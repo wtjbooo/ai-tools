@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  order     Int      @default(0)
+  tools     Tool[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  tools     ToolTag[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tool {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String
+  content     String   @default("")
+  website     String?  // Optional: This can be null if no website provided
+  pricing     String   @default("unknown")
+  featured    Boolean  @default(false)
+  clicks      Int      @default(0)
+
+  logoUrl     String   @default("")
+  screenshots String   @default("")
+  searchText  String   @default("") // You can fill this during insertion or make it nullable
+
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  tags        ToolTag[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([clicks])
+}
+
+model ToolTag {
+  toolId String
+  tagId  String
+
+  tool   Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([toolId, tagId])
+}
+
+model Submission {
+  id          String   @id @default(cuid())
+  name        String
+  website     String
+  description String
+  category    String
+  tags        String   @default("")
+  contact     String   @default("")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
