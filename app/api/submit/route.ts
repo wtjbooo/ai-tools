@@ -5,7 +5,6 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export const runtime = "nodejs";
 
 function normalizeWebsite(url: string) {
   return url.trim().replace(/\/+$/, ""); // 去掉末尾 /
