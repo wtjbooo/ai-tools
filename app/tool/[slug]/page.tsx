@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params }: { params: { slug: string } }) {
   const tool = await prisma.tool.findUnique({
     where: { slug: params.slug },
   });
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default async function ToolPage({ params }) {
+export default async function ToolPage({ params }: { params: { slug: string } }) {
 
   const tool = await prisma.tool.findUnique({
     where: { slug: params.slug },
