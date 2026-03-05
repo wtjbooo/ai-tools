@@ -1,0 +1,11 @@
+name,slug,url,description,pricing,clicks
+ChatGPT,chatgpt,https://chat.openai.com,OpenAI开发的AI聊天助手,免费,0
+Claude,claude,https://claude.ai,Anthropic开发的大模型助手,免费,0
+DeepSeek,deepseek,https://deepseek.com,深度求索AI模型,免费,0
+Midjourney,midjourney,https://midjourney.com,AI绘画生成工具,付费,0
+Runway,runway,https://runwayml.com,AI视频生成工具,免费试用,0
+Perplexity,perplexity,https://perplexity.ai,AI搜索引擎,免费,0
+Notion AI,notion-ai,https://notion.so,AI笔记和写作工具,付费,0
+Gamma,gamma,https://gamma.app,AI PPT生成工具,免费试用,0
+Pika,pika,https://pika.art,AI视频生成工具,免费试用,0
+Ideogram,ideogram,https://ideogram.ai,AI图片生成工具,免费,0
