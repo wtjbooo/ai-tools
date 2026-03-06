@@ -12,55 +12,41 @@ model Category {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
-  icon      String   @default("")
   order     Int      @default(0)
-
-  tools     Tool[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  icon      String   @default("")
+  tools     Tool[]
 }
 
 model Tag {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  slug      String   @unique
-
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   tools     ToolTag[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Tool {
-  id          String   @id @default(cuid())
-
+  id          String    @id @default(cuid())
   name        String
-  slug        String   @unique
-
+  slug        String    @unique
   description String
-  content     String   @default("")
-
+  content     String    @default("")
   website     String?
-  pricing     String   @default("unknown")
-
-  featured    Boolean  @default(false)
-  clicks      Int      @default(0)
-
-  logoUrl     String   @default("")
-  screenshots String   @default("")
-
-  searchText  String   @default("")
-
+  pricing     String    @default("unknown")
+  featured    Boolean   @default(false)
+  clicks      Int       @default(0)
+  logoUrl     String    @default("")
+  screenshots String    @default("")
+  searchText  String    @default("")
   categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isPublished Boolean   @default(true)
+  category    Category  @relation(fields: [categoryId], references: [id])
   tags        ToolTag[]
-
-  isPublished Boolean  @default(true)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
   @@index([categoryId])
   @@index([clicks])
@@ -70,26 +56,21 @@ model Tool {
 model ToolTag {
   toolId String
   tagId  String
-
-  tool   Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
-  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tool   Tool   @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@id([toolId, tagId])
 }
 
 model Submission {
   id          String   @id @default(cuid())
-
   name        String
   website     String
   description String
-
   category    String
   tags        String   @default("")
-
   contact     String   @default("")
   status      String   @default("pending")
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
