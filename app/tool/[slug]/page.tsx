@@ -15,11 +15,32 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     },
   });
 
-  if (!tool) return {};
+  if (!tool) {
+    return {
+      title: "工具不存在",
+      description: "你访问的工具页面不存在。",
+    };
+  }
+
+  const description =
+    tool.description ||
+    `${tool.name} 的详细介绍、分类、标签、价格和官网入口`;
+
+  const url = `https://y78bq.dpdns.org/tool/${tool.slug}`;
 
   return {
-    title: `${tool.name} - AI工具详情`,
-    description: tool.description || `${tool.name} 的详细介绍、分类、标签、价格和官网入口`,
+    title: tool.name,
+    description,
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      title: tool.name,
+      description,
+      url,
+      siteName: "AI 工具目录",
+      type: "article",
+    },
   };
 }
 
@@ -69,10 +90,10 @@ export default async function ToolPage({ params }: { params: { slug: string } })
           ) : null}
 
           {tool.clicks > 0 ? (
-  <span className="rounded-full bg-gray-100 px-3 py-1">
-    点击：{tool.clicks}
-  </span>
-) : null}
+            <span className="rounded-full bg-gray-100 px-3 py-1">
+              点击：{tool.clicks}
+            </span>
+          ) : null}
         </div>
 
         <p className="text-lg text-gray-700">{tool.description || "暂无简介"}</p>

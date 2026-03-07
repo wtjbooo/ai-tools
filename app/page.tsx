@@ -6,33 +6,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [categories, tools] = await Promise.all([
-    prisma.category.findMany({
-      include: {
-        _count: {
-          select: { tools: true },
+  const tools = await prisma.tool.findMany({
+    where: { isPublished: true },
+    include: {
+      category: true,
+      tags: {
+        include: {
+          tag: true,
         },
       },
-      orderBy: [{ order: "asc" }, { name: "asc" }],
-    }),
-    prisma.tool.findMany({
-      where: { isPublished: true },
-      include: {
-        category: true,
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
-      orderBy: [{ featured: "desc" }, { clicks: "desc" }, { createdAt: "desc" }],
-      take: 24,
-    }),
-  ]);
-
-  const validCategories = categories.filter(
-    (c) => c.name && c.name.trim() !== "" && c._count.tools > 0
-  );
+    },
+    orderBy: [{ featured: "desc" }, { clicks: "desc" }, { createdAt: "desc" }],
+    take: 24,
+  });
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 space-y-12">
@@ -132,21 +118,6 @@ export default async function HomePage() {
               </Link>
             );
           })}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold">工具分类</h2>
-        <div className="flex flex-wrap gap-3">
-          {validCategories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/category/${category.id}`}
-              className="rounded-full bg-gray-100 px-4 py-2 text-sm hover:bg-gray-200"
-            >
-              {category.name}（{category._count.tools}）
-            </Link>
-          ))}
         </div>
       </section>
     </div>
