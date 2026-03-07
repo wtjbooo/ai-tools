@@ -8,34 +8,36 @@ export default function SubmitForm() {
   const [msg, setMsg] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setMsg(null);
-    setLoading(true);
+  e.preventDefault();
+  setMsg(null);
+  setLoading(true);
 
-    const fd = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(fd.entries());
+  const form = e.currentTarget;
+  const fd = new FormData(form);
+  const payload = Object.fromEntries(fd.entries());
 
-    try {
-      const res = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+  try {
+    const res = await fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-      const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        setMsg(data.error ?? "提交失败，请稍后重试");
-      } else {
-        setMsg("提交成功，我们会尽快审核并收录。");
-        e.currentTarget.reset();
-      }
-    } catch {
-      setMsg("网络异常，请稍后重试。");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      setMsg(data.error ?? "提交失败，请稍后重试");
+    } else {
+      setMsg("提交成功，我们会尽快审核并收录。");
+      form.reset();
     }
+  } catch (error) {
+    console.error("submit form error:", error);
+    setMsg("网络异常，请稍后重试。");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10 space-y-8">

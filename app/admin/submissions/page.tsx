@@ -11,6 +11,7 @@ type Submission = {
   category: string;
   tags: string;
   contact: string;
+  reason: string;
   status: string;
   createdAt: string;
 };
@@ -21,28 +22,31 @@ export default function AdminSubmissionsPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  async function load(clearMsg = false) {
+  setLoading(true);
+
+  if (clearMsg) {
     setMsg(null);
-
-    const res = await fetch(`/api/admin/submissions?status=${status}`);
-    const data = await res.json().catch(() => ({}));
-
-    setLoading(false);
-
-    if (!res.ok) {
-      setMsg(data.error ?? "加载失败（可能没登录）");
-      setList([]);
-      return;
-    }
-
-    setList(data.list ?? []);
   }
 
+  const res = await fetch(`/api/admin/submissions?status=${status}`);
+  const data = await res.json().catch(() => ({}));
+
+  setLoading(false);
+
+  if (!res.ok) {
+    setMsg(data.error ?? "加载失败（可能没登录）");
+    setList([]);
+    return;
+  }
+
+  setList(data.list ?? []);
+}
+
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  load(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [status]);
 
   async function approve(id: string) {
     setMsg(null);
@@ -94,9 +98,9 @@ export default function AdminSubmissionsPage() {
           </button>
         ))}
 
-        <button onClick={load} className="rounded-full border px-3 py-1 text-sm">
-          {loading ? "刷新中..." : "刷新"}
-        </button>
+        <button onClick={() => load(true)} className="rounded-full border px-3 py-1 text-sm">
+  {loading ? "刷新中..." : "刷新"}
+</button>
       </div>
 
       {msg ? <div className="rounded border p-3 text-sm">{msg}</div> : null}
@@ -106,7 +110,7 @@ export default function AdminSubmissionsPage() {
       ) : (
         <div className="space-y-3">
           {list.map((x) => (
-            <div key={x.id} className="rounded-xl border p-4 space-y-2">
+            <div key={x.id} className="rounded-xl border p-4 space-y-3">
               <div className="font-semibold text-lg">{x.name}</div>
 
               <div className="text-sm text-gray-600">
@@ -115,9 +119,20 @@ export default function AdminSubmissionsPage() {
 
               <div className="text-sm">{x.description}</div>
 
+              {x.reason ? (
+                <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700 whitespace-pre-wrap">
+                  <div className="mb-1 font-medium text-gray-900">补充说明</div>
+                  <div>{x.reason}</div>
+                </div>
+              ) : null}
+
               <a className="underline text-sm" href={x.website} target="_blank" rel="noreferrer">
                 {x.website}
               </a>
+
+              <div className="text-xs text-gray-500">
+                提交时间：{new Date(x.createdAt).toLocaleString("zh-CN")}
+              </div>
 
               {status === "pending" ? (
                 <div className="flex gap-2 pt-2">

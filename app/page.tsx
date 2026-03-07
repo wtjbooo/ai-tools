@@ -1,6 +1,24 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import SearchBar from "@/components/SearchBar";
+
+export const metadata: Metadata = {
+  title: "AI 工具导航",
+  description:
+    "收录聊天、写作、绘图、视频、搜索、办公效率等实用 AI 工具，支持搜索、浏览和提交收录。",
+  alternates: {
+    canonical: "https://y78bq.dpdns.org",
+  },
+  openGraph: {
+    title: "AI 工具导航",
+    description:
+      "收录聊天、写作、绘图、视频、搜索、办公效率等实用 AI 工具，支持搜索、浏览和提交收录。",
+    url: "https://y78bq.dpdns.org",
+    siteName: "AI 工具目录",
+    type: "website",
+  },
+};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

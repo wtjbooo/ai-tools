@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+function isValidHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function normalizeWebsite(value: string) {
+  return value.trim().replace(/\/+$/, "");
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
     const name = String(body.name ?? "").trim();
-    const website = String(body.website ?? "").trim();
+    const website = normalizeWebsite(String(body.website ?? ""));
     const description = String(body.description ?? "").trim();
     const category = String(body.category ?? "").trim();
     const tags = String(body.tags ?? "").trim();
@@ -20,15 +33,78 @@ export async function POST(req: Request) {
       );
     }
 
-    const exists = await prisma.submission.findFirst({
+    if (name.length < 2 || name.length > 100) {
+      return NextResponse.json(
+        { error: "工具名称长度需在 2 到 100 个字符之间" },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidHttpUrl(website)) {
+      return NextResponse.json(
+        { error: "官网链接格式不正确，请填写完整的 http 或 https 地址" },
+        { status: 400 }
+      );
+    }
+
+    if (description.length < 10 || description.length > 300) {
+      return NextResponse.json(
+        { error: "一句话简介长度需在 10 到 300 个字符之间" },
+        { status: 400 }
+      );
+    }
+
+    if (category.length < 2 || category.length > 50) {
+      return NextResponse.json(
+        { error: "分类长度需在 2 到 50 个字符之间" },
+        { status: 400 }
+      );
+    }
+
+    if (tags.length > 200) {
+      return NextResponse.json(
+        { error: "标签内容过长，请控制在 200 个字符以内" },
+        { status: 400 }
+      );
+    }
+
+    if (contact.length > 100) {
+      return NextResponse.json(
+        { error: "联系方式过长，请控制在 100 个字符以内" },
+        { status: 400 }
+      );
+    }
+
+    if (reason.length > 1000) {
+      return NextResponse.json(
+        { error: "补充说明过长，请控制在 1000 个字符以内" },
+        { status: 400 }
+      );
+    }
+
+    const existingByWebsite = await prisma.submission.findFirst({
       where: {
-        OR: [{ name }, { website }],
+        website,
       },
     });
 
-    if (exists) {
+    if (existingByWebsite) {
       return NextResponse.json(
-        { error: "该工具或网址已提交过，请勿重复提交" },
+        { error: "该官网链接已提交过，请勿重复提交" },
+        { status: 400 }
+      );
+    }
+
+    const existingByName = await prisma.submission.findFirst({
+      where: {
+        name,
+        status: "pending",
+      },
+    });
+
+    if (existingByName) {
+      return NextResponse.json(
+        { error: "该工具名称已存在待审核记录，请勿重复提交" },
         { status: 400 }
       );
     }
@@ -41,13 +117,14 @@ export async function POST(req: Request) {
         category,
         tags,
         contact,
+        reason,
         status: "pending",
       },
     });
 
     return NextResponse.json({
       ok: true,
-      message: "提交成功",
+      message: "提交成功，我们会尽快审核并收录。",
     });
   } catch (error) {
     console.error("submit api error:", error);

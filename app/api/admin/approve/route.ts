@@ -1,7 +1,6 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { cookies } from "next/headers";
@@ -26,55 +25,167 @@ function slugify(input: string) {
     .toLowerCase()
     .trim()
     .replace(/[\s]+/g, "-")
-    .replace(/[^\w\-]+/g, "")
+    .replace(/[^a-z0-9\-]+/g, "")
+    .replace(/\-+/g, "-")
+    .replace(/^\-+|\-+$/g, "")
     .slice(0, 60);
 }
 
+function slugFromWebsite(website: string) {
+  try {
+    const url = new URL(website);
+    const hostParts = url.hostname.replace(/^www\./, "").split(".");
+    const mainHost =
+      hostParts.length >= 2 ? hostParts.slice(0, -1).join("-") : hostParts[0];
+
+    const pathLast =
+      url.pathname.split("/").filter(Boolean).slice(-1)[0] ?? "";
+
+    return slugify([mainHost, pathLast].filter(Boolean).join("-"));
+  } catch {
+    return "";
+  }
+}
+
+function parseTags(input: string) {
+  return Array.from(
+    new Set(
+      input
+        .split(/[,，]/)
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .slice(0, 10)
+    )
+  );
+}
+
 export async function POST(req: Request) {
-  if (!verifyAdmin()) {
-    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
+  try {
+    if (!verifyAdmin()) {
+      return NextResponse.json(
+        { ok: false, error: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json().catch(() => null);
+    const id = String(body?.id ?? "").trim();
+
+    if (!id) {
+      return NextResponse.json(
+        { ok: false, error: "id required" },
+        { status: 400 }
+      );
+    }
+
+    const sub = await prisma.submission.findUnique({
+      where: { id },
+    });
+
+    if (!sub) {
+      return NextResponse.json(
+        { ok: false, error: "not found" },
+        { status: 404 }
+      );
+    }
+
+    if (sub.status !== "pending") {
+      return NextResponse.json(
+        { ok: false, error: "该提交已处理，不能重复通过" },
+        { status: 400 }
+      );
+    }
+
+    const catSlug = slugify(sub.category) || "category";
+
+    const category = await prisma.category.upsert({
+      where: { slug: catSlug },
+      update: { name: sub.category },
+      create: {
+        name: sub.category,
+        slug: catSlug,
+        order: 0,
+      },
+    });
+
+    const base =
+      slugFromWebsite(sub.website) ||
+      slugify(sub.name) ||
+      `tool-${Date.now()}`;
+
+    let slug = base;
+
+    for (let i = 0; i < 20; i++) {
+      const exists = await prisma.tool.findUnique({
+        where: { slug },
+      });
+
+      if (!exists) break;
+      slug = `${base}-${i + 2}`;
+    }
+
+    const parsedTags = parseTags(sub.tags);
+
+    const tool = await prisma.tool.create({
+      data: {
+        name: sub.name,
+        slug,
+        description: sub.description,
+        content: sub.reason || "",
+        website: sub.website,
+        pricing: "unknown",
+        featured: false,
+        clicks: 0,
+        logoUrl: "",
+        screenshots: "",
+        searchText: `${sub.name} ${sub.description} ${sub.category} ${sub.tags} ${sub.reason}`,
+        categoryId: category.id,
+      },
+    });
+
+    for (const tagName of parsedTags) {
+      const tagSlug = slugify(tagName) || "tag";
+
+      const tag = await prisma.tag.upsert({
+        where: { slug: tagSlug },
+        update: { name: tagName },
+        create: {
+          name: tagName,
+          slug: tagSlug,
+        },
+      });
+
+      await prisma.toolTag.upsert({
+        where: {
+          toolId_tagId: {
+            toolId: tool.id,
+            tagId: tag.id,
+          },
+        },
+        update: {},
+        create: {
+          toolId: tool.id,
+          tagId: tag.id,
+        },
+      });
+    }
+
+    await prisma.submission.update({
+      where: { id },
+      data: { status: "approved" },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      toolId: tool.id,
+      toolSlug: tool.slug,
+    });
+  } catch (error) {
+    console.error("approve api error:", error);
+
+    return NextResponse.json(
+      { ok: false, error: "通过失败，请稍后重试" },
+      { status: 500 }
+    );
   }
-
-  const body = await req.json().catch(() => null);
-  const id = String(body?.id ?? "");
-  if (!id) return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
-
-  const sub = await prisma.submission.findUnique({ where: { id } });
-  if (!sub) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
-
-  const catSlug = slugify(sub.category) || "category";
-  const category = await prisma.category.upsert({
-    where: { slug: catSlug },
-    update: { name: sub.category },
-    create: { name: sub.category, slug: catSlug, order: 0 },
-  });
-
-  let base = slugify(sub.name) || "tool";
-  let slug = base;
-  for (let i = 0; i < 20; i++) {
-    const exists = await prisma.tool.findUnique({ where: { slug } });
-    if (!exists) break;
-    slug = `${base}-${i + 2}`;
-  }
-
-  const tool = await prisma.tool.create({
-    data: {
-      name: sub.name,
-      slug,
-      description: sub.description,
-      content: "",
-      website: sub.website,
-      pricing: "unknown",
-      featured: false,
-      clicks: 0,
-      logoUrl: "",
-      screenshots: "",
-      searchText: `${sub.name} ${sub.description} ${sub.category} ${sub.tags}`,
-      categoryId: category.id,
-    },
-  });
-
-  await prisma.submission.update({ where: { id }, data: { status: "approved" } });
-
-  return NextResponse.json({ ok: true, toolId: tool.id, toolSlug: tool.slug });
 }
