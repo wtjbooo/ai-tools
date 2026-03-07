@@ -164,6 +164,11 @@ export default async function CategoryPage({
                 tool.pricing !== "unknown" &&
                 tool.pricing !== "未知";
 
+              const logoSrc =
+                tool.logoUrl && tool.logoUrl.trim() !== ""
+                  ? tool.logoUrl
+                  : "/default-tool-icon.png";
+
               return (
                 <Link
                   key={tool.id}
@@ -172,12 +177,25 @@ export default async function CategoryPage({
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
-                      <h2 className="text-lg font-semibold">{tool.name}</h2>
-                      {tool.featured ? (
-                        <span className="rounded-full bg-black px-2 py-1 text-xs text-white">
-                          推荐
-                        </span>
-                      ) : null}
+                      <div className="min-w-0">
+                        <h2 className="text-lg font-semibold">{tool.name}</h2>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {tool.featured ? (
+                          <span className="rounded-full bg-black px-2 py-1 text-xs text-white">
+                            推荐
+                          </span>
+                        ) : null}
+
+                        <img
+                          src={logoSrc}
+                          alt={`${tool.name} logo`}
+                          width={24}
+                          height={24}
+                          className="h-6 w-6 rounded object-cover"
+                        />
+                      </div>
                     </div>
 
                     <p className="text-sm text-gray-700">

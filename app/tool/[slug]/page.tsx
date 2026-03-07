@@ -113,8 +113,13 @@ export default async function ToolPage({
   const tagList = tool.tags.map((item) => item.tag.name);
   const url = `${SITE_URL}/tool/${tool.slug}`;
   const categoryHref = tool.category?.slug
-  ? `/category/${encodeURIComponent(tool.category.slug)}`
-  : null;
+    ? `/category/${encodeURIComponent(tool.category.slug)}`
+    : null;
+
+  const logoSrc =
+    tool.logoUrl && tool.logoUrl.trim() !== ""
+      ? tool.logoUrl
+      : "/default-tool-icon.png";
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -155,38 +160,50 @@ export default async function ToolPage({
             ← 返回首页
           </Link>
 
-          <h1 className="text-3xl font-bold">{tool.name}</h1>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 space-y-4">
+              <h1 className="text-3xl font-bold">{tool.name}</h1>
 
-          <div className="flex flex-wrap gap-2 text-sm">
-            {categoryHref ? (
-              <Link
-                href={categoryHref}
-                className="rounded-full bg-gray-100 px-3 py-1 hover:bg-gray-200"
-              >
-                主分类：{tool.category?.name || "未分类"}
-              </Link>
-            ) : (
-              <span className="rounded-full bg-gray-100 px-3 py-1">
-                主分类：{tool.category?.name || "未分类"}
-              </span>
-            )}
+              <div className="flex flex-wrap gap-2 text-sm">
+                {categoryHref ? (
+                  <Link
+                    href={categoryHref}
+                    className="rounded-full bg-gray-100 px-3 py-1 hover:bg-gray-200"
+                  >
+                    主分类：{tool.category?.name || "未分类"}
+                  </Link>
+                ) : (
+                  <span className="rounded-full bg-gray-100 px-3 py-1">
+                    主分类：{tool.category?.name || "未分类"}
+                  </span>
+                )}
 
-            {showPricing ? (
-              <span className="rounded-full bg-gray-100 px-3 py-1">
-                价格：{tool.pricing}
-              </span>
-            ) : null}
+                {showPricing ? (
+                  <span className="rounded-full bg-gray-100 px-3 py-1">
+                    价格：{tool.pricing}
+                  </span>
+                ) : null}
 
-            {tool.clicks > 0 ? (
-              <span className="rounded-full bg-gray-100 px-3 py-1">
-                点击：{tool.clicks}
-              </span>
-            ) : null}
+                {tool.clicks > 0 ? (
+                  <span className="rounded-full bg-gray-100 px-3 py-1">
+                    点击：{tool.clicks}
+                  </span>
+                ) : null}
+              </div>
+
+              <p className="text-lg text-gray-700">
+                {tool.description || "暂无简介"}
+              </p>
+            </div>
+
+            <img
+              src={logoSrc}
+              alt={`${tool.name} logo`}
+              width={56}
+              height={56}
+              className="h-14 w-14 rounded-xl border object-cover shrink-0 bg-white"
+            />
           </div>
-
-          <p className="text-lg text-gray-700">
-            {tool.description || "暂无简介"}
-          </p>
         </div>
 
         {tagList.length > 0 ? (

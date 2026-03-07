@@ -111,25 +111,46 @@ export default async function SearchPage({
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {tools.map((t) => (
-            <Link
-              key={t.id}
-              href={`/tool/${t.slug}`}
-              className="block rounded-xl border bg-white p-4 transition hover:shadow-lg"
-            >
-              <div className="font-semibold">{t.name}</div>
-              <div className="mt-1 text-sm text-gray-600">
-                {t.category?.name ?? "未分类"} · 点击 {t.clicks ?? 0} · 价格{" "}
-                {t.pricing ?? "未知"}
-              </div>
-              <p className="mt-2 text-sm text-gray-700">
-                {t.description ?? "暂无简介"}
-              </p>
-              <span className="mt-3 inline-block text-sm underline">
-                查看详情 →
-              </span>
-            </Link>
-          ))}
+          {tools.map((t) => {
+            const logoSrc =
+              t.logoUrl && t.logoUrl.trim() !== ""
+                ? t.logoUrl
+                : "/default-tool-icon.png";
+
+            return (
+              <Link
+                key={t.id}
+                href={`/tool/${t.slug}`}
+                className="block rounded-xl border bg-white p-4 transition hover:shadow-lg"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold">{t.name}</div>
+                    <div className="mt-1 text-sm text-gray-600">
+                      {t.category?.name ?? "未分类"} · 点击 {t.clicks ?? 0} · 价格{" "}
+                      {t.pricing ?? "未知"}
+                    </div>
+                  </div>
+
+                  <img
+                    src={logoSrc}
+                    alt={`${t.name} logo`}
+                    width={24}
+                    height={24}
+                    className="h-6 w-6 rounded object-cover shrink-0"
+                  />
+                </div>
+
+                <p className="mt-2 text-sm text-gray-700">
+                  {t.description ?? "暂无简介"}
+                </p>
+
+                <span className="mt-3 inline-block text-sm underline">
+                  查看详情 →
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
 
