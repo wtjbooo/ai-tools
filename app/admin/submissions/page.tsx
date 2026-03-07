@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type Submission = {
@@ -28,6 +29,8 @@ type EditForm = {
 };
 
 export default function AdminSubmissionsPage() {
+  const router = useRouter();
+
   const [status, setStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [list, setList] = useState<Submission[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
@@ -36,6 +39,28 @@ export default function AdminSubmissionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function handleUnauthorized(data?: { error?: string }) {
+    setMsg(data?.error ?? "登录已失效，请重新登录");
+    router.replace("/admin");
+  }
+
+  async function logout() {
+    setMsg(null);
+
+    const res = await fetch("/api/admin/logout", {
+      method: "POST",
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setMsg(data.error ?? "退出失败");
+      return;
+    }
+
+    router.replace("/admin");
+  }
 
   async function load(clearMsg = false) {
     setLoading(true);
@@ -49,8 +74,13 @@ export default function AdminSubmissionsPage() {
 
     setLoading(false);
 
+    if (res.status === 401 || res.status === 403) {
+      handleUnauthorized(data);
+      return;
+    }
+
     if (!res.ok) {
-      setMsg(data.error ?? "加载失败（可能没登录）");
+      setMsg(data.error ?? "加载失败");
       setList([]);
       return;
     }
@@ -65,13 +95,24 @@ export default function AdminSubmissionsPage() {
 
   async function approve(id: string) {
     setMsg(null);
+
     const res = await fetch("/api/admin/approve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
+
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return setMsg(data.error ?? "通过失败");
+
+    if (res.status === 401 || res.status === 403) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!res.ok) {
+      setMsg(data.error ?? "通过失败");
+      return;
+    }
 
     setMsg(`已通过 ✅ 新工具 slug：${data.toolSlug}`);
     await load();
@@ -79,13 +120,24 @@ export default function AdminSubmissionsPage() {
 
   async function reject(id: string) {
     setMsg(null);
+
     const res = await fetch("/api/admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
+
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return setMsg(data.error ?? "拒绝失败");
+
+    if (res.status === 401 || res.status === 403) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!res.ok) {
+      setMsg(data.error ?? "拒绝失败");
+      return;
+    }
 
     setMsg("已拒绝");
     await load();
@@ -127,6 +179,11 @@ export default function AdminSubmissionsPage() {
 
     setSaving(false);
 
+    if (res.status === 401 || res.status === 403) {
+      handleUnauthorized(data);
+      return;
+    }
+
     if (!res.ok) {
       setMsg(data.error ?? "保存失败");
       return;
@@ -140,11 +197,23 @@ export default function AdminSubmissionsPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-bold">审核队列</h1>
-        <Link className="underline" href="/">
-          ← 返回首页
-        </Link>
+
+        <div className="flex items-center gap-3">
+          <Link className="underline" href="/admin/tools">
+            工具管理
+          </Link>
+          <Link className="underline" href="/">
+            返回首页
+          </Link>
+          <button
+            onClick={logout}
+            className="rounded border px-3 py-1 text-sm"
+          >
+            退出登录
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -180,105 +249,103 @@ export default function AdminSubmissionsPage() {
             return (
               <div key={x.id} className="rounded-xl border p-4 space-y-3">
                 {isEditing ? (
-                  <>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">工具名称</label>
-                        <input
-                          value={editForm.name}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, name: e.target.value })
-                          }
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">官网链接</label>
-                        <input
-                          value={editForm.website}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, website: e.target.value })
-                          }
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">一句话简介</label>
-                        <textarea
-                          rows={3}
-                          value={editForm.description}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, description: e.target.value })
-                          }
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">分类</label>
-                        <input
-                          value={editForm.category}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, category: e.target.value })
-                          }
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">标签</label>
-                        <input
-                          value={editForm.tags}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, tags: e.target.value })
-                          }
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">联系方式</label>
-                        <input
-                          value={editForm.contact}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, contact: e.target.value })
-                          }
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">补充说明</label>
-                        <textarea
-                          rows={8}
-                          value={editForm.reason}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, reason: e.target.value })
-                          }
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                      </div>
-
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={saveEdit}
-                          disabled={saving}
-                          className="rounded border px-3 py-1 text-sm"
-                        >
-                          {saving ? "保存中..." : "保存"}
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          disabled={saving}
-                          className="rounded border px-3 py-1 text-sm"
-                        >
-                          取消
-                        </button>
-                      </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">工具名称</label>
+                      <input
+                        value={editForm.name}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, name: e.target.value })
+                        }
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
                     </div>
-                  </>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">官网链接</label>
+                      <input
+                        value={editForm.website}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, website: e.target.value })
+                        }
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">一句话简介</label>
+                      <textarea
+                        rows={3}
+                        value={editForm.description}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, description: e.target.value })
+                        }
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">分类</label>
+                      <input
+                        value={editForm.category}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, category: e.target.value })
+                        }
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">标签</label>
+                      <input
+                        value={editForm.tags}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, tags: e.target.value })
+                        }
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">联系方式</label>
+                      <input
+                        value={editForm.contact}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, contact: e.target.value })
+                        }
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">补充说明</label>
+                      <textarea
+                        rows={8}
+                        value={editForm.reason}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, reason: e.target.value })
+                        }
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={saveEdit}
+                        disabled={saving}
+                        className="rounded border px-3 py-1 text-sm"
+                      >
+                        {saving ? "保存中..." : "保存"}
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        disabled={saving}
+                        className="rounded border px-3 py-1 text-sm"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <div className="font-semibold text-lg">{x.name}</div>
