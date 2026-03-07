@@ -1,10 +1,8 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 
 import { put } from "@vercel/blob";
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { isAdminAuthenticated } from "@/lib/auth";
 
 function slugify(input: string) {
   return input
@@ -31,18 +29,6 @@ function slugFromWebsite(website: string) {
   } catch {
     return "";
   }
-}
-
-function parseTags(input: string) {
-  return Array.from(
-    new Set(
-      input
-        .split(/[,，]/)
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-        .slice(0, 10)
-    )
-  );
 }
 
 function normalizeWebsite(value: string) {
@@ -153,7 +139,7 @@ async function fetchWebsiteIcon(website: string) {
       if (iconFile) return iconFile;
     }
   } catch {
-    // ignore html parse failure, fallback below
+    // ignore and fallback
   }
 
   try {
@@ -161,7 +147,7 @@ async function fetchWebsiteIcon(website: string) {
     const iconFile = await tryDownloadIcon(faviconUrl);
     if (iconFile) return iconFile;
   } catch {
-    // ignore fallback failure
+    // ignore fallback
   }
 
   return null;
@@ -191,181 +177,66 @@ async function uploadLogoToBlob(website: string, toolName: string) {
   }
 }
 
-export async function POST(req: Request) {
-  try {
-    const ok = await isAdminAuthenticated();
+async function main() {
+  const limit = Number(process.argv[2] ?? 20);
 
-    if (!ok) {
-      return NextResponse.json(
-        { ok: false, error: "UNAUTHORIZED" },
-        { status: 401 }
-      );
-    }
+  const tools = await prisma.tool.findMany({
+  where: {
+    isPublished: true,
+    logoUrl: "",
+  },
+  orderBy: { createdAt: "desc" },
+  take: limit,
+});
 
-    const body = await req.json().catch(() => null);
-    const id = String(body?.id ?? "").trim();
+  console.log(`准备处理 ${tools.length} 条工具数据`);
 
-    if (!id) {
-      return NextResponse.json(
-        { ok: false, error: "id required" },
-        { status: 400 }
-      );
-    }
+  let success = 0;
+  let skipped = 0;
+  let failed = 0;
 
-    const sub = await prisma.submission.findUnique({
-      where: { id },
-    });
+  for (const tool of tools) {
+    try {
+      const website = normalizeWebsite(tool.website ?? "");
 
-    if (!sub) {
-      return NextResponse.json(
-        { ok: false, error: "not found" },
-        { status: 404 }
-      );
-    }
+      if (!website) {
+        console.log(`跳过 ${tool.name}：没有 website`);
+        skipped += 1;
+        continue;
+      }
 
-    if (sub.status !== "pending") {
-      return NextResponse.json(
-        { ok: false, error: "该提交已处理，不能重复通过" },
-        { status: 400 }
-      );
-    }
+      console.log(`开始处理：${tool.name} (${website})`);
 
-    const normalizedWebsite = normalizeWebsite(sub.website);
+      const logoUrl = await uploadLogoToBlob(website, tool.name);
 
-    const existingToolByWebsite = await prisma.tool.findFirst({
-      where: {
-        website: normalizedWebsite,
-      },
-    });
+      if (!logoUrl) {
+        console.log(`未抓到图标：${tool.name}`);
+        skipped += 1;
+        continue;
+      }
 
-    if (existingToolByWebsite) {
-      await prisma.submission.update({
-        where: { id },
-        data: { status: "approved" },
+      await prisma.tool.update({
+        where: { id: tool.id },
+        data: { logoUrl },
       });
 
-      return NextResponse.json({
-        ok: true,
-        toolId: existingToolByWebsite.id,
-        toolSlug: existingToolByWebsite.slug,
-        message: "该工具已存在，已直接标记为通过",
-      });
+      console.log(`成功写入 logoUrl：${tool.name}`);
+      success += 1;
+    } catch (error) {
+      console.error(`处理失败：${tool.name}`, error);
+      failed += 1;
     }
-
-    const existingToolByName = await prisma.tool.findFirst({
-      where: {
-        name: sub.name,
-      },
-    });
-
-    if (existingToolByName) {
-      await prisma.submission.update({
-        where: { id },
-        data: { status: "approved" },
-      });
-
-      return NextResponse.json({
-        ok: true,
-        toolId: existingToolByName.id,
-        toolSlug: existingToolByName.slug,
-        message: "同名工具已存在，已直接标记为通过",
-      });
-    }
-
-    const catSlug = slugify(sub.category) || "category";
-
-    const category = await prisma.category.upsert({
-      where: { slug: catSlug },
-      update: { name: sub.category },
-      create: {
-        name: sub.category,
-        slug: catSlug,
-        order: 0,
-      },
-    });
-
-    const base =
-      slugFromWebsite(normalizedWebsite) ||
-      slugify(sub.name) ||
-      `tool-${Date.now()}`;
-
-    let slug = base;
-
-    for (let i = 0; i < 20; i++) {
-      const exists = await prisma.tool.findUnique({
-        where: { slug },
-      });
-
-      if (!exists) break;
-      slug = `${base}-${i + 2}`;
-    }
-
-    const parsedTags = parseTags(sub.tags);
-
-    const logoUrl = await uploadLogoToBlob(normalizedWebsite, sub.name);
-
-    const tool = await prisma.tool.create({
-      data: {
-        name: sub.name,
-        slug,
-        description: sub.description,
-        content: sub.reason || "",
-        website: normalizedWebsite,
-        pricing: "unknown",
-        featured: false,
-        clicks: 0,
-        logoUrl,
-        screenshots: "",
-        searchText: `${sub.name} ${sub.description} ${sub.category} ${sub.tags} ${sub.reason}`,
-        categoryId: category.id,
-      },
-    });
-
-    for (const tagName of parsedTags) {
-      const tagSlug = slugify(tagName) || "tag";
-
-      const tag = await prisma.tag.upsert({
-        where: { slug: tagSlug },
-        update: { name: tagName },
-        create: {
-          name: tagName,
-          slug: tagSlug,
-        },
-      });
-
-      await prisma.toolTag.upsert({
-        where: {
-          toolId_tagId: {
-            toolId: tool.id,
-            tagId: tag.id,
-          },
-        },
-        update: {},
-        create: {
-          toolId: tool.id,
-          tagId: tag.id,
-        },
-      });
-    }
-
-    await prisma.submission.update({
-      where: { id },
-      data: { status: "approved" },
-    });
-
-    return NextResponse.json({
-      ok: true,
-      toolId: tool.id,
-      toolSlug: tool.slug,
-      logoUrl: tool.logoUrl,
-      message: "已创建新工具",
-    });
-  } catch (error) {
-    console.error("approve api error:", error);
-
-    return NextResponse.json(
-      { ok: false, error: "通过失败，请稍后重试" },
-      { status: 500 }
-    );
   }
+
+  console.log("处理完成");
+  console.log({ success, skipped, failed });
 }
+
+main()
+  .catch((error) => {
+    console.error("backfill logos failed:", error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
