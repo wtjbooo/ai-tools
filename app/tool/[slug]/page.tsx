@@ -112,6 +112,9 @@ export default async function ToolPage({
   const showContent = tool.content && tool.content.trim() !== "";
   const tagList = tool.tags.map((item) => item.tag.name);
   const url = `${SITE_URL}/tool/${tool.slug}`;
+  const categoryHref = tool.category?.slug
+  ? `/category/${encodeURIComponent(tool.category.slug)}`
+  : null;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -155,9 +158,18 @@ export default async function ToolPage({
           <h1 className="text-3xl font-bold">{tool.name}</h1>
 
           <div className="flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full bg-gray-100 px-3 py-1">
-              主分类：{tool.category?.name || "未分类"}
-            </span>
+            {categoryHref ? (
+              <Link
+                href={categoryHref}
+                className="rounded-full bg-gray-100 px-3 py-1 hover:bg-gray-200"
+              >
+                主分类：{tool.category?.name || "未分类"}
+              </Link>
+            ) : (
+              <span className="rounded-full bg-gray-100 px-3 py-1">
+                主分类：{tool.category?.name || "未分类"}
+              </span>
+            )}
 
             {showPricing ? (
               <span className="rounded-full bg-gray-100 px-3 py-1">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Script from "next/script";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -9,9 +10,9 @@ export const dynamic = "force-dynamic";
 const SITE_NAME = "AI 工具目录";
 const SITE_URL = "https://y78bq.dpdns.org";
 
-async function getCategoryWithTools(id: string) {
+async function getCategoryWithTools(slug: string) {
   const category = await prisma.category.findUnique({
-    where: { id },
+    where: { slug },
   });
 
   if (!category) return null;
@@ -39,10 +40,10 @@ async function getCategoryWithTools(id: string) {
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: { slug: string };
 }): Promise<Metadata> {
-  const id = decodeURIComponent(params.id);
-  const data = await getCategoryWithTools(id);
+  const slug = decodeURIComponent(params.slug);
+  const data = await getCategoryWithTools(slug);
 
   if (!data) {
     return {
@@ -56,7 +57,7 @@ export async function generateMetadata({
   }
 
   const { category, tools } = data;
-  const url = `${SITE_URL}/category/${encodeURIComponent(category.id)}`;
+  const url = `${SITE_URL}/category/${encodeURIComponent(category.slug)}`;
 
   const description = `${category.name} 分类下收录了 ${tools.length} 个 AI 工具，包含工具介绍、标签、价格信息和官网入口。`;
 
@@ -85,6 +86,7 @@ export async function generateMetadata({
     },
     keywords: [
       category.name,
+      category.slug,
       `${category.name} AI 工具`,
       `${category.name} 工具推荐`,
       `${category.name} 工具目录`,
@@ -97,25 +99,17 @@ export async function generateMetadata({
 export default async function CategoryPage({
   params,
 }: {
-  params: { id: string };
+  params: { slug: string };
 }) {
-  const id = decodeURIComponent(params.id);
-  const data = await getCategoryWithTools(id);
+  const slug = decodeURIComponent(params.slug);
+  const data = await getCategoryWithTools(slug);
 
   if (!data) {
-    return (
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-3">
-        <h1 className="text-2xl font-bold">没有找到这个分类</h1>
-        <p className="text-gray-600">分类 ID：{id}</p>
-        <Link className="underline" href="/">
-          返回首页
-        </Link>
-      </div>
-    );
+    notFound();
   }
 
   const { category, tools } = data;
-  const url = `${SITE_URL}/category/${encodeURIComponent(category.id)}`;
+  const url = `${SITE_URL}/category/${encodeURIComponent(category.slug)}`;
 
   const jsonLd = {
     "@context": "https://schema.org",
