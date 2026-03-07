@@ -59,6 +59,10 @@ function parseTags(input: string) {
   );
 }
 
+function normalizeWebsite(value: string) {
+  return value.trim().replace(/\/+$/, "");
+}
+
 export async function POST(req: Request) {
   try {
     if (!verifyAdmin()) {
@@ -96,6 +100,48 @@ export async function POST(req: Request) {
       );
     }
 
+    const normalizedWebsite = normalizeWebsite(sub.website);
+
+    const existingToolByWebsite = await prisma.tool.findFirst({
+      where: {
+        website: normalizedWebsite,
+      },
+    });
+
+    if (existingToolByWebsite) {
+      await prisma.submission.update({
+        where: { id },
+        data: { status: "approved" },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        toolId: existingToolByWebsite.id,
+        toolSlug: existingToolByWebsite.slug,
+        message: "该工具已存在，已直接标记为通过",
+      });
+    }
+
+    const existingToolByName = await prisma.tool.findFirst({
+      where: {
+        name: sub.name,
+      },
+    });
+
+    if (existingToolByName) {
+      await prisma.submission.update({
+        where: { id },
+        data: { status: "approved" },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        toolId: existingToolByName.id,
+        toolSlug: existingToolByName.slug,
+        message: "同名工具已存在，已直接标记为通过",
+      });
+    }
+
     const catSlug = slugify(sub.category) || "category";
 
     const category = await prisma.category.upsert({
@@ -109,7 +155,7 @@ export async function POST(req: Request) {
     });
 
     const base =
-      slugFromWebsite(sub.website) ||
+      slugFromWebsite(normalizedWebsite) ||
       slugify(sub.name) ||
       `tool-${Date.now()}`;
 
@@ -132,7 +178,7 @@ export async function POST(req: Request) {
         slug,
         description: sub.description,
         content: sub.reason || "",
-        website: sub.website,
+        website: normalizedWebsite,
         pricing: "unknown",
         featured: false,
         clicks: 0,
@@ -179,6 +225,7 @@ export async function POST(req: Request) {
       ok: true,
       toolId: tool.id,
       toolSlug: tool.slug,
+      message: "已创建新工具",
     });
   } catch (error) {
     console.error("approve api error:", error);
