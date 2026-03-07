@@ -45,6 +45,11 @@ function resolveIconUrl(iconHref: string, website: string) {
   }
 }
 
+function isBlobLogoUrl(url: string | null | undefined) {
+  if (!url) return false;
+  return url.includes("blob.vercel-storage.com");
+}
+
 async function fetchHtml(url: string) {
   const res = await fetch(url, {
     headers: {
@@ -192,18 +197,31 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => null);
     const rawLimit = Number(body?.limit ?? 5);
+    const force = Boolean(body?.force);
+
     const limit = Number.isFinite(rawLimit)
       ? Math.max(1, Math.min(50, rawLimit))
       : 5;
 
-    const tools = await prisma.tool.findMany({
+    const candidates = await prisma.tool.findMany({
       where: {
         isPublished: true,
-        logoUrl: "",
       },
       orderBy: { createdAt: "desc" },
-      take: limit,
+      take: force ? 200 : limit,
     });
+
+    const tools = candidates
+      .filter((tool) => {
+        const logoUrl = tool.logoUrl ?? "";
+
+        if (!force) {
+          return logoUrl === "";
+        }
+
+        return logoUrl === "" || !isBlobLogoUrl(logoUrl);
+      })
+      .slice(0, limit);
 
     let success = 0;
     let skipped = 0;
@@ -250,6 +268,7 @@ export async function POST(req: Request) {
       success,
       skipped,
       failed,
+      force,
       logs,
     });
   } catch (error) {

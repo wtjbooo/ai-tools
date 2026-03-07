@@ -11,6 +11,7 @@ type ToolItem = {
   description: string;
   content: string;
   website: string | null;
+  logoUrl: string | null;
   isPublished: boolean;
   createdAt: string;
   category: {
@@ -28,6 +29,7 @@ type EditToolForm = {
   id: string;
   name: string;
   website: string;
+  logoUrl: string;
   description: string;
   content: string;
   category: string;
@@ -133,6 +135,7 @@ export default function AdminToolsPage() {
       id: tool.id,
       name: tool.name,
       website: tool.website ?? "",
+      logoUrl: tool.logoUrl ?? "",
       description: tool.description,
       content: tool.content ?? "",
       category: tool.category?.name ?? "",
@@ -180,7 +183,7 @@ export default function AdminToolsPage() {
     await load();
   }
 
-  async function backfillLogos(limit: number) {
+  async function backfillLogos(limit: number, force = false) {
     setBackfilling(true);
     setMsg(null);
     setBackfillLogs([]);
@@ -190,7 +193,7 @@ export default function AdminToolsPage() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ limit }),
+      body: JSON.stringify({ limit, force }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -208,7 +211,7 @@ export default function AdminToolsPage() {
     }
 
     setMsg(
-      `批量补 logo 完成：处理 ${data.processed} 条，成功 ${data.success}，跳过 ${data.skipped}，失败 ${data.failed}`
+      `批量补 logo 完成：处理 ${data.processed} 条，成功 ${data.success}，跳过 ${data.skipped}，失败 ${data.failed}${data.force ? "（强制重补模式）" : ""}`
     );
     setBackfillLogs(data.logs ?? []);
     await load();
@@ -258,6 +261,14 @@ export default function AdminToolsPage() {
         >
           {backfilling ? "处理中..." : "批量补 logo（20 条）"}
         </button>
+
+        <button
+          onClick={() => backfillLogos(5, true)}
+          disabled={backfilling}
+          className="rounded border px-3 py-1 text-sm"
+        >
+          {backfilling ? "处理中..." : "强制重补坏 logo（5 条）"}
+        </button>
       </div>
 
       {msg ? <div className="rounded border p-3 text-sm">{msg}</div> : null}
@@ -303,6 +314,34 @@ export default function AdminToolsPage() {
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
                     </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">logoUrl</label>
+                      <input
+                        value={editForm.logoUrl}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, logoUrl: e.target.value })
+                        }
+                        placeholder="https://... 或留空"
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        自动抓得不好时，可以手动填图片地址；留空则前台会走默认图标。
+                      </p>
+                    </div>
+
+                    {editForm.logoUrl ? (
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">logo 预览</div>
+                        <img
+                          src={editForm.logoUrl}
+                          alt="logo preview"
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded border object-cover bg-white"
+                        />
+                      </div>
+                    ) : null}
 
                     <div>
                       <label className="mb-1 block text-sm font-medium">一句话简介</label>
@@ -398,6 +437,14 @@ export default function AdminToolsPage() {
                         </span>
                       ))}
                     </div>
+
+                    {tool.logoUrl ? (
+                      <div className="text-xs text-gray-500 break-all">
+                        logoUrl：{tool.logoUrl}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400">logoUrl：未设置</div>
+                    )}
 
                     {tool.website ? (
                       <a

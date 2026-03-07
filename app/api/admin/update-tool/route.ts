@@ -16,6 +16,10 @@ function slugify(input: string) {
     .slice(0, 60);
 }
 
+function normalizeWebsite(value: string) {
+  return value.trim().replace(/\/+$/, "");
+}
+
 function parseTags(input: string) {
   return Array.from(
     new Set(
@@ -23,22 +27,9 @@ function parseTags(input: string) {
         .split(/[,，]/)
         .map((tag) => tag.trim())
         .filter(Boolean)
-        .slice(0, 10)
+        .slice(0, 20)
     )
   );
-}
-
-function normalizeWebsite(value: string) {
-  return value.trim().replace(/\/+$/, "");
-}
-
-function isValidHttpUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 export async function POST(req: Request) {
@@ -56,111 +47,132 @@ export async function POST(req: Request) {
 
     const id = String(body?.id ?? "").trim();
     const name = String(body?.name ?? "").trim();
-    const website = normalizeWebsite(String(body?.website ?? ""));
+    const website = String(body?.website ?? "").trim();
+    const logoUrl = String(body?.logoUrl ?? "").trim();
     const description = String(body?.description ?? "").trim();
     const content = String(body?.content ?? "").trim();
-    const category = String(body?.category ?? "").trim();
-    const tags = String(body?.tags ?? "").trim();
+    const categoryName = String(body?.category ?? "").trim();
+    const tagsInput = String(body?.tags ?? "").trim();
 
     if (!id) {
       return NextResponse.json(
-        { ok: false, error: "id required" },
+        { ok: false, error: "缺少工具 id" },
         { status: 400 }
       );
     }
 
-    if (!name || !website || !description || !category) {
+    if (!name) {
       return NextResponse.json(
-        { ok: false, error: "请填写完整的工具名称、官网链接、一句话简介和分类" },
+        { ok: false, error: "工具名称不能为空" },
         { status: 400 }
       );
     }
 
-    if (name.length < 2 || name.length > 100) {
+    if (!website) {
       return NextResponse.json(
-        { ok: false, error: "工具名称长度需在 2 到 100 个字符之间" },
+        { ok: false, error: "官网链接不能为空" },
         { status: 400 }
       );
     }
 
-    if (!isValidHttpUrl(website)) {
+    if (!description) {
       return NextResponse.json(
-        { ok: false, error: "官网链接格式不正确，请填写完整的 http 或 https 地址" },
+        { ok: false, error: "一句话简介不能为空" },
         { status: 400 }
       );
     }
 
-    if (description.length < 10 || description.length > 300) {
+    if (!categoryName) {
       return NextResponse.json(
-        { ok: false, error: "一句话简介长度需在 10 到 300 个字符之间" },
+        { ok: false, error: "分类不能为空" },
         { status: 400 }
       );
     }
 
-    if (content.length > 5000) {
+    let normalizedWebsite = "";
+    try {
+      normalizedWebsite = normalizeWebsite(website);
+      new URL(normalizedWebsite);
+    } catch {
       return NextResponse.json(
-        { ok: false, error: "详细介绍过长，请控制在 5000 个字符以内" },
+        { ok: false, error: "官网链接格式不正确" },
         { status: 400 }
       );
     }
 
-    if (category.length < 2 || category.length > 50) {
+    if (logoUrl) {
+      try {
+        new URL(logoUrl);
+      } catch {
+        return NextResponse.json(
+          { ok: false, error: "logoUrl 格式不正确" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (description.length > 300) {
       return NextResponse.json(
-        { ok: false, error: "分类长度需在 2 到 50 个字符之间" },
+        { ok: false, error: "一句话简介不能超过 300 字" },
         { status: 400 }
       );
     }
 
-    if (tags.length > 200) {
+    if (content.length > 20000) {
       return NextResponse.json(
-        { ok: false, error: "标签内容过长，请控制在 200 个字符以内" },
+        { ok: false, error: "详细介绍不能超过 20000 字" },
+        { status: 400 }
+      );
+    }
+
+    if (tagsInput.length > 500) {
+      return NextResponse.json(
+        { ok: false, error: "标签内容过长" },
         { status: 400 }
       );
     }
 
     const tool = await prisma.tool.findUnique({
       where: { id },
-      include: {
-        tags: true,
-      },
     });
 
     if (!tool) {
       return NextResponse.json(
-        { ok: false, error: "tool not found" },
+        { ok: false, error: "工具不存在" },
         { status: 404 }
       );
     }
 
-    const categorySlug = slugify(category) || "category";
+    const categorySlug = slugify(categoryName) || "category";
 
-    const categoryRow = await prisma.category.upsert({
+    const category = await prisma.category.upsert({
       where: { slug: categorySlug },
-      update: { name: category },
+      update: { name: categoryName },
       create: {
-        name: category,
+        name: categoryName,
         slug: categorySlug,
         order: 0,
       },
     });
 
+    const parsedTags = parseTags(tagsInput);
+
     await prisma.tool.update({
       where: { id },
       data: {
         name,
-        website,
+        website: normalizedWebsite,
+        logoUrl,
         description,
         content,
-        categoryId: categoryRow.id,
-        searchText: `${name} ${description} ${category} ${tags} ${content}`,
+        categoryId: category.id,
+        searchText: `${name} ${description} ${categoryName} ${tagsInput} ${content}`,
       },
     });
 
     await prisma.toolTag.deleteMany({
       where: { toolId: id },
     });
-
-    const parsedTags = parseTags(tags);
 
     for (const tagName of parsedTags) {
       const tagSlug = slugify(tagName) || "tag";
@@ -174,8 +186,15 @@ export async function POST(req: Request) {
         },
       });
 
-      await prisma.toolTag.create({
-        data: {
+      await prisma.toolTag.upsert({
+        where: {
+          toolId_tagId: {
+            toolId: id,
+            tagId: tag.id,
+          },
+        },
+        update: {},
+        create: {
           toolId: id,
           tagId: tag.id,
         },
@@ -187,7 +206,7 @@ export async function POST(req: Request) {
       message: "工具保存成功",
     });
   } catch (error) {
-    console.error("update tool api error:", error);
+    console.error("update-tool api error:", error);
 
     return NextResponse.json(
       { ok: false, error: "保存失败，请稍后重试" },
