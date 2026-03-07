@@ -45,6 +45,9 @@ export default function AdminToolsPage() {
   const [editForm, setEditForm] = useState<EditToolForm | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillLogs, setBackfillLogs] = useState<string[]>([]);
+
   function handleUnauthorized(data?: { error?: string }) {
     setMsg(data?.error ?? "登录已失效，请重新登录");
     router.replace("/admin");
@@ -177,6 +180,40 @@ export default function AdminToolsPage() {
     await load();
   }
 
+  async function backfillLogos(limit: number) {
+    setBackfilling(true);
+    setMsg(null);
+    setBackfillLogs([]);
+
+    const res = await fetch("/api/admin/backfill-logos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ limit }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    setBackfilling(false);
+
+    if (res.status === 401 || res.status === 403) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!res.ok) {
+      setMsg(data.error ?? "批量补 logo 失败");
+      return;
+    }
+
+    setMsg(
+      `批量补 logo 完成：处理 ${data.processed} 条，成功 ${data.success}，跳过 ${data.skipped}，失败 ${data.failed}`
+    );
+    setBackfillLogs(data.logs ?? []);
+    await load();
+  }
+
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -198,16 +235,41 @@ export default function AdminToolsPage() {
         </div>
       </div>
 
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => load(true)}
           className="rounded border px-3 py-1 text-sm"
         >
           {loading ? "刷新中..." : "刷新"}
         </button>
+
+        <button
+          onClick={() => backfillLogos(5)}
+          disabled={backfilling}
+          className="rounded border px-3 py-1 text-sm"
+        >
+          {backfilling ? "处理中..." : "批量补 logo（5 条）"}
+        </button>
+
+        <button
+          onClick={() => backfillLogos(20)}
+          disabled={backfilling}
+          className="rounded border px-3 py-1 text-sm"
+        >
+          {backfilling ? "处理中..." : "批量补 logo（20 条）"}
+        </button>
       </div>
 
       {msg ? <div className="rounded border p-3 text-sm">{msg}</div> : null}
+
+      {backfillLogs.length > 0 ? (
+        <div className="rounded border p-3 text-sm space-y-1 bg-gray-50">
+          <div className="font-medium">本次批量补 logo 日志</div>
+          {backfillLogs.map((log, index) => (
+            <div key={`${log}-${index}`}>{log}</div>
+          ))}
+        </div>
+      ) : null}
 
       {list.length === 0 ? (
         <div className="text-gray-600">{loading ? "加载中..." : "暂无工具"}</div>
