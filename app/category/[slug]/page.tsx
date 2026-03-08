@@ -17,7 +17,7 @@ async function getCategoryBySlug(slug: string) {
   });
 }
 
-async function getCategoryTools(categoryId: number, page: number) {
+async function getCategoryTools(categoryId: string, page: number) {
   const skip = (page - 1) * PAGE_SIZE;
 
   const [total, tools] = await Promise.all([
@@ -102,7 +102,9 @@ export async function generateMetadata({
   const url = getCategoryPageUrl(category.slug, safePage);
 
   const pageText = safePage > 1 ? ` - 第 ${safePage} 页` : "";
-  const description = `${category.name} 分类下收录了 ${total} 个 AI 工具${safePage > 1 ? `，当前为第 ${safePage} 页` : ""}，包含工具介绍、标签、价格信息和官网入口。`;
+  const description = `${category.name} 分类下收录了 ${total} 个 AI 工具${
+    safePage > 1 ? `，当前为第 ${safePage} 页` : ""
+  }，包含工具介绍、标签、价格信息和官网入口。`;
 
   return {
     title: `${category.name} AI 工具推荐${pageText} | ${SITE_NAME}`,
@@ -302,7 +304,9 @@ export default async function CategoryPage({
                   href={
                     currentPage - 1 === 1
                       ? `/category/${encodeURIComponent(category.slug)}`
-                      : `/category/${encodeURIComponent(category.slug)}?page=${currentPage - 1}`
+                      : `/category/${encodeURIComponent(category.slug)}?page=${
+                          currentPage - 1
+                        }`
                   }
                   className="underline"
                 >
@@ -314,7 +318,9 @@ export default async function CategoryPage({
 
               {currentPage < totalPages ? (
                 <Link
-                  href={`/category/${encodeURIComponent(category.slug)}?page=${currentPage + 1}`}
+                  href={`/category/${encodeURIComponent(category.slug)}?page=${
+                    currentPage + 1
+                  }`}
                   className="underline"
                 >
                   下一页 →
