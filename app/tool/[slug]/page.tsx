@@ -3,6 +3,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import ToolViewTracker from "@/components/ToolViewTracker";
 
 const SITE_NAME = "AI 工具目录";
 const SITE_URL = "https://y78bq.dpdns.org";
@@ -24,7 +25,7 @@ async function getPublishedToolBySlug(slug: string) {
   });
 }
 
-async function getRelatedTools(categoryId: number, slug: string) {
+async function getRelatedTools(categoryId: string, slug: string) {
   return prisma.tool.findMany({
     where: {
       categoryId,
@@ -146,6 +147,8 @@ export default async function ToolPage({
       ? tool.logoUrl
       : "/default-tool-icon.png";
 
+  const outHref = `/out/${tool.slug}`;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -171,6 +174,8 @@ export default async function ToolPage({
 
   return (
     <>
+      <ToolViewTracker slug={tool.slug} />
+
       <Script
         id="tool-json-ld"
         type="application/ld+json"
@@ -248,7 +253,7 @@ export default async function ToolPage({
           <h2 className="text-xl font-semibold">官网入口</h2>
           {tool.website ? (
             <a
-              href={tool.website}
+              href={outHref}
               target="_blank"
               rel="noreferrer"
               className="inline-block rounded-xl bg-black px-4 py-2 text-white"
