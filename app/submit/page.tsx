@@ -14,6 +14,10 @@ export const metadata: Metadata = {
     siteName: "AI 工具目录",
     type: "website",
   },
+  robots: {
+    index: false,
+    follow: true,
+  },
 };
 
 export default function SubmitPage() {

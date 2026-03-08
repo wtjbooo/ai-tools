@@ -13,6 +13,8 @@ type ToolItem = {
   website: string | null;
   logoUrl: string | null;
   isPublished: boolean;
+  featured: boolean;
+  featuredOrder: number;
   createdAt: string;
   category: {
     name: string;
@@ -34,6 +36,7 @@ type EditToolForm = {
   content: string;
   category: string;
   tags: string;
+  featuredOrder: string;
 };
 
 export default function AdminToolsPage() {
@@ -79,7 +82,9 @@ export default function AdminToolsPage() {
       setMsg(null);
     }
 
-    const res = await fetch("/api/admin/tools");
+    const res = await fetch(`/api/admin/tools?_t=${Date.now()}`, {
+      cache: "no-store",
+    });
     const data = await res.json().catch(() => ({}));
 
     setLoading(false);
@@ -126,6 +131,35 @@ export default function AdminToolsPage() {
     }
 
     setMsg(isPublished ? "已恢复显示" : "已隐藏工具");
+    router.refresh();
+    await load();
+  }
+
+  async function toggleFeatured(id: string, featured: boolean) {
+    setMsg(null);
+
+    const res = await fetch("/api/admin/toggle-featured", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id, featured }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401 || res.status === 403) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!res.ok) {
+      setMsg(data.error ?? "操作失败");
+      return;
+    }
+
+    setMsg(featured ? "已设为推荐工具" : "已取消推荐");
+    router.refresh();
     await load();
   }
 
@@ -140,6 +174,7 @@ export default function AdminToolsPage() {
       content: tool.content ?? "",
       category: tool.category?.name ?? "",
       tags: tool.tags.map((item) => item.tag.name).join(", "),
+      featuredOrder: String(tool.featuredOrder ?? 0),
     });
     setMsg(null);
   }
@@ -160,7 +195,10 @@ export default function AdminToolsPage() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(editForm),
+      body: JSON.stringify({
+        ...editForm,
+        featuredOrder: Number(editForm.featuredOrder || "0"),
+      }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -274,7 +312,7 @@ export default function AdminToolsPage() {
       {msg ? <div className="rounded border p-3 text-sm">{msg}</div> : null}
 
       {backfillLogs.length > 0 ? (
-        <div className="rounded border p-3 text-sm space-y-1 bg-gray-50">
+        <div className="rounded border bg-gray-50 p-3 text-sm space-y-1">
           <div className="font-medium">本次批量补 logo 日志</div>
           {backfillLogs.map((log, index) => (
             <div key={`${log}-${index}`}>{log}</div>
@@ -294,7 +332,9 @@ export default function AdminToolsPage() {
                 {isEditing ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1 block text-sm font-medium">工具名称</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        工具名称
+                      </label>
                       <input
                         value={editForm.name}
                         onChange={(e) =>
@@ -305,7 +345,9 @@ export default function AdminToolsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">官网链接</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        官网链接
+                      </label>
                       <input
                         value={editForm.website}
                         onChange={(e) =>
@@ -316,7 +358,9 @@ export default function AdminToolsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">logoUrl</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        logoUrl
+                      </label>
                       <input
                         value={editForm.logoUrl}
                         onChange={(e) =>
@@ -344,19 +388,26 @@ export default function AdminToolsPage() {
                     ) : null}
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">一句话简介</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        一句话简介
+                      </label>
                       <textarea
                         rows={3}
                         value={editForm.description}
                         onChange={(e) =>
-                          setEditForm({ ...editForm, description: e.target.value })
+                          setEditForm({
+                            ...editForm,
+                            description: e.target.value,
+                          })
                         }
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">详细介绍</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        详细介绍
+                      </label>
                       <textarea
                         rows={8}
                         value={editForm.content}
@@ -368,7 +419,9 @@ export default function AdminToolsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">分类</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        分类
+                      </label>
                       <input
                         value={editForm.category}
                         onChange={(e) =>
@@ -379,7 +432,9 @@ export default function AdminToolsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">标签</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        标签
+                      </label>
                       <input
                         value={editForm.tags}
                         onChange={(e) =>
@@ -387,6 +442,27 @@ export default function AdminToolsPage() {
                         }
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        推荐顺序
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={editForm.featuredOrder}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            featuredOrder: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        数字越小越靠前。通常填 1、2、3、4……
+                      </p>
                     </div>
 
                     <div className="flex gap-2 pt-2">
@@ -416,12 +492,20 @@ export default function AdminToolsPage() {
                         </div>
                       </div>
 
-                      <div
-                        className={`rounded-full px-3 py-1 text-xs border ${
-                          tool.isPublished ? "bg-gray-100" : "bg-white"
-                        }`}
-                      >
-                        {tool.isPublished ? "已发布" : "已隐藏"}
+                      <div className="flex gap-2">
+                        <div
+                          className={`rounded-full px-3 py-1 text-xs border ${
+                            tool.isPublished ? "bg-gray-100" : "bg-white"
+                          }`}
+                        >
+                          {tool.isPublished ? "已发布" : "已隐藏"}
+                        </div>
+
+                        {tool.featured ? (
+                          <div className="rounded-full border bg-yellow-100 px-3 py-1 text-xs">
+                            推荐
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 
@@ -438,8 +522,12 @@ export default function AdminToolsPage() {
                       ))}
                     </div>
 
+                    <div className="text-xs text-gray-500">
+                      推荐顺序：{tool.featuredOrder ?? 0}
+                    </div>
+
                     {tool.logoUrl ? (
-                      <div className="text-xs text-gray-500 break-all">
+                      <div className="break-all text-xs text-gray-500">
                         logoUrl：{tool.logoUrl}
                       </div>
                     ) : (
@@ -448,7 +536,7 @@ export default function AdminToolsPage() {
 
                     {tool.website ? (
                       <a
-                        className="underline text-sm"
+                        className="text-sm underline"
                         href={tool.website}
                         target="_blank"
                         rel="noreferrer"
@@ -467,6 +555,13 @@ export default function AdminToolsPage() {
                         className="rounded border px-3 py-1 text-sm"
                       >
                         编辑
+                      </button>
+
+                      <button
+                        onClick={() => toggleFeatured(tool.id, !tool.featured)}
+                        className="rounded border px-3 py-1 text-sm"
+                      >
+                        {tool.featured ? "取消推荐" : "设为推荐"}
                       </button>
 
                       {tool.isPublished ? (

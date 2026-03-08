@@ -9,43 +9,83 @@ export const dynamic = "force-dynamic";
 
 const SITE_NAME = "AI 工具目录";
 const SITE_URL = "https://y78bq.dpdns.org";
+const PAGE_SIZE = 20;
 
-async function getCategoryWithTools(slug: string) {
-  const category = await prisma.category.findUnique({
+async function getCategoryBySlug(slug: string) {
+  return prisma.category.findUnique({
     where: { slug },
   });
+}
 
-  if (!category) return null;
+async function getCategoryTools(categoryId: number, page: number) {
+  const skip = (page - 1) * PAGE_SIZE;
 
-  const tools = await prisma.tool.findMany({
-    where: {
-      categoryId: category.id,
-      isPublished: true,
-    },
-    include: {
-      category: true,
-      tags: {
-        include: {
-          tag: true,
+  const [total, tools] = await Promise.all([
+    prisma.tool.count({
+      where: {
+        categoryId,
+        isPublished: true,
+      },
+    }),
+    prisma.tool.findMany({
+      where: {
+        categoryId,
+        isPublished: true,
+      },
+      include: {
+        category: true,
+        tags: {
+          include: {
+            tag: true,
+          },
         },
       },
-    },
-    orderBy: [{ featured: "desc" }, { clicks: "desc" }, { createdAt: "desc" }],
-    take: 100,
-  });
+      orderBy: [
+        { featured: "desc" },
+        { clicks: "desc" },
+        { createdAt: "desc" },
+      ],
+      skip,
+      take: PAGE_SIZE,
+    }),
+  ]);
 
-  return { category, tools };
+  return { total, tools };
+}
+
+function getPageFromSearchParams(page?: string) {
+  const pageNumber = Number(page);
+
+  if (!Number.isFinite(pageNumber) || pageNumber < 1) {
+    return 1;
+  }
+
+  return Math.floor(pageNumber);
+}
+
+function getCategoryPageUrl(slug: string, page: number) {
+  const encodedSlug = encodeURIComponent(slug);
+
+  if (page <= 1) {
+    return `${SITE_URL}/category/${encodedSlug}`;
+  }
+
+  return `${SITE_URL}/category/${encodedSlug}?page=${page}`;
 }
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: { slug: string };
+  searchParams: { page?: string };
 }): Promise<Metadata> {
   const slug = decodeURIComponent(params.slug);
-  const data = await getCategoryWithTools(slug);
+  const currentPage = getPageFromSearchParams(searchParams.page);
 
-  if (!data) {
+  const category = await getCategoryBySlug(slug);
+
+  if (!category) {
     return {
       title: "分类不存在",
       description: "你访问的分类页面不存在。",
@@ -56,19 +96,22 @@ export async function generateMetadata({
     };
   }
 
-  const { category, tools } = data;
-  const url = `${SITE_URL}/category/${encodeURIComponent(category.slug)}`;
+  const { total } = await getCategoryTools(category.id, currentPage);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = currentPage > totalPages ? totalPages : currentPage;
+  const url = getCategoryPageUrl(category.slug, safePage);
 
-  const description = `${category.name} 分类下收录了 ${tools.length} 个 AI 工具，包含工具介绍、标签、价格信息和官网入口。`;
+  const pageText = safePage > 1 ? ` - 第 ${safePage} 页` : "";
+  const description = `${category.name} 分类下收录了 ${total} 个 AI 工具${safePage > 1 ? `，当前为第 ${safePage} 页` : ""}，包含工具介绍、标签、价格信息和官网入口。`;
 
   return {
-    title: `${category.name} AI 工具推荐 | ${SITE_NAME}`,
+    title: `${category.name} AI 工具推荐${pageText} | ${SITE_NAME}`,
     description,
     alternates: {
       canonical: url,
     },
     openGraph: {
-      title: `${category.name} AI 工具推荐 | ${SITE_NAME}`,
+      title: `${category.name} AI 工具推荐${pageText} | ${SITE_NAME}`,
       description,
       url,
       siteName: SITE_NAME,
@@ -77,7 +120,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${category.name} AI 工具推荐 | ${SITE_NAME}`,
+      title: `${category.name} AI 工具推荐${pageText} | ${SITE_NAME}`,
       description,
     },
     robots: {
@@ -98,24 +141,37 @@ export async function generateMetadata({
 
 export default async function CategoryPage({
   params,
+  searchParams,
 }: {
   params: { slug: string };
+  searchParams: { page?: string };
 }) {
   const slug = decodeURIComponent(params.slug);
-  const data = await getCategoryWithTools(slug);
+  const currentPage = getPageFromSearchParams(searchParams.page);
 
-  if (!data) {
+  const category = await getCategoryBySlug(slug);
+
+  if (!category) {
     notFound();
   }
 
-  const { category, tools } = data;
-  const url = `${SITE_URL}/category/${encodeURIComponent(category.slug)}`;
+  const { total, tools } = await getCategoryTools(category.id, currentPage);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  if (currentPage > totalPages && total > 0) {
+    notFound();
+  }
+
+  const url = getCategoryPageUrl(category.slug, currentPage);
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `${category.name} AI 工具推荐`,
-    description: `${category.name} 分类下收录了 ${tools.length} 个 AI 工具，包含工具介绍、标签、价格信息和官网入口。`,
+    name:
+      currentPage > 1
+        ? `${category.name} AI 工具推荐 - 第 ${currentPage} 页`
+        : `${category.name} AI 工具推荐`,
+    description: `${category.name} 分类下收录了 ${total} 个 AI 工具，包含工具介绍、标签、价格信息和官网入口。`,
     url,
     isPartOf: {
       "@type": "WebSite",
@@ -126,7 +182,7 @@ export default async function CategoryPage({
       "@type": "ItemList",
       itemListElement: tools.map((tool, index) => ({
         "@type": "ListItem",
-        position: index + 1,
+        position: (currentPage - 1) * PAGE_SIZE + index + 1,
         url: `${SITE_URL}/tool/${tool.slug}`,
         name: tool.name,
       })),
@@ -148,8 +204,15 @@ export default async function CategoryPage({
           <Link className="underline" href="/">
             ← 返回首页
           </Link>
-          <h1 className="text-3xl font-bold">{category.name}</h1>
-          <p className="text-gray-600">共收录 {tools.length} 个工具</p>
+
+          <h1 className="text-3xl font-bold">
+            {category.name}
+            {currentPage > 1 ? ` - 第 ${currentPage} 页` : ""}
+          </h1>
+
+          <p className="text-gray-600">
+            共收录 {total} 个工具 · 当前第 {currentPage} / {totalPages} 页
+          </p>
         </div>
 
         {tools.length === 0 ? (
@@ -157,80 +220,110 @@ export default async function CategoryPage({
             这个分类下暂时还没有工具。
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {tools.map((tool) => {
-              const showPricing =
-                tool.pricing &&
-                tool.pricing !== "unknown" &&
-                tool.pricing !== "未知";
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
+              {tools.map((tool) => {
+                const showPricing =
+                  tool.pricing &&
+                  tool.pricing !== "unknown" &&
+                  tool.pricing !== "未知";
 
-              const logoSrc =
-                tool.logoUrl && tool.logoUrl.trim() !== ""
-                  ? tool.logoUrl
-                  : "/default-tool-icon.png";
+                const logoSrc =
+                  tool.logoUrl && tool.logoUrl.trim() !== ""
+                    ? tool.logoUrl
+                    : "/default-tool-icon.png";
 
-              return (
-                <Link
-                  key={tool.id}
-                  href={`/tool/${tool.slug}`}
-                  className="rounded-2xl border p-5 hover:shadow-md transition"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h2 className="text-lg font-semibold">{tool.name}</h2>
+                return (
+                  <Link
+                    key={tool.id}
+                    href={`/tool/${tool.slug}`}
+                    className="rounded-2xl border p-5 hover:shadow-md transition"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h2 className="text-lg font-semibold">{tool.name}</h2>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {tool.featured ? (
+                            <span className="rounded-full bg-black px-2 py-1 text-xs text-white">
+                              推荐
+                            </span>
+                          ) : null}
+
+                          <img
+                            src={logoSrc}
+                            alt={`${tool.name} logo`}
+                            width={24}
+                            height={24}
+                            className="h-6 w-6 rounded object-cover"
+                          />
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        {tool.featured ? (
-                          <span className="rounded-full bg-black px-2 py-1 text-xs text-white">
-                            推荐
+                      <p className="text-sm text-gray-700">
+                        {tool.description || "暂无简介"}
+                      </p>
+
+                      <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                        <span className="rounded-full bg-gray-100 px-2 py-1">
+                          点击 {tool.clicks}
+                        </span>
+
+                        {showPricing ? (
+                          <span className="rounded-full bg-gray-100 px-2 py-1">
+                            {tool.pricing}
                           </span>
                         ) : null}
 
-                        <img
-                          src={logoSrc}
-                          alt={`${tool.name} logo`}
-                          width={24}
-                          height={24}
-                          className="h-6 w-6 rounded object-cover"
-                        />
+                        {tool.tags.slice(0, 4).map((item) => (
+                          <span
+                            key={item.tag.id}
+                            className="rounded-full border px-2 py-1"
+                          >
+                            {item.tag.name}
+                          </span>
+                        ))}
                       </div>
-                    </div>
 
-                    <p className="text-sm text-gray-700">
-                      {tool.description || "暂无简介"}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                      <span className="rounded-full bg-gray-100 px-2 py-1">
-                        点击 {tool.clicks}
+                      <span className="inline-block text-sm underline">
+                        查看详情
                       </span>
-
-                      {showPricing ? (
-                        <span className="rounded-full bg-gray-100 px-2 py-1">
-                          {tool.pricing}
-                        </span>
-                      ) : null}
-
-                      {tool.tags.slice(0, 4).map((item) => (
-                        <span
-                          key={item.tag.id}
-                          className="rounded-full border px-2 py-1"
-                        >
-                          {item.tag.name}
-                        </span>
-                      ))}
                     </div>
+                  </Link>
+                );
+              })}
+            </div>
 
-                    <span className="inline-block text-sm underline">
-                      查看详情
-                    </span>
-                  </div>
+            <div className="flex items-center justify-between pt-4">
+              {currentPage > 1 ? (
+                <Link
+                  href={
+                    currentPage - 1 === 1
+                      ? `/category/${encodeURIComponent(category.slug)}`
+                      : `/category/${encodeURIComponent(category.slug)}?page=${currentPage - 1}`
+                  }
+                  className="underline"
+                >
+                  ← 上一页
                 </Link>
-              );
-            })}
-          </div>
+              ) : (
+                <span />
+              )}
+
+              {currentPage < totalPages ? (
+                <Link
+                  href={`/category/${encodeURIComponent(category.slug)}?page=${currentPage + 1}`}
+                  className="underline"
+                >
+                  下一页 →
+                </Link>
+              ) : (
+                <span />
+              )}
+            </div>
+          </>
         )}
       </div>
     </>

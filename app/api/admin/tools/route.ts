@@ -16,17 +16,40 @@ export async function GET() {
   }
 
   const list = await prisma.tool.findMany({
-    include: {
-      category: true,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      content: true,
+      website: true,
+      logoUrl: true,
+      isPublished: true,
+      featured: true,
+      featuredOrder: true,
+      createdAt: true,
+      category: {
+        select: {
+          name: true,
+        },
+      },
       tags: {
         include: {
           tag: true,
         },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: [
+      {
+        featured: "desc",
+      },
+      {
+        featuredOrder: "asc",
+      },
+      {
+        createdAt: "desc",
+      },
+    ],
     take: 300,
   });
 

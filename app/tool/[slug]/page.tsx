@@ -24,6 +24,27 @@ async function getPublishedToolBySlug(slug: string) {
   });
 }
 
+async function getRelatedTools(categoryId: number, slug: string) {
+  return prisma.tool.findMany({
+    where: {
+      categoryId,
+      isPublished: true,
+      NOT: {
+        slug,
+      },
+    },
+    orderBy: [{ featured: "desc" }, { clicks: "desc" }, { createdAt: "desc" }],
+    take: 4,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      logoUrl: true,
+    },
+  });
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -103,6 +124,10 @@ export default async function ToolPage({
   if (!tool) {
     notFound();
   }
+
+  const relatedTools = tool.categoryId
+    ? await getRelatedTools(tool.categoryId, tool.slug)
+    : [];
 
   const showPricing =
     tool.pricing &&
@@ -256,6 +281,50 @@ export default async function ToolPage({
             <p>Slug：{tool.slug}</p>
           </div>
         </section>
+
+        {relatedTools.length > 0 ? (
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">相关工具</h2>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {relatedTools.map((t) => {
+                const relatedLogoSrc =
+                  t.logoUrl && t.logoUrl.trim() !== ""
+                    ? t.logoUrl
+                    : "/default-tool-icon.png";
+
+                return (
+                  <Link
+                    key={t.id}
+                    href={`/tool/${t.slug}`}
+                    className="block rounded-xl border bg-white p-4 transition hover:shadow-lg"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold">{t.name}</div>
+                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                          {t.description ?? "暂无简介"}
+                        </p>
+                      </div>
+
+                      <img
+                        src={relatedLogoSrc}
+                        alt={`${t.name} logo`}
+                        width={24}
+                        height={24}
+                        className="h-6 w-6 rounded object-cover shrink-0"
+                      />
+                    </div>
+
+                    <span className="mt-2 inline-block text-sm underline">
+                      查看详情 →
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
       </div>
     </>
   );

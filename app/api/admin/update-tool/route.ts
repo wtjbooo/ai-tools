@@ -54,6 +54,9 @@ export async function POST(req: Request) {
     const categoryName = String(body?.category ?? "").trim();
     const tagsInput = String(body?.tags ?? "").trim();
 
+    const featuredOrderRaw = body?.featuredOrder;
+    const featuredOrderNumber = Number(featuredOrderRaw);
+
     if (!id) {
       return NextResponse.json(
         { ok: false, error: "缺少工具 id" },
@@ -85,6 +88,17 @@ export async function POST(req: Request) {
     if (!categoryName) {
       return NextResponse.json(
         { ok: false, error: "分类不能为空" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      featuredOrderRaw !== undefined &&
+      featuredOrderRaw !== null &&
+      (!Number.isFinite(featuredOrderNumber) || featuredOrderNumber < 0)
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "推荐排序必须是大于等于 0 的数字" },
         { status: 400 }
       );
     }
@@ -166,6 +180,9 @@ export async function POST(req: Request) {
         description,
         content,
         categoryId: category.id,
+        featuredOrder: Number.isFinite(featuredOrderNumber)
+          ? Math.floor(featuredOrderNumber)
+          : 0,
         searchText: `${name} ${description} ${categoryName} ${tagsInput} ${content}`,
       },
     });

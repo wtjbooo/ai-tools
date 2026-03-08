@@ -16,12 +16,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const q = (searchParams.q ?? "").trim();
 
+  const canonical = `${SITE_URL}/search`;
+
   if (!q) {
     return {
       title: `搜索 AI 工具 | ${SITE_NAME}`,
       description: "搜索 AI 工具、分类、标签和使用场景，快速找到适合你的 AI 工具。",
       alternates: {
-        canonical: `${SITE_URL}/search`,
+        canonical,
       },
       robots: {
         index: false,
@@ -29,8 +31,6 @@ export async function generateMetadata({
       },
     };
   }
-
-  const canonical = `${SITE_URL}/search?q=${encodeURIComponent(q)}`;
 
   return {
     title: `${q} 搜索结果 | ${SITE_NAME}`,
