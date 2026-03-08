@@ -5,6 +5,9 @@ import SearchBar from "@/components/SearchBar";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CATEGORY_SECTIONS_LIMIT = 4;
+const CATEGORY_TOOLS_LIMIT = 6;
+
 async function getHomeData() {
   const manualFeaturedTools = await prisma.tool.findMany({
     where: {
@@ -114,12 +117,49 @@ async function getHomeData() {
     take: 8,
   });
 
+  const sectionCategories = await prisma.category.findMany({
+    where: {
+      tools: {
+        some: {
+          isPublished: true,
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      tools: {
+        where: {
+          isPublished: true,
+        },
+        include: {
+          category: true,
+          tags: {
+            include: {
+              tag: true,
+            },
+          },
+        },
+        orderBy: [{ featured: "desc" }, { clicks: "desc" }, { createdAt: "desc" }],
+        take: CATEGORY_TOOLS_LIMIT,
+      },
+    },
+    orderBy: {
+      tools: {
+        _count: "desc",
+      },
+    },
+    take: CATEGORY_SECTIONS_LIMIT,
+  });
+
   return {
     featuredTools,
     popularTools,
     latestTools,
     categories,
     hasManualFeatured,
+    sectionCategories,
   };
 }
 
@@ -192,6 +232,7 @@ export default async function HomePage() {
     latestTools,
     categories,
     hasManualFeatured,
+    sectionCategories,
   } = await getHomeData();
 
   return (
@@ -281,6 +322,47 @@ export default async function HomePage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {latestTools.map((tool) => (
               <ToolCard key={tool.id} tool={tool} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">按分类浏览</h2>
+          <span className="text-sm text-gray-500">更像目录站的逛法</span>
+        </div>
+
+        {sectionCategories.length === 0 ? (
+          <div className="rounded-2xl border p-6 text-gray-600">
+            暂时还没有可展示的分类模块。
+          </div>
+        ) : (
+          <div className="space-y-10">
+            {sectionCategories.map((category) => (
+              <section key={category.id} className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold">{category.name}</h3>
+                  <Link
+                    href={`/category/${category.slug}`}
+                    className="text-sm underline"
+                  >
+                    更多 →
+                  </Link>
+                </div>
+
+                {category.tools.length === 0 ? (
+                  <div className="rounded-2xl border p-6 text-gray-600">
+                    这个分类下暂时还没有工具。
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {category.tools.map((tool) => (
+                      <ToolCard key={tool.id} tool={tool} />
+                    ))}
+                  </div>
+                )}
+              </section>
             ))}
           </div>
         )}
