@@ -29,29 +29,29 @@ model Tag {
 }
 
 model Tool {
-  id          String    @id @default(cuid())
-  name        String
-  slug        String    @unique
-  description String
-  content     String    @default("")
-  website     String?
-  pricing     String    @default("unknown")
-  featured    Boolean   @default(false)
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String
+  content       String    @default("")
+  website       String?
+  pricing       String    @default("unknown")
+  featured      Boolean   @default(false)
+  clicks        Int       @default(0)
+  logoUrl       String    @default("")
+  screenshots   String    @default("")
+  searchText    String    @default("")
+  categoryId    String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  isPublished   Boolean   @default(true)
   featuredOrder Int       @default(0)
-  clicks      Int       @default(0)
-  logoUrl     String    @default("")
-  screenshots String    @default("")
-  searchText  String    @default("")
-  categoryId  String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  isPublished Boolean   @default(true)
-  category    Category  @relation(fields: [categoryId], references: [id])
-  tags        ToolTag[]
+  category      Category  @relation(fields: [categoryId], references: [id])
+  tags          ToolTag[]
 
   @@index([categoryId])
-  @@index([clicks])
   @@index([slug])
+  @@index([clicks])
 }
 
 model ToolTag {
@@ -71,8 +71,8 @@ model Submission {
   category    String
   tags        String   @default("")
   contact     String   @default("")
-  reason      String   @default("")
   status      String   @default("pending")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  reason      String   @default("")
 }
