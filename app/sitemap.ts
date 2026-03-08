@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db";
 
 const baseUrl = "https://y78bq.dpdns.org";
 
@@ -47,7 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const toolPages: MetadataRoute.Sitemap = tools.map((tool) => ({
-    url: `${baseUrl}/tools/${tool.slug}`,
+    url: `${baseUrl}/tool/${tool.slug}`,
     lastModified: tool.updatedAt,
     changeFrequency: "weekly",
     priority: 0.8,
@@ -56,7 +56,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const categoryPages: MetadataRoute.Sitemap = categories
     .filter((category) => category.tools.length > 0)
     .map((category) => ({
-      url: `${baseUrl}/categories/${category.slug}`,
+      url: `${baseUrl}/category/${category.slug}`,
       lastModified: category.updatedAt,
       changeFrequency: "weekly",
       priority: 0.7,
