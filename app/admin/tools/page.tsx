@@ -429,6 +429,9 @@ export default function AdminToolsPage() {
                         }
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        这里只填一个主分类，例如：视频生成。不要填写“聊天助手 / 视频生成”这种多个分类组合。
+                      </p>
                     </div>
 
                     <div>

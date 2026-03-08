@@ -9,6 +9,51 @@ const CATEGORY_SECTIONS_LIMIT = 4;
 const CATEGORY_TOOLS_LIMIT = 6;
 
 async function getHomeData() {
+  const featuredTotal = await prisma.tool.count({
+    where: {
+      isPublished: true,
+      featured: true,
+    },
+  });
+
+  const featuredCategoriesRaw = await prisma.category.findMany({
+    where: {
+      tools: {
+        some: {
+          isPublished: true,
+          featured: true,
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      tools: {
+        where: {
+          isPublished: true,
+          featured: true,
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+    orderBy: {
+      tools: {
+        _count: "desc",
+      },
+    },
+    take: 6,
+  });
+
+  const featuredCategories = featuredCategoriesRaw.map((category) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    count: category.tools.length,
+  }));
+
   const manualFeaturedTools = await prisma.tool.findMany({
     where: {
       isPublished: true,
@@ -20,14 +65,7 @@ async function getHomeData() {
         include: { tag: true },
       },
     },
-    orderBy: [
-      {
-        featuredOrder: "asc",
-      },
-      {
-        createdAt: "desc",
-      },
-    ],
+    orderBy: [{ featuredOrder: "asc" }, { createdAt: "desc" }],
     take: 6,
   });
 
@@ -117,7 +155,7 @@ async function getHomeData() {
     take: 8,
   });
 
-  const sectionCategories = await prisma.category.findMany({
+  const sectionCategoriesRaw = await prisma.category.findMany({
     where: {
       tools: {
         some: {
@@ -129,6 +167,15 @@ async function getHomeData() {
       id: true,
       name: true,
       slug: true,
+      _count: {
+        select: {
+          tools: {
+            where: {
+              isPublished: true,
+            },
+          },
+        },
+      },
       tools: {
         where: {
           isPublished: true,
@@ -153,8 +200,18 @@ async function getHomeData() {
     take: CATEGORY_SECTIONS_LIMIT,
   });
 
+  const sectionCategories = sectionCategoriesRaw.map((category) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    count: category._count.tools,
+    tools: category.tools,
+  }));
+
   return {
     featuredTools,
+    featuredTotal,
+    featuredCategories,
     popularTools,
     latestTools,
     categories,
@@ -228,6 +285,8 @@ function ToolCard({ tool }: any) {
 export default async function HomePage() {
   const {
     featuredTools,
+    featuredTotal,
+    featuredCategories,
     popularTools,
     latestTools,
     categories,
@@ -275,12 +334,44 @@ export default async function HomePage() {
       </section>
 
       <section className="space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">推荐工具</h2>
-          {!hasManualFeatured ? (
-            <span className="text-sm text-gray-500">当前为自动推荐</span>
-          ) : null}
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold">推荐工具</h2>
+            <p className="text-sm text-gray-500">
+              当前共收录 {featuredTotal} 个精选推荐工具
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {!hasManualFeatured ? (
+              <span className="text-sm text-gray-500">当前为自动推荐</span>
+            ) : null}
+            <Link href="/featured" className="text-sm underline">
+              查看全部精选 →
+            </Link>
+          </div>
         </div>
+
+        {featuredCategories.length > 0 ? (
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/featured"
+              className="rounded-full border px-4 py-2 text-sm transition hover:bg-gray-100"
+            >
+              全部精选（{featuredTotal}）
+            </Link>
+
+            {featuredCategories.map((category) => (
+              <Link
+                key={category.id}
+                href={`/featured?category=${encodeURIComponent(category.slug)}`}
+                className="rounded-full border px-4 py-2 text-sm transition hover:bg-gray-100"
+              >
+                {category.name}（{category.count}）
+              </Link>
+            ))}
+          </div>
+        ) : null}
 
         {featuredTools.length === 0 ? (
           <div className="rounded-2xl border p-6 text-gray-600">
@@ -342,7 +433,9 @@ export default async function HomePage() {
             {sectionCategories.map((category) => (
               <section key={category.id} className="space-y-5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold">{category.name}</h3>
+                  <h3 className="text-xl font-bold">
+                    {category.name}（{category.count}）
+                  </h3>
                   <Link
                     href={`/category/${category.slug}`}
                     className="text-sm underline"

@@ -32,6 +32,61 @@ function parseTags(input: string) {
   );
 }
 
+function buildSafeCategorySlug(name: string) {
+  const trimmedName = name.trim();
+  const englishSlug = slugify(trimmedName);
+
+  if (englishSlug) {
+    return englishSlug;
+  }
+
+  return `category-${Date.now()}`;
+}
+
+async function findOrCreateCategoryByName(categoryName: string) {
+  const trimmedName = categoryName.trim();
+
+  const existingByName = await prisma.category.findFirst({
+    where: {
+      name: trimmedName,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  if (existingByName) {
+    return existingByName;
+  }
+
+  const baseSlug = buildSafeCategorySlug(trimmedName);
+
+  let finalSlug = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const exists = await prisma.category.findUnique({
+      where: { slug: finalSlug },
+      select: { id: true },
+    });
+
+    if (!exists) {
+      break;
+    }
+
+    finalSlug = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+
+  return prisma.category.create({
+    data: {
+      name: trimmedName,
+      slug: finalSlug,
+      order: 0,
+    },
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const ok = await isAdminAuthenticated();
@@ -157,18 +212,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const categorySlug = slugify(categoryName) || "category";
-
-    const category = await prisma.category.upsert({
-      where: { slug: categorySlug },
-      update: { name: categoryName },
-      create: {
-        name: categoryName,
-        slug: categorySlug,
-        order: 0,
-      },
-    });
-
+    const category = await findOrCreateCategoryByName(categoryName);
     const parsedTags = parseTags(tagsInput);
 
     await prisma.tool.update({
@@ -192,16 +236,43 @@ export async function POST(req: Request) {
     });
 
     for (const tagName of parsedTags) {
-      const tagSlug = slugify(tagName) || "tag";
+      const tagSlugBase = slugify(tagName);
+      const safeTagSlug = tagSlugBase || `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      const tag = await prisma.tag.upsert({
-        where: { slug: tagSlug },
-        update: { name: tagName },
-        create: {
-          name: tagName,
-          slug: tagSlug,
-        },
+      const existingTagByName = await prisma.tag.findFirst({
+        where: { name: tagName },
+        orderBy: { createdAt: "asc" },
       });
+
+      let tag;
+
+      if (existingTagByName) {
+        tag = existingTagByName;
+      } else {
+        let finalTagSlug = safeTagSlug;
+        let counter = 1;
+
+        while (true) {
+          const exists = await prisma.tag.findUnique({
+            where: { slug: finalTagSlug },
+            select: { id: true },
+          });
+
+          if (!exists) {
+            break;
+          }
+
+          finalTagSlug = `${safeTagSlug}-${counter}`;
+          counter += 1;
+        }
+
+        tag = await prisma.tag.create({
+          data: {
+            name: tagName,
+            slug: finalTagSlug,
+          },
+        });
+      }
 
       await prisma.toolTag.upsert({
         where: {
