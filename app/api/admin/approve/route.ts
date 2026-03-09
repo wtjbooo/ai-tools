@@ -6,15 +6,107 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/auth";
 
+const INVALID_CATEGORY_SLUGS = new Set([
+  "category",
+  "categories",
+  "uncategorized",
+  "unknown",
+  "分类",
+  "未分类",
+]);
+
+function normalizeSpaces(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 function slugify(input: string) {
   return input
+    .normalize("NFKC")
     .toLowerCase()
     .trim()
-    .replace(/[\s]+/g, "-")
-    .replace(/[^a-z0-9\-]+/g, "")
-    .replace(/\-+/g, "-")
-    .replace(/^\-+|\-+$/g, "")
+    .replace(/[’'"]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[()（）[\]【】]/g, " ")
+    .replace(/[\/\\|]+/g, " ")
+    .replace(/,|，|、/g, " ")
+    // 保留：中文、英文、数字、空格、连字符
+    .replace(/[^\p{L}\p{N}\s-]+/gu, " ")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
     .slice(0, 60);
+}
+
+function normalizeSingleCategoryName(raw: string) {
+  const value = normalizeSpaces(raw || "");
+
+  if (!value) {
+    throw new Error("分类不能为空");
+  }
+
+  // 禁止组合分类：聊天助手 / 视频生成、聊天助手, 视频生成、聊天助手、视频生成
+  if (/[\/\\|]+/.test(value) || /,|，|、/.test(value)) {
+    throw new Error(
+      "分类只能填写一个主分类，不能填写“聊天助手 / 视频生成”这种组合值"
+    );
+  }
+
+  const lower = value.toLowerCase();
+
+  if (
+    lower === "category" ||
+    lower === "categories" ||
+    lower === "uncategorized" ||
+    lower === "unknown"
+  ) {
+    throw new Error("分类值无效，请填写真实分类名称");
+  }
+
+  return value;
+}
+
+function buildCategorySlug(raw: string) {
+  const name = normalizeSingleCategoryName(raw);
+  const slug = slugify(name);
+
+  if (!slug) {
+    throw new Error(`分类 slug 生成失败：${name}`);
+  }
+
+  if (INVALID_CATEGORY_SLUGS.has(slug)) {
+    throw new Error(`分类 slug 非法：${slug}`);
+  }
+
+  return slug;
+}
+
+async function findOrCreateCategory(rawCategory: string) {
+  const name = normalizeSingleCategoryName(rawCategory);
+  const slug = buildCategorySlug(name);
+
+  const bySlug = await prisma.category.findUnique({
+    where: { slug },
+  });
+
+  if (bySlug) {
+    return bySlug;
+  }
+
+  const byName = await prisma.category.findFirst({
+    where: { name },
+  });
+
+  if (byName) {
+    return byName;
+  }
+
+  return prisma.category.create({
+    data: {
+      name,
+      slug,
+      order: 0,
+    },
+  });
 }
 
 function slugFromWebsite(website: string) {
@@ -272,17 +364,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const catSlug = slugify(sub.category) || "category";
-
-    const category = await prisma.category.upsert({
-      where: { slug: catSlug },
-      update: { name: sub.category },
-      create: {
-        name: sub.category,
-        slug: catSlug,
-        order: 0,
-      },
-    });
+    const category = await findOrCreateCategory(sub.category);
 
     const base =
       slugFromWebsite(normalizedWebsite) ||
@@ -322,7 +404,7 @@ export async function POST(req: Request) {
     });
 
     for (const tagName of parsedTags) {
-      const tagSlug = slugify(tagName) || "tag";
+      const tagSlug = slugify(tagName) || `tag-${Date.now()}`;
 
       const tag = await prisma.tag.upsert({
         where: { slug: tagSlug },
@@ -363,8 +445,11 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("approve api error:", error);
 
+    const message =
+      error instanceof Error ? error.message : "通过失败，请稍后重试";
+
     return NextResponse.json(
-      { ok: false, error: "通过失败，请稍后重试" },
+      { ok: false, error: message || "通过失败，请稍后重试" },
       { status: 500 }
     );
   }

@@ -28,17 +28,73 @@ type EditForm = {
   reason: string;
 };
 
+const STATUS_OPTIONS = [
+  { value: "pending", label: "待审核" },
+  { value: "approved", label: "已通过" },
+  { value: "rejected", label: "已拒绝" },
+] as const;
+
+type StatusValue = (typeof STATUS_OPTIONS)[number]["value"];
+type ActionType = "approve" | "reject" | "save" | null;
+
+function normalizeSpaces(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function validateSingleCategoryName(raw: string) {
+  const value = normalizeSpaces(raw || "");
+
+  if (!value) {
+    return "分类不能为空";
+  }
+
+  if (/[\/\\|]+/.test(value) || /,|，|、/.test(value)) {
+    return "分类只能填写一个主分类，不能填写“聊天助手 / 视频生成”这种组合值";
+  }
+
+  const lower = value.toLowerCase();
+
+  if (
+    lower === "category" ||
+    lower === "categories" ||
+    lower === "uncategorized" ||
+    lower === "unknown"
+  ) {
+    return "分类值无效，请填写真实分类名称";
+  }
+
+  if (value.length < 2 || value.length > 50) {
+    return "分类长度需在 2 到 50 个字符之间";
+  }
+
+  return "";
+}
+
+function getButtonClass(disabled = false, active = false) {
+  return [
+    "rounded border px-3 py-1 text-sm transition duration-150",
+    "active:scale-[0.97] active:opacity-80",
+    active ? "bg-gray-100" : "bg-white",
+    disabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-50",
+  ].join(" ");
+}
+
 export default function AdminSubmissionsPage() {
   const router = useRouter();
 
-  const [status, setStatus] = useState<"pending" | "approved" | "rejected">("pending");
+  const [status, setStatus] = useState<StatusValue>("pending");
   const [list, setList] = useState<Submission[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
-  const [saving, setSaving] = useState(false);
+
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<ActionType>(null);
+
+  const isBusy = loading || loggingOut || !!actionId;
 
   function handleUnauthorized(data?: { error?: string }) {
     setMsg(data?.error ?? "登录已失效，请重新登录");
@@ -46,6 +102,9 @@ export default function AdminSubmissionsPage() {
   }
 
   async function logout() {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
     setMsg(null);
 
     const res = await fetch("/api/admin/logout", {
@@ -53,6 +112,8 @@ export default function AdminSubmissionsPage() {
     });
 
     const data = await res.json().catch(() => ({}));
+
+    setLoggingOut(false);
 
     if (!res.ok) {
       setMsg(data.error ?? "退出失败");
@@ -94,6 +155,10 @@ export default function AdminSubmissionsPage() {
   }, [status]);
 
   async function approve(id: string) {
+    if (actionId) return;
+
+    setActionId(id);
+    setActionType("approve");
     setMsg(null);
 
     const res = await fetch("/api/admin/approve", {
@@ -103,6 +168,9 @@ export default function AdminSubmissionsPage() {
     });
 
     const data = await res.json().catch(() => ({}));
+
+    setActionId(null);
+    setActionType(null);
 
     if (res.status === 401 || res.status === 403) {
       handleUnauthorized(data);
@@ -119,6 +187,10 @@ export default function AdminSubmissionsPage() {
   }
 
   async function reject(id: string) {
+    if (actionId) return;
+
+    setActionId(id);
+    setActionType("reject");
     setMsg(null);
 
     const res = await fetch("/api/admin", {
@@ -128,6 +200,9 @@ export default function AdminSubmissionsPage() {
     });
 
     const data = await res.json().catch(() => ({}));
+
+    setActionId(null);
+    setActionType(null);
 
     if (res.status === 401 || res.status === 403) {
       handleUnauthorized(data);
@@ -144,6 +219,8 @@ export default function AdminSubmissionsPage() {
   }
 
   function startEdit(x: Submission) {
+    if (isBusy) return;
+
     setEditingId(x.id);
     setEditForm({
       id: x.id,
@@ -159,25 +236,38 @@ export default function AdminSubmissionsPage() {
   }
 
   function cancelEdit() {
+    if (actionType === "save") return;
+
     setEditingId(null);
     setEditForm(null);
   }
 
   async function saveEdit() {
-    if (!editForm) return;
+    if (!editForm || actionId) return;
 
-    setSaving(true);
+    const categoryError = validateSingleCategoryName(editForm.category);
+    if (categoryError) {
+      setMsg(categoryError);
+      return;
+    }
+
+    setActionId(editForm.id);
+    setActionType("save");
     setMsg(null);
 
     const res = await fetch("/api/admin/update-submission", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
+      body: JSON.stringify({
+        ...editForm,
+        category: normalizeSpaces(editForm.category),
+      }),
     });
 
     const data = await res.json().catch(() => ({}));
 
-    setSaving(false);
+    setActionId(null);
+    setActionType(null);
 
     if (res.status === 401 || res.status === 403) {
       handleUnauthorized(data);
@@ -196,7 +286,7 @@ export default function AdminSubmissionsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl p-6 space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-bold">审核队列</h1>
 
@@ -209,29 +299,33 @@ export default function AdminSubmissionsPage() {
           </Link>
           <button
             onClick={logout}
-            className="rounded border px-3 py-1 text-sm"
+            disabled={loggingOut}
+            className={getButtonClass(loggingOut)}
           >
-            退出登录
+            {loggingOut ? "退出中..." : "退出登录"}
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
-        {(["pending", "approved", "rejected"] as const).map((s) => (
+      <div className="flex flex-wrap items-center gap-2">
+        {STATUS_OPTIONS.map((item) => (
           <button
-            key={s}
-            onClick={() => setStatus(s)}
-            className={`rounded-full border px-3 py-1 text-sm ${
-              status === s ? "bg-gray-100" : "bg-white"
-            }`}
+            key={item.value}
+            onClick={() => setStatus(item.value)}
+            disabled={loading || !!actionId || loggingOut}
+            className={getButtonClass(
+              loading || !!actionId || loggingOut,
+              status === item.value
+            )}
           >
-            {s}
+            {item.label}
           </button>
         ))}
 
         <button
           onClick={() => load(true)}
-          className="rounded-full border px-3 py-1 text-sm"
+          disabled={loading || !!actionId || loggingOut}
+          className={getButtonClass(loading || !!actionId || loggingOut)}
         >
           {loading ? "刷新中..." : "刷新"}
         </button>
@@ -245,9 +339,13 @@ export default function AdminSubmissionsPage() {
         <div className="space-y-3">
           {list.map((x) => {
             const isEditing = editingId === x.id && editForm;
+            const isApproving = actionId === x.id && actionType === "approve";
+            const isRejecting = actionId === x.id && actionType === "reject";
+            const isSaving = actionId === x.id && actionType === "save";
+            const rowBusy = actionId === x.id;
 
             return (
-              <div key={x.id} className="rounded-xl border p-4 space-y-3">
+              <div key={x.id} className="space-y-3 rounded-xl border p-4">
                 {isEditing ? (
                   <div className="space-y-3">
                     <div>
@@ -257,7 +355,8 @@ export default function AdminSubmissionsPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, name: e.target.value })
                         }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                        disabled={isSaving}
+                        className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
                     </div>
 
@@ -268,7 +367,8 @@ export default function AdminSubmissionsPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, website: e.target.value })
                         }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                        disabled={isSaving}
+                        className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
                     </div>
 
@@ -280,7 +380,8 @@ export default function AdminSubmissionsPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, description: e.target.value })
                         }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                        disabled={isSaving}
+                        className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
                     </div>
 
@@ -291,8 +392,12 @@ export default function AdminSubmissionsPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, category: e.target.value })
                         }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                        disabled={isSaving}
+                        className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        只填写一个主分类，不要填写“聊天助手 / 视频生成”这种组合值
+                      </p>
                     </div>
 
                     <div>
@@ -302,7 +407,8 @@ export default function AdminSubmissionsPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, tags: e.target.value })
                         }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                        disabled={isSaving}
+                        className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
                     </div>
 
@@ -313,7 +419,8 @@ export default function AdminSubmissionsPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, contact: e.target.value })
                         }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                        disabled={isSaving}
+                        className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
                     </div>
 
@@ -325,22 +432,23 @@ export default function AdminSubmissionsPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, reason: e.target.value })
                         }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                        disabled={isSaving}
+                        className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
                     </div>
 
                     <div className="flex gap-2 pt-2">
                       <button
                         onClick={saveEdit}
-                        disabled={saving}
-                        className="rounded border px-3 py-1 text-sm"
+                        disabled={isSaving}
+                        className={getButtonClass(isSaving)}
                       >
-                        {saving ? "保存中..." : "保存"}
+                        {isSaving ? "保存中..." : "保存"}
                       </button>
                       <button
                         onClick={cancelEdit}
-                        disabled={saving}
-                        className="rounded border px-3 py-1 text-sm"
+                        disabled={isSaving}
+                        className={getButtonClass(isSaving)}
                       >
                         取消
                       </button>
@@ -348,23 +456,23 @@ export default function AdminSubmissionsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="font-semibold text-lg">{x.name}</div>
+                    <div className="text-lg font-semibold">{x.name}</div>
 
                     <div className="text-sm text-gray-600">
-                      分类：{x.category} · tags：{x.tags || "-"} · 联系：{x.contact || "-"}
+                      分类：{x.category} · 标签：{x.tags || "-"} · 联系方式：{x.contact || "-"}
                     </div>
 
                     <div className="text-sm">{x.description}</div>
 
                     {x.reason ? (
-                      <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700 whitespace-pre-wrap">
+                      <div className="whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
                         <div className="mb-1 font-medium text-gray-900">补充说明</div>
                         <div>{x.reason}</div>
                       </div>
                     ) : null}
 
                     <a
-                      className="underline text-sm"
+                      className="text-sm underline"
                       href={x.website}
                       target="_blank"
                       rel="noreferrer"
@@ -381,21 +489,24 @@ export default function AdminSubmissionsPage() {
                         <>
                           <button
                             onClick={() => startEdit(x)}
-                            className="rounded border px-3 py-1 text-sm"
+                            disabled={isBusy}
+                            className={getButtonClass(isBusy)}
                           >
                             编辑
                           </button>
                           <button
                             onClick={() => approve(x.id)}
-                            className="rounded border px-3 py-1 text-sm"
+                            disabled={isBusy}
+                            className={getButtonClass(rowBusy)}
                           >
-                            通过
+                            {isApproving ? "通过中..." : "通过"}
                           </button>
                           <button
                             onClick={() => reject(x.id)}
-                            className="rounded border px-3 py-1 text-sm"
+                            disabled={isBusy}
+                            className={getButtonClass(rowBusy)}
                           >
-                            拒绝
+                            {isRejecting ? "拒绝中..." : "拒绝"}
                           </button>
                         </>
                       ) : null}

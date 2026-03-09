@@ -18,6 +18,38 @@ function normalizeWebsite(value: string) {
   return value.trim().replace(/\/+$/, "");
 }
 
+function normalizeSpaces(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeSingleCategoryName(raw: string) {
+  const value = normalizeSpaces(raw || "");
+
+  if (!value) {
+    throw new Error("分类不能为空");
+  }
+
+  // 禁止组合分类：聊天助手 / 视频生成、聊天助手, 视频生成、聊天助手、视频生成
+  if (/[\/\\|]+/.test(value) || /,|，|、/.test(value)) {
+    throw new Error(
+      "分类只能填写一个主分类，不能填写“聊天助手 / 视频生成”这种组合值"
+    );
+  }
+
+  const lower = value.toLowerCase();
+
+  if (
+    lower === "category" ||
+    lower === "categories" ||
+    lower === "uncategorized" ||
+    lower === "unknown"
+  ) {
+    throw new Error("分类值无效，请填写真实分类名称");
+  }
+
+  return value;
+}
+
 export async function POST(req: Request) {
   try {
     const ok = await isAdminAuthenticated();
@@ -35,7 +67,7 @@ export async function POST(req: Request) {
     const name = String(body?.name ?? "").trim();
     const website = normalizeWebsite(String(body?.website ?? ""));
     const description = String(body?.description ?? "").trim();
-    const category = String(body?.category ?? "").trim();
+    const rawCategory = String(body?.category ?? "");
     const tags = String(body?.tags ?? "").trim();
     const contact = String(body?.contact ?? "").trim();
     const reason = String(body?.reason ?? "").trim();
@@ -43,6 +75,21 @@ export async function POST(req: Request) {
     if (!id) {
       return NextResponse.json(
         { ok: false, error: "id required" },
+        { status: 400 }
+      );
+    }
+
+    let category = "";
+
+    try {
+      category = normalizeSingleCategoryName(rawCategory);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            error instanceof Error ? error.message : "分类格式不正确",
+        },
         { status: 400 }
       );
     }

@@ -141,6 +141,100 @@ export async function generateMetadata({
   };
 }
 
+function ToolCard({ tool }: { tool: any }) {
+  const showPricing =
+    tool.pricing && tool.pricing !== "unknown" && tool.pricing !== "未知";
+
+  const logoSrc =
+    tool.logoUrl && tool.logoUrl.trim() !== ""
+      ? tool.logoUrl
+      : "/default-tool-icon.png";
+
+  return (
+    <Link
+      href={`/tool/${tool.slug}`}
+      className="group block rounded-[24px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.015] hover:border-gray-300 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] active:scale-[0.995]"
+    >
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <h2 className="truncate text-lg font-semibold tracking-tight text-gray-950 transition-colors duration-300 group-hover:text-black">
+              {tool.name}
+            </h2>
+            <div className="text-sm text-gray-500">
+              {tool.category?.name ?? "未分类"}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {tool.featured ? (
+              <span className="rounded-full bg-black px-2.5 py-1 text-xs text-white">
+                推荐
+              </span>
+            ) : null}
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-50 ring-1 ring-gray-100 transition-all duration-300 group-hover:bg-white group-hover:ring-gray-200">
+              <img
+                src={logoSrc}
+                alt={`${tool.name} logo`}
+                width={24}
+                height={24}
+                className="h-6 w-6 rounded object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+          </div>
+        </div>
+
+        <p className="line-clamp-3 min-h-[60px] text-sm leading-6 text-gray-600">
+          {tool.description || "暂无简介"}
+        </p>
+
+        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
+            点击 {tool.clicks}
+          </span>
+
+          {showPricing ? (
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
+              {tool.pricing}
+            </span>
+          ) : null}
+
+          {tool.tags.slice(0, 4).map((item: any) => (
+            <span
+              key={item.tag.id}
+              className="rounded-full border border-gray-200 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:border-gray-300"
+            >
+              {item.tag.name}
+            </span>
+          ))}
+        </div>
+
+        <span className="inline-block text-sm text-gray-700 underline underline-offset-4 transition-colors duration-300 group-hover:text-gray-950">
+          查看详情 →
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function PageButton({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+    >
+      {children}
+    </Link>
+  );
+}
+
 export default async function CategoryPage({
   params,
   searchParams,
@@ -201,136 +295,76 @@ export default async function CategoryPage({
         }}
       />
 
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-        <div className="space-y-3">
-          <Link className="underline" href="/">
-            ← 返回首页
-          </Link>
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="space-y-8">
+          <section className="relative overflow-hidden rounded-[32px] border border-gray-200 bg-white px-6 py-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:px-8 sm:py-10">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_35%),radial-gradient(circle_at_85%_20%,rgba(168,85,247,0.06),transparent_30%)]" />
 
-          <h1 className="text-3xl font-bold">
-            {category.name}
-            {currentPage > 1 ? ` - 第 ${currentPage} 页` : ""}
-          </h1>
+            <div className="relative space-y-4">
+              <Link
+                className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:text-gray-950 active:scale-[0.98]"
+                href="/"
+              >
+                ← 返回首页
+              </Link>
 
-          <p className="text-gray-600">
-            共收录 {total} 个工具 · 当前第 {currentPage} / {totalPages} 页
-          </p>
-        </div>
+              <div className="space-y-2">
+                <h1 className="text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
+                  {category.name}
+                  {currentPage > 1 ? ` - 第 ${currentPage} 页` : ""}
+                </h1>
 
-        {tools.length === 0 ? (
-          <div className="rounded-2xl border p-6 text-gray-600">
-            这个分类下暂时还没有工具。
-          </div>
-        ) : (
-          <>
-            <div className="grid gap-4 md:grid-cols-2">
-              {tools.map((tool) => {
-                const showPricing =
-                  tool.pricing &&
-                  tool.pricing !== "unknown" &&
-                  tool.pricing !== "未知";
+                <p className="text-sm leading-7 text-gray-600 sm:text-base">
+                  共收录 {total} 个工具 · 当前第 {currentPage} / {totalPages} 页
+                </p>
+              </div>
+            </div>
+          </section>
 
-                const logoSrc =
-                  tool.logoUrl && tool.logoUrl.trim() !== ""
-                    ? tool.logoUrl
-                    : "/default-tool-icon.png";
+          {tools.length === 0 ? (
+            <div className="rounded-[24px] border border-gray-200 bg-white p-6 text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+              这个分类下暂时还没有工具。
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {tools.map((tool) => (
+                  <ToolCard key={tool.id} tool={tool} />
+                ))}
+              </div>
 
-                return (
-                  <Link
-                    key={tool.id}
-                    href={`/tool/${tool.slug}`}
-                    className="rounded-2xl border p-5 hover:shadow-md transition"
+              <div className="flex items-center justify-between gap-4 pt-2">
+                {currentPage > 1 ? (
+                  <PageButton
+                    href={
+                      currentPage - 1 === 1
+                        ? `/category/${encodeURIComponent(category.slug)}`
+                        : `/category/${encodeURIComponent(category.slug)}?page=${
+                            currentPage - 1
+                          }`
+                    }
                   >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h2 className="text-lg font-semibold">{tool.name}</h2>
-                        </div>
+                    ← 上一页
+                  </PageButton>
+                ) : (
+                  <span />
+                )}
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {tool.featured ? (
-                            <span className="rounded-full bg-black px-2 py-1 text-xs text-white">
-                              推荐
-                            </span>
-                          ) : null}
-
-                          <img
-                            src={logoSrc}
-                            alt={`${tool.name} logo`}
-                            width={24}
-                            height={24}
-                            className="h-6 w-6 rounded object-cover"
-                          />
-                        </div>
-                      </div>
-
-                      <p className="text-sm text-gray-700">
-                        {tool.description || "暂无简介"}
-                      </p>
-
-                      <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                        <span className="rounded-full bg-gray-100 px-2 py-1">
-                          点击 {tool.clicks}
-                        </span>
-
-                        {showPricing ? (
-                          <span className="rounded-full bg-gray-100 px-2 py-1">
-                            {tool.pricing}
-                          </span>
-                        ) : null}
-
-                        {tool.tags.slice(0, 4).map((item) => (
-                          <span
-                            key={item.tag.id}
-                            className="rounded-full border px-2 py-1"
-                          >
-                            {item.tag.name}
-                          </span>
-                        ))}
-                      </div>
-
-                      <span className="inline-block text-sm underline">
-                        查看详情
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between pt-4">
-              {currentPage > 1 ? (
-                <Link
-                  href={
-                    currentPage - 1 === 1
-                      ? `/category/${encodeURIComponent(category.slug)}`
-                      : `/category/${encodeURIComponent(category.slug)}?page=${
-                          currentPage - 1
-                        }`
-                  }
-                  className="underline"
-                >
-                  ← 上一页
-                </Link>
-              ) : (
-                <span />
-              )}
-
-              {currentPage < totalPages ? (
-                <Link
-                  href={`/category/${encodeURIComponent(category.slug)}?page=${
-                    currentPage + 1
-                  }`}
-                  className="underline"
-                >
-                  下一页 →
-                </Link>
-              ) : (
-                <span />
-              )}
-            </div>
-          </>
-        )}
+                {currentPage < totalPages ? (
+                  <PageButton
+                    href={`/category/${encodeURIComponent(category.slug)}?page=${
+                      currentPage + 1
+                    }`}
+                  >
+                    下一页 →
+                  </PageButton>
+                ) : (
+                  <span />
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </>
   );

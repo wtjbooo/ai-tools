@@ -14,6 +14,37 @@ function normalizeWebsite(value: string) {
   return value.trim().replace(/\/+$/, "");
 }
 
+function normalizeSpaces(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeSingleCategoryName(raw: string) {
+  const value = normalizeSpaces(raw || "");
+
+  if (!value) {
+    throw new Error("分类不能为空");
+  }
+
+  if (/[\/\\|]+/.test(value) || /,|，|、/.test(value)) {
+    throw new Error(
+      "分类只能填写一个主分类，不能填写“聊天助手 / 视频生成”这种组合值"
+    );
+  }
+
+  const lower = value.toLowerCase();
+
+  if (
+    lower === "category" ||
+    lower === "categories" ||
+    lower === "uncategorized" ||
+    lower === "unknown"
+  ) {
+    throw new Error("分类值无效，请填写真实分类名称");
+  }
+
+  return value;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -21,10 +52,23 @@ export async function POST(req: Request) {
     const name = String(body.name ?? "").trim();
     const website = normalizeWebsite(String(body.website ?? ""));
     const description = String(body.description ?? "").trim();
-    const category = String(body.category ?? "").trim();
+    const rawCategory = String(body.category ?? "");
     const tags = String(body.tags ?? "").trim();
     const contact = String(body.contact ?? "").trim();
     const reason = String(body.reason ?? "").trim();
+
+    let category = "";
+
+    try {
+      category = normalizeSingleCategoryName(rawCategory);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: error instanceof Error ? error.message : "分类格式不正确",
+        },
+        { status: 400 }
+      );
+    }
 
     if (!name || !website || !description || !category) {
       return NextResponse.json(
@@ -82,27 +126,43 @@ export async function POST(req: Request) {
       );
     }
 
-    const existingByWebsite = await prisma.submission.findFirst({
+    // 1) 正式已收录工具：禁止重复提交
+    const existingToolByWebsite = await prisma.tool.findFirst({
       where: {
         website,
       },
     });
 
-    if (existingByWebsite) {
+    if (existingToolByWebsite) {
       return NextResponse.json(
-        { error: "该官网链接已提交过，请勿重复提交" },
+        { error: "该工具已被正式收录，请勿重复提交" },
         { status: 400 }
       );
     }
 
-    const existingByName = await prisma.submission.findFirst({
+    // 2) 只拦截待审核 submission；已拒绝的允许重新提交
+    const existingPendingByWebsite = await prisma.submission.findFirst({
+      where: {
+        website,
+        status: "pending",
+      },
+    });
+
+    if (existingPendingByWebsite) {
+      return NextResponse.json(
+        { error: "该官网链接已存在待审核记录，请勿重复提交" },
+        { status: 400 }
+      );
+    }
+
+    const existingPendingByName = await prisma.submission.findFirst({
       where: {
         name,
         status: "pending",
       },
     });
 
-    if (existingByName) {
+    if (existingPendingByName) {
       return NextResponse.json(
         { error: "该工具名称已存在待审核记录，请勿重复提交" },
         { status: 400 }

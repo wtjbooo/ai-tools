@@ -98,6 +98,30 @@ async function getFeaturedCategories() {
   }));
 }
 
+function FilterPill({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={[
+        "inline-flex items-center rounded-full border px-4 py-2 text-sm transition-all duration-200 active:scale-[0.98]",
+        active
+          ? "border-black bg-black text-white"
+          : "border-gray-200 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950",
+      ].join(" ")}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function ToolCard({ tool }: any) {
   const showPricing =
     tool.pricing && tool.pricing !== "unknown" && tool.pricing !== "未知";
@@ -112,49 +136,56 @@ function ToolCard({ tool }: any) {
   return (
     <Link
       href={`/tool/${tool.slug}`}
-      className="block rounded-2xl border bg-white p-4 transition hover:shadow-md"
+      className="group block rounded-[24px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.015] hover:border-gray-300 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] active:scale-[0.995]"
     >
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
-            <div className="text-lg font-semibold">{tool.name}</div>
-            <div className="text-sm text-gray-600">
+            <div className="truncate text-lg font-semibold tracking-tight text-gray-950 transition-colors duration-300 group-hover:text-black">
+              {tool.name}
+            </div>
+            <div className="text-sm text-gray-500">
               {tool.category?.name ?? "未分类"}
             </div>
           </div>
 
-          <img
-            src={logoSrc}
-            alt={`${tool.name} logo`}
-            width={24}
-            height={24}
-            className="h-6 w-6 shrink-0 rounded object-cover"
-          />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gray-50 ring-1 ring-gray-100 transition-all duration-300 group-hover:bg-white group-hover:ring-gray-200">
+            <img
+              src={logoSrc}
+              alt={`${tool.name} logo`}
+              width={24}
+              height={24}
+              className="h-6 w-6 rounded object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          </div>
         </div>
 
-        <p className="line-clamp-3 text-sm text-gray-700">
+        <p className="line-clamp-3 min-h-[60px] text-sm leading-6 text-gray-600">
           {tool.description || "暂无简介"}
         </p>
 
         <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-          <span className="rounded-full bg-gray-100 px-2 py-1">
+          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
             推荐顺序 {tool.featuredOrder ?? 0}
           </span>
 
           {tool.clicks > 0 ? (
-            <span className="rounded-full bg-gray-100 px-2 py-1">
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
               点击 {tool.clicks}
             </span>
           ) : null}
 
           {showPricing ? (
-            <span className="rounded-full bg-gray-100 px-2 py-1">
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
               {tool.pricing}
             </span>
           ) : null}
 
           {tags.map((tag: string) => (
-            <span key={tag} className="rounded-full border px-2 py-1">
+            <span
+              key={tag}
+              className="rounded-full border border-gray-200 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:border-gray-300"
+            >
               {tag}
             </span>
           ))}
@@ -223,64 +254,67 @@ export default async function FeaturedPage({
         }}
       />
 
-      <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-        <div className="space-y-3">
-          <Link href="/" className="text-sm underline">
-            ← 返回首页
-          </Link>
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="space-y-8">
+          <section className="relative overflow-hidden rounded-[32px] border border-gray-200 bg-white px-6 py-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:px-8 sm:py-10">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_35%),radial-gradient(circle_at_85%_20%,rgba(168,85,247,0.06),transparent_30%)]" />
 
-          <h1 className="text-3xl font-bold">精选推荐</h1>
-          <p className="text-gray-600">
-            这里展示站长精选推荐的 AI 工具，按推荐顺序排列。适合从高质量、优先推荐的工具开始逛。
-          </p>
-
-          <div className="text-sm text-gray-500">
-            当前共收录 {tools.length} 个
-            {currentCategory ? `「${currentCategory.name}」` : ""}精选推荐工具
-            {!currentCategory ? `（总计 ${totalFeaturedCount} 个）` : ""}
-          </div>
-        </div>
-
-        {categories.length > 0 ? (
-          <section className="space-y-4">
-            <div className="flex flex-wrap gap-3">
+            <div className="relative space-y-4">
               <Link
-                href="/featured"
-                className={`rounded-full border px-4 py-2 text-sm transition ${
-                  !selectedCategorySlug ? "bg-black text-white" : "hover:bg-gray-100"
-                }`}
+                href="/"
+                className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:text-gray-950 active:scale-[0.98]"
               >
-                全部（{totalFeaturedCount}）
+                ← 返回首页
               </Link>
 
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/featured?category=${encodeURIComponent(category.slug)}`}
-                  className={`rounded-full border px-4 py-2 text-sm transition ${
-                    selectedCategorySlug === category.slug
-                      ? "bg-black text-white"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {category.name}（{category.count}）
-                </Link>
-              ))}
+              <div className="space-y-2">
+                <h1 className="text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
+                  精选推荐
+                </h1>
+                <p className="max-w-3xl text-sm leading-7 text-gray-600 sm:text-base">
+                  这里展示站长精选推荐的 AI 工具，按推荐顺序排列。适合从高质量、优先推荐的工具开始逛。
+                </p>
+                <div className="text-sm text-gray-500">
+                  当前共收录 {tools.length} 个
+                  {currentCategory ? `「${currentCategory.name}」` : ""}精选推荐工具
+                  {!currentCategory ? `（总计 ${totalFeaturedCount} 个）` : ""}
+                </div>
+              </div>
             </div>
           </section>
-        ) : null}
 
-        {tools.length === 0 ? (
-          <div className="rounded-2xl border p-6 text-gray-600">
-            这个筛选条件下暂时还没有精选推荐工具。
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {tools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} />
-            ))}
-          </div>
-        )}
+          {categories.length > 0 ? (
+            <section className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <FilterPill href="/featured" active={!selectedCategorySlug}>
+                  全部（{totalFeaturedCount}）
+                </FilterPill>
+
+                {categories.map((category) => (
+                  <FilterPill
+                    key={category.id}
+                    href={`/featured?category=${encodeURIComponent(category.slug)}`}
+                    active={selectedCategorySlug === category.slug}
+                  >
+                    {category.name}（{category.count}）
+                  </FilterPill>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {tools.length === 0 ? (
+            <div className="rounded-[24px] border border-gray-200 bg-white p-6 text-gray-600 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+              这个筛选条件下暂时还没有精选推荐工具。
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {tools.map((tool) => (
+                <ToolCard key={tool.id} tool={tool} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
