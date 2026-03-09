@@ -230,16 +230,16 @@ function SectionTitle({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight text-gray-950">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-950 sm:text-3xl">
           {title}
         </h2>
         {description ? (
-          <p className="text-sm text-gray-500">{description}</p>
+          <p className="text-sm leading-6 text-gray-500">{description}</p>
         ) : null}
       </div>
-      {right ? <div>{right}</div> : null}
+      {right ? <div className="text-sm">{right}</div> : null}
     </div>
   );
 }
@@ -275,12 +275,12 @@ function ToolCard({ tool }: any) {
   return (
     <Link
       href={`/tool/${tool.slug}`}
-      className="group block rounded-[24px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.015] hover:border-gray-300 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] active:scale-[0.995]"
+      className="group block rounded-[22px] border border-gray-200 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.015] hover:border-gray-300 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] active:scale-[0.995] sm:rounded-[24px] sm:p-5"
     >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
-            <div className="truncate text-lg font-semibold tracking-tight text-gray-950 transition-colors duration-300 group-hover:text-black">
+            <div className="truncate text-base font-semibold tracking-tight text-gray-950 transition-colors duration-300 group-hover:text-black sm:text-lg">
               {tool.name}
             </div>
             <div className="text-sm text-gray-500">
@@ -288,18 +288,18 @@ function ToolCard({ tool }: any) {
             </div>
           </div>
 
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gray-50 ring-1 ring-gray-100 transition-all duration-300 group-hover:bg-white group-hover:ring-gray-200">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gray-50 ring-1 ring-gray-100 transition-all duration-300 group-hover:bg-white group-hover:ring-gray-200 sm:h-10 sm:w-10">
             <img
               src={logoSrc}
               alt={`${tool.name} logo`}
               width={24}
               height={24}
-              className="h-6 w-6 rounded object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-5 w-5 rounded object-cover transition-transform duration-300 group-hover:scale-105 sm:h-6 sm:w-6"
             />
           </div>
         </div>
 
-        <p className="line-clamp-3 min-h-[60px] text-sm leading-6 text-gray-600">
+        <p className="line-clamp-3 min-h-[54px] text-sm leading-6 text-gray-600 sm:min-h-[60px]">
           {tool.description || "暂无简介"}
         </p>
 
@@ -332,7 +332,7 @@ function ToolCard({ tool }: any) {
 
 function EmptyBox({ text }: { text: string }) {
   return (
-    <div className="rounded-[24px] border border-gray-200 bg-white p-6 text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+    <div className="rounded-[22px] border border-gray-200 bg-white p-5 text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:rounded-[24px] sm:p-6">
       {text}
     </div>
   );
@@ -351,13 +351,13 @@ export default async function HomePage() {
   } = await getHomeData();
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-10">
-      <div className="space-y-14">
-        <section className="relative overflow-hidden rounded-[32px] border border-gray-200 bg-white px-6 py-12 text-center shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:px-10">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+      <div className="space-y-10 sm:space-y-14">
+        <section className="relative overflow-hidden rounded-[28px] border border-gray-200 bg-white px-4 py-8 text-center shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:rounded-[32px] sm:px-10 sm:py-12">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.10),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(168,85,247,0.08),transparent_30%)]" />
-          <div className="relative mx-auto max-w-4xl space-y-5">
+          <div className="relative mx-auto max-w-4xl space-y-4 sm:space-y-5">
             <div className="space-y-3">
-              <h1 className="text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
+              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
                 AI 工具导航
               </h1>
               <p className="mx-auto max-w-2xl text-sm leading-7 text-gray-600 sm:text-base">
@@ -366,7 +366,7 @@ export default async function HomePage() {
             </div>
 
             <div className="mx-auto max-w-4xl">
-              <div className="rounded-[28px] border border-gray-200 bg-white/90 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.05)] backdrop-blur">
+              <div className="rounded-[24px] border border-gray-200 bg-white/90 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.05)] backdrop-blur sm:rounded-[28px]">
                 <SearchBar />
               </div>
             </div>
@@ -382,7 +382,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="space-y-5">
+        <section className="space-y-4 sm:space-y-5">
           <SectionTitle
             title="热门分类"
             description="从常见需求出发，快速进入对应工具方向"
@@ -404,18 +404,18 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="space-y-5">
+        <section className="space-y-4 sm:space-y-5">
           <SectionTitle
             title="推荐工具"
             description={`当前共收录 ${featuredTotal} 个精选推荐工具`}
             right={
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                 {!hasManualFeatured ? (
-                  <span className="text-sm text-gray-500">当前为自动推荐</span>
+                  <span className="text-gray-500">当前为自动推荐</span>
                 ) : null}
                 <Link
                   href="/featured"
-                  className="text-sm text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
+                  className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
                 >
                   查看全部精选 →
                 </Link>
@@ -441,7 +441,7 @@ export default async function HomePage() {
           {featuredTools.length === 0 ? (
             <EmptyBox text="暂时还没有推荐工具。" />
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
               {featuredTools.map((tool) => (
                 <ToolCard key={tool.id} tool={tool} />
               ))}
@@ -449,13 +449,13 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="space-y-5">
+        <section className="space-y-4 sm:space-y-5">
           <SectionTitle title="热门工具" />
 
           {popularTools.length === 0 ? (
             <EmptyBox text="暂时还没有热门工具。" />
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
               {popularTools.map((tool) => (
                 <ToolCard key={tool.id} tool={tool} />
               ))}
@@ -463,13 +463,13 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="space-y-5">
+        <section className="space-y-4 sm:space-y-5">
           <SectionTitle title="最新收录" />
 
           {latestTools.length === 0 ? (
             <EmptyBox text="暂时还没有最新收录的工具。" />
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
               {latestTools.map((tool) => (
                 <ToolCard key={tool.id} tool={tool} />
               ))}
@@ -477,7 +477,7 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="space-y-8">
+        <section className="space-y-6 sm:space-y-8">
           <SectionTitle
             title="按分类浏览"
             description="更像目录站的逛法"
@@ -486,11 +486,11 @@ export default async function HomePage() {
           {sectionCategories.length === 0 ? (
             <EmptyBox text="暂时还没有可展示的分类模块。" />
           ) : (
-            <div className="space-y-10">
+            <div className="space-y-8 sm:space-y-10">
               {sectionCategories.map((category) => (
-                <section key={category.id} className="space-y-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-xl font-semibold tracking-tight text-gray-950">
+                <section key={category.id} className="space-y-4 sm:space-y-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <h3 className="text-xl font-semibold tracking-tight text-gray-950 sm:text-2xl">
                       {category.name}（{category.count}）
                     </h3>
                     <Link
@@ -504,7 +504,7 @@ export default async function HomePage() {
                   {category.tools.length === 0 ? (
                     <EmptyBox text="这个分类下暂时还没有工具。" />
                   ) : (
-                    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
                       {category.tools.map((tool) => (
                         <ToolCard key={tool.id} tool={tool} />
                       ))}

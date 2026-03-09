@@ -9,6 +9,15 @@ export const dynamic = "force-dynamic";
 const SITE_NAME = "AI 工具目录";
 const SITE_URL = "https://y78bq.dpdns.org";
 
+const SEARCH_SUGGESTIONS = [
+  "聊天助手",
+  "PPT",
+  "图片生成",
+  "视频生成",
+  "写作",
+  "翻译",
+];
+
 export async function generateMetadata({
   searchParams,
 }: {
@@ -56,6 +65,17 @@ export async function generateMetadata({
       follow: true,
     },
   };
+}
+
+function SuggestionPill({ keyword }: { keyword: string }) {
+  return (
+    <Link
+      href={`/search?q=${encodeURIComponent(keyword)}`}
+      className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+    >
+      {keyword}
+    </Link>
+  );
 }
 
 function ToolCard({ tool }: { tool: any }) {
@@ -118,6 +138,58 @@ function ToolCard({ tool }: { tool: any }) {
   );
 }
 
+function EmptySearchState({
+  title,
+  description,
+  keyword,
+}: {
+  title: string;
+  description: string;
+  keyword?: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-gray-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:p-8">
+      <div className="mx-auto max-w-2xl space-y-5 text-center">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-950">
+            {title}
+          </h2>
+          <p className="text-sm leading-7 text-gray-600 sm:text-base">
+            {description}
+          </p>
+          {keyword ? (
+            <p className="text-sm text-gray-500">
+              当前关键词：<span className="font-medium text-gray-900">{keyword}</span>
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3">
+          {SEARCH_SUGGESTIONS.map((item) => (
+            <SuggestionPill key={item} keyword={item} />
+          ))}
+        </div>
+
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
+          >
+            返回首页
+          </Link>
+
+          <Link
+            href="/featured"
+            className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+          >
+            浏览精选推荐
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default async function SearchPage({
   searchParams,
 }: {
@@ -127,7 +199,7 @@ export default async function SearchPage({
 
   if (!q) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-10">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
         <div className="space-y-8">
           <section className="relative overflow-hidden rounded-[32px] border border-gray-200 bg-white px-6 py-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:px-8 sm:py-10">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_35%),radial-gradient(circle_at_85%_20%,rgba(168,85,247,0.06),transparent_30%)]" />
@@ -155,9 +227,10 @@ export default async function SearchPage({
             </div>
           </section>
 
-          <div className="rounded-[24px] border border-gray-200 bg-white p-6 text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-            请输入关键词开始搜索，例如：PPT、图片、翻译、写作、视频生成。
-          </div>
+          <EmptySearchState
+            title="输入关键词开始搜索"
+            description="你可以搜索工具名称、功能方向或使用场景，例如：聊天助手、PPT、图片生成、翻译、视频生成。"
+          />
         </div>
       </div>
     );
@@ -180,7 +253,7 @@ export default async function SearchPage({
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
       <div className="space-y-8">
         <section className="relative overflow-hidden rounded-[32px] border border-gray-200 bg-white px-6 py-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:px-8 sm:py-10">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_35%),radial-gradient(circle_at_85%_20%,rgba(168,85,247,0.06),transparent_30%)]" />
@@ -210,9 +283,11 @@ export default async function SearchPage({
         </section>
 
         {tools.length === 0 ? (
-          <div className="rounded-[24px] border border-gray-200 bg-white p-6 text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-            没找到相关工具。换个关键词试试，例如：PPT、图片、翻译、写作、视频生成。
-          </div>
+          <EmptySearchState
+            title="没有找到相关工具"
+            description="这个关键词暂时没有匹配结果。你可以试试更短的词、更常见的功能词，或者直接浏览精选推荐。"
+            keyword={q}
+          />
         ) : (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {tools.map((tool) => (

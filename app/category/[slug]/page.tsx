@@ -235,6 +235,48 @@ function PageButton({
   );
 }
 
+function EmptyCategoryState({ categoryName }: { categoryName: string }) {
+  return (
+    <div className="rounded-[24px] border border-gray-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:p-8">
+      <div className="mx-auto max-w-2xl space-y-5 text-center">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-950">
+            这个分类暂时还没有工具
+          </h2>
+          <p className="text-sm leading-7 text-gray-600 sm:text-base">
+            当前分类：
+            <span className="font-medium text-gray-900"> {categoryName} </span>
+            还没有已发布的工具。你可以先去浏览精选推荐，或者返回首页看看其他方向。
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            href="/featured"
+            className="inline-flex items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
+          >
+            浏览精选推荐
+          </Link>
+
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+          >
+            返回首页
+          </Link>
+
+          <Link
+            href="/submit"
+            className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+          >
+            提交工具
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default async function CategoryPage({
   params,
   searchParams,
@@ -322,9 +364,7 @@ export default async function CategoryPage({
           </section>
 
           {tools.length === 0 ? (
-            <div className="rounded-[24px] border border-gray-200 bg-white p-6 text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-              这个分类下暂时还没有工具。
-            </div>
+            <EmptyCategoryState categoryName={category.name} />
           ) : (
             <>
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
