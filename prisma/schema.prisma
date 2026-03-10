@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Category {
@@ -20,45 +19,53 @@ model Category {
 }
 
 model Tag {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
-  slug      String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   tools     ToolTag[]
 }
 
 model Tool {
-  id            String    @id @default(cuid())
-  name          String
-  slug          String    @unique
-  description   String
-  content       String    @default("")
-  website       String?
-  pricing       String    @default("unknown")
-  featured      Boolean   @default(false)
-  clicks        Int       @default(0)
-  logoUrl       String    @default("")
-  screenshots   String    @default("")
-  searchText    String    @default("")
-  categoryId    String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  isPublished   Boolean   @default(true)
-  featuredOrder Int       @default(0)
-  category      Category  @relation(fields: [categoryId], references: [id])
-  tags          ToolTag[]
+  id             String              @id @default(cuid())
+  name           String
+  slug           String              @unique
+  description    String
+  content        String              @default("")
+  website        String?
+  pricing        String              @default("unknown")
+  featured       Boolean             @default(false)
+  clicks         Int                 @default(0)
+  views          Int                 @default(0)
+  outClicks      Int                 @default(0)
+  logoUrl        String              @default("")
+  screenshots    String              @default("")
+  searchText     String              @default("")
+  categoryId     String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  isPublished    Boolean             @default(true)
+  featuredOrder  Int                 @default(0)
+
+  category       Category            @relation(fields: [categoryId], references: [id])
+  tags           ToolTag[]
+  viewEvents     ToolViewEvent[]
+  outClickEvents ToolOutClickEvent[]
 
   @@index([categoryId])
   @@index([slug])
   @@index([clicks])
+  @@index([views])
+  @@index([outClicks])
 }
 
 model ToolTag {
   toolId String
   tagId  String
-  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  tool   Tool   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@id([toolId, tagId])
 }
@@ -75,4 +82,31 @@ model Submission {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   reason      String   @default("")
+}
+
+model ToolViewEvent {
+  id         String   @id @default(cuid())
+  toolId     String
+  sessionKey String
+  dayBucket  String
+  createdAt  DateTime @default(now())
+
+  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([toolId, sessionKey, dayBucket])
+  @@index([toolId, createdAt])
+  @@index([createdAt])
+}
+
+model ToolOutClickEvent {
+  id         String   @id @default(cuid())
+  toolId     String
+  sessionKey String?
+  targetUrl  String?
+  createdAt  DateTime @default(now())
+
+  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@index([toolId, createdAt])
+  @@index([createdAt])
 }

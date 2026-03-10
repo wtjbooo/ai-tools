@@ -15,6 +15,27 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://y78bq.dpdns.org"),
 };
 
+const isDev = process.env.NODE_ENV === "development";
+
+function DevDatabaseWarning() {
+  if (!isDev) return null;
+
+  return (
+    <div className="border-b border-amber-200 bg-amber-50">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-xs text-amber-900 sm:px-6 sm:text-sm">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="inline-flex shrink-0 items-center rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
+            本地开发环境
+          </span>
+          <span className="truncate">
+            注意：当前本地项目已连接正式数据库，请谨慎进行审核、编辑、推荐、隐藏等写入操作。
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/80 backdrop-blur">
@@ -110,6 +131,7 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
         <div className="min-h-screen">
+          <DevDatabaseWarning />
           <Header />
           <main>{children}</main>
           <Footer />

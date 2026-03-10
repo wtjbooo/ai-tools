@@ -1,26 +1,31 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-export default function ToolViewTracker({ slug }: { slug: string }) {
+type ToolViewTrackerProps = {
+  slug: string;
+};
+
+export default function ToolViewTracker({
+  slug,
+}: ToolViewTrackerProps) {
+  const hasTrackedRef = useRef(false);
+
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || hasTrackedRef.current) return;
 
-    const key = `viewed_tool_${slug}`;
-    const viewed = sessionStorage.getItem(key);
+    hasTrackedRef.current = true;
 
-    if (viewed) return;
-
-    sessionStorage.setItem(key, "1");
-
-    fetch("/api/tool/view", {
+    fetch("/api/track/view", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ slug }),
-      keepalive: true,
-    }).catch(() => {});
+      cache: "no-store",
+    }).catch((error) => {
+      console.error("track view request failed:", error);
+    });
   }, [slug]);
 
   return null;
