@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -15,6 +15,9 @@ type ToolItem = {
   isPublished: boolean;
   featured: boolean;
   featuredOrder: number;
+  clicks: number;
+  views: number;
+  outClicks: number;
   createdAt: string;
   category: {
     name: string;
@@ -39,6 +42,16 @@ type EditToolForm = {
   featuredOrder: string;
 };
 
+type PublishFilter = "all" | "published" | "hidden";
+type FeaturedFilter = "all" | "featured" | "normal";
+type SortMode =
+  | "default"
+  | "outClicks"
+  | "views"
+  | "clicks"
+  | "createdAt"
+  | "name";
+
 export default function AdminToolsPage() {
   const router = useRouter();
 
@@ -52,6 +65,11 @@ export default function AdminToolsPage() {
 
   const [backfilling, setBackfilling] = useState(false);
   const [backfillLogs, setBackfillLogs] = useState<string[]>([]);
+
+  const [keyword, setKeyword] = useState("");
+  const [publishFilter, setPublishFilter] = useState<PublishFilter>("all");
+  const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
 
   function handleUnauthorized(data?: { error?: string }) {
     setMsg(data?.error ?? "登录已失效，请重新登录");
@@ -255,6 +273,93 @@ export default function AdminToolsPage() {
     await load();
   }
 
+  const filteredAndSortedList = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+
+    const filtered = list.filter((tool) => {
+      if (publishFilter === "published" && !tool.isPublished) return false;
+      if (publishFilter === "hidden" && tool.isPublished) return false;
+
+      if (featuredFilter === "featured" && !tool.featured) return false;
+      if (featuredFilter === "normal" && tool.featured) return false;
+
+      if (!q) return true;
+
+      const haystack = [
+        tool.name,
+        tool.slug,
+        tool.description,
+        tool.category?.name ?? "",
+        ...(tool.tags ?? []).map((item) => item.tag.name),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(q);
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortMode === "outClicks") {
+        return (b.outClicks ?? 0) - (a.outClicks ?? 0);
+      }
+
+      if (sortMode === "views") {
+        return (b.views ?? 0) - (a.views ?? 0);
+      }
+
+      if (sortMode === "clicks") {
+        return (b.clicks ?? 0) - (a.clicks ?? 0);
+      }
+
+      if (sortMode === "createdAt") {
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      }
+
+      if (sortMode === "name") {
+        return a.name.localeCompare(b.name, "zh-CN");
+      }
+
+      if (a.featured !== b.featured) {
+        return a.featured ? -1 : 1;
+      }
+
+      const aFeaturedOrder =
+        typeof a.featuredOrder === "number" ? a.featuredOrder : 0;
+      const bFeaturedOrder =
+        typeof b.featuredOrder === "number" ? b.featuredOrder : 0;
+
+      if (a.featured && b.featured && aFeaturedOrder !== bFeaturedOrder) {
+        return aFeaturedOrder - bFeaturedOrder;
+      }
+
+      const aOutClicks = typeof a.outClicks === "number" ? a.outClicks : 0;
+      const bOutClicks = typeof b.outClicks === "number" ? b.outClicks : 0;
+      if (aOutClicks !== bOutClicks) {
+        return bOutClicks - aOutClicks;
+      }
+
+      const aViews = typeof a.views === "number" ? a.views : 0;
+      const bViews = typeof b.views === "number" ? b.views : 0;
+      if (aViews !== bViews) {
+        return bViews - aViews;
+      }
+
+      const aClicks = typeof a.clicks === "number" ? a.clicks : 0;
+      const bClicks = typeof b.clicks === "number" ? b.clicks : 0;
+      if (aClicks !== bClicks) {
+        return bClicks - aClicks;
+      }
+
+      return (
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    });
+
+    return sorted;
+  }, [list, keyword, publishFilter, featuredFilter, sortMode]);
+
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-4">
       <div className="flex items-center justify-between gap-4">
@@ -309,6 +414,83 @@ export default function AdminToolsPage() {
         </button>
       </div>
 
+      <div className="rounded-xl border p-4 space-y-3">
+        <div className="text-sm font-medium">筛选与排序</div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="space-y-1">
+            <label className="block text-sm text-gray-600">关键词搜索</label>
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="搜索名称 / slug / 分类 / 标签"
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm text-gray-600">发布状态</label>
+            <select
+              value={publishFilter}
+              onChange={(e) => setPublishFilter(e.target.value as PublishFilter)}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="all">全部</option>
+              <option value="published">已发布</option>
+              <option value="hidden">已隐藏</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm text-gray-600">推荐状态</label>
+            <select
+              value={featuredFilter}
+              onChange={(e) => setFeaturedFilter(e.target.value as FeaturedFilter)}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="all">全部</option>
+              <option value="featured">推荐</option>
+              <option value="normal">非推荐</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm text-gray-600">排序方式</label>
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="default">默认排序</option>
+              <option value="outClicks">官网点击最高</option>
+              <option value="views">浏览最高</option>
+              <option value="clicks">历史点击最高</option>
+              <option value="createdAt">最新创建</option>
+              <option value="name">名称 A-Z</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <span>总数：{list.length}</span>
+          <span>筛选后：{filteredAndSortedList.length}</span>
+
+          {(keyword || publishFilter !== "all" || featuredFilter !== "all" || sortMode !== "default") ? (
+            <button
+              onClick={() => {
+                setKeyword("");
+                setPublishFilter("all");
+                setFeaturedFilter("all");
+                setSortMode("default");
+              }}
+              className="rounded border px-2 py-1 text-xs text-gray-700"
+            >
+              清空筛选
+            </button>
+          ) : null}
+        </div>
+      </div>
+
       {msg ? <div className="rounded border p-3 text-sm">{msg}</div> : null}
 
       {backfillLogs.length > 0 ? (
@@ -320,12 +502,16 @@ export default function AdminToolsPage() {
         </div>
       ) : null}
 
-      {list.length === 0 ? (
-        <div className="text-gray-600">{loading ? "加载中..." : "暂无工具"}</div>
+      {filteredAndSortedList.length === 0 ? (
+        <div className="text-gray-600">{loading ? "加载中..." : "暂无符合条件的工具"}</div>
       ) : (
         <div className="space-y-3">
-          {list.map((tool) => {
+          {filteredAndSortedList.map((tool) => {
             const isEditing = editingId === tool.id && editForm;
+            const showOutClicks =
+              typeof tool.outClicks === "number" && tool.outClicks > 0;
+            const showViews = typeof tool.views === "number" && tool.views > 0;
+            const showClicks = typeof tool.clicks === "number" && tool.clicks > 0;
 
             return (
               <div key={tool.id} className="rounded-xl border p-4 space-y-3">
@@ -525,8 +711,28 @@ export default function AdminToolsPage() {
                       ))}
                     </div>
 
-                    <div className="text-xs text-gray-500">
-                      推荐顺序：{tool.featuredOrder ?? 0}
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                      <span className="rounded-full border px-2 py-1">
+                        推荐顺序：{tool.featuredOrder ?? 0}
+                      </span>
+
+                      {showOutClicks ? (
+                        <span className="rounded-full border px-2 py-1">
+                          官网点击：{tool.outClicks}
+                        </span>
+                      ) : null}
+
+                      {showViews ? (
+                        <span className="rounded-full border px-2 py-1">
+                          浏览：{tool.views}
+                        </span>
+                      ) : null}
+
+                      {showClicks ? (
+                        <span className="rounded-full border px-2 py-1">
+                          历史点击：{tool.clicks}
+                        </span>
+                      ) : null}
                     </div>
 
                     {tool.logoUrl ? (

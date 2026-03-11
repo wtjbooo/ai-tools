@@ -35,7 +35,13 @@ async function getRelatedTools(categoryId: string, slug: string) {
         slug,
       },
     },
-    orderBy: [{ featured: "desc" }, { clicks: "desc" }, { createdAt: "desc" }],
+    orderBy: [
+      { featured: "desc" },
+      { outClicks: "desc" },
+      { views: "desc" },
+      { clicks: "desc" },
+      { createdAt: "desc" },
+    ],
     take: 4,
     select: {
       id: true,
@@ -188,6 +194,10 @@ export default async function ToolPage({
 
   const outHref = `/out/${tool.slug}`;
 
+  const showViews = typeof tool.views === "number" && tool.views > 0;
+  const showOutClicks =
+    typeof tool.outClicks === "number" && tool.outClicks > 0;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -258,9 +268,11 @@ export default async function ToolPage({
 
                     {showPricing ? <InfoBadge>价格：{tool.pricing}</InfoBadge> : null}
 
-                    {tool.clicks > 0 ? (
-                      <InfoBadge>点击：{tool.clicks}</InfoBadge>
+                    {showOutClicks ? (
+                      <InfoBadge>官网点击：{tool.outClicks}</InfoBadge>
                     ) : null}
+
+                    {showViews ? <InfoBadge>浏览：{tool.views}</InfoBadge> : null}
                   </div>
 
                   <div className="flex flex-wrap gap-3 pt-1">
@@ -333,7 +345,7 @@ export default async function ToolPage({
           </DetailCard>
 
           <DetailCard title="基础信息">
-            <div className="grid gap-4 text-sm text-gray-700 sm:grid-cols-2">
+            <div className="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-2xl bg-gray-50 px-4 py-4">
                 <div className="text-xs text-gray-500">收录时间</div>
                 <div className="mt-1 font-medium text-gray-900">
@@ -345,6 +357,20 @@ export default async function ToolPage({
                 <div className="text-xs text-gray-500">最后更新</div>
                 <div className="mt-1 font-medium text-gray-900">
                   {new Date(tool.updatedAt).toLocaleString("zh-CN")}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-gray-50 px-4 py-4">
+                <div className="text-xs text-gray-500">浏览</div>
+                <div className="mt-1 font-medium text-gray-900">
+                  {tool.views ?? 0}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-gray-50 px-4 py-4">
+                <div className="text-xs text-gray-500">官网点击</div>
+                <div className="mt-1 font-medium text-gray-900">
+                  {tool.outClicks ?? 0}
                 </div>
               </div>
             </div>

@@ -27,6 +27,9 @@ export async function GET() {
       isPublished: true,
       featured: true,
       featuredOrder: true,
+      clicks: true,
+      views: true,
+      outClicks: true,
       createdAt: true,
       category: {
         select: {
@@ -45,6 +48,15 @@ export async function GET() {
       },
       {
         featuredOrder: "asc",
+      },
+      {
+        outClicks: "desc",
+      },
+      {
+        views: "desc",
+      },
+      {
+        clicks: "desc",
       },
       {
         createdAt: "desc",

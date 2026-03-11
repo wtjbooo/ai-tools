@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -36,6 +36,7 @@ const STATUS_OPTIONS = [
 
 type StatusValue = (typeof STATUS_OPTIONS)[number]["value"];
 type ActionType = "approve" | "reject" | "save" | null;
+type SortMode = "createdAtDesc" | "createdAtAsc" | "name";
 
 function normalizeSpaces(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -93,6 +94,9 @@ export default function AdminSubmissionsPage() {
 
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<ActionType>(null);
+
+  const [keyword, setKeyword] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("createdAtDesc");
 
   const isBusy = loading || loggingOut || !!actionId;
 
@@ -285,6 +289,45 @@ export default function AdminSubmissionsPage() {
     await load();
   }
 
+  const filteredAndSortedList = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+
+    const filtered = list.filter((x) => {
+      if (!q) return true;
+
+      const haystack = [
+        x.name,
+        x.website,
+        x.description,
+        x.category,
+        x.tags,
+        x.contact,
+        x.reason,
+        x.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(q);
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortMode === "createdAtAsc") {
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      }
+
+      if (sortMode === "name") {
+        return a.name.localeCompare(b.name, "zh-CN");
+      }
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    return sorted;
+  }, [list, keyword, sortMode]);
+
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-4">
@@ -331,13 +374,61 @@ export default function AdminSubmissionsPage() {
         </button>
       </div>
 
+      <div className="rounded-xl border p-4 space-y-3">
+        <div className="text-sm font-medium">搜索与排序</div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1">
+            <label className="block text-sm text-gray-600">关键词搜索</label>
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="搜索名称 / 官网 / 分类 / 标签 / 联系方式"
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm text-gray-600">排序方式</label>
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="createdAtDesc">最新提交</option>
+              <option value="createdAtAsc">最早提交</option>
+              <option value="name">名称 A-Z</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <span>当前状态总数：{list.length}</span>
+          <span>筛选后：{filteredAndSortedList.length}</span>
+
+          {(keyword || sortMode !== "createdAtDesc") ? (
+            <button
+              onClick={() => {
+                setKeyword("");
+                setSortMode("createdAtDesc");
+              }}
+              className="rounded border px-2 py-1 text-xs text-gray-700"
+            >
+              清空筛选
+            </button>
+          ) : null}
+        </div>
+      </div>
+
       {msg ? <div className="rounded border p-3 text-sm">{msg}</div> : null}
 
-      {list.length === 0 ? (
-        <div className="text-gray-600">{loading ? "加载中..." : "暂无数据"}</div>
+      {filteredAndSortedList.length === 0 ? (
+        <div className="text-gray-600">
+          {loading ? "加载中..." : "暂无符合条件的数据"}
+        </div>
       ) : (
         <div className="space-y-3">
-          {list.map((x) => {
+          {filteredAndSortedList.map((x) => {
             const isEditing = editingId === x.id && editForm;
             const isApproving = actionId === x.id && actionType === "approve";
             const isRejecting = actionId === x.id && actionType === "reject";
@@ -349,7 +440,9 @@ export default function AdminSubmissionsPage() {
                 {isEditing ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1 block text-sm font-medium">工具名称</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        工具名称
+                      </label>
                       <input
                         value={editForm.name}
                         onChange={(e) =>
@@ -361,7 +454,9 @@ export default function AdminSubmissionsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">官网链接</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        官网链接
+                      </label>
                       <input
                         value={editForm.website}
                         onChange={(e) =>
@@ -373,12 +468,17 @@ export default function AdminSubmissionsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">一句话简介</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        一句话简介
+                      </label>
                       <textarea
                         rows={3}
                         value={editForm.description}
                         onChange={(e) =>
-                          setEditForm({ ...editForm, description: e.target.value })
+                          setEditForm({
+                            ...editForm,
+                            description: e.target.value,
+                          })
                         }
                         disabled={isSaving}
                         className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
@@ -386,7 +486,9 @@ export default function AdminSubmissionsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">分类</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        分类
+                      </label>
                       <input
                         value={editForm.category}
                         onChange={(e) =>
@@ -401,7 +503,9 @@ export default function AdminSubmissionsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">标签</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        标签
+                      </label>
                       <input
                         value={editForm.tags}
                         onChange={(e) =>
@@ -413,7 +517,9 @@ export default function AdminSubmissionsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">联系方式</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        联系方式
+                      </label>
                       <input
                         value={editForm.contact}
                         onChange={(e) =>
@@ -425,7 +531,9 @@ export default function AdminSubmissionsPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">补充说明</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        补充说明
+                      </label>
                       <textarea
                         rows={8}
                         value={editForm.reason}
@@ -466,7 +574,9 @@ export default function AdminSubmissionsPage() {
 
                     {x.reason ? (
                       <div className="whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-                        <div className="mb-1 font-medium text-gray-900">补充说明</div>
+                        <div className="mb-1 font-medium text-gray-900">
+                          补充说明
+                        </div>
                         <div>{x.reason}</div>
                       </div>
                     ) : null}

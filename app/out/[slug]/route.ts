@@ -1,13 +1,35 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 const SITE_URL = "https://y78bq.dpdns.org";
 
+function getClientIp(req: Request) {
+  const xForwardedFor = req.headers.get("x-forwarded-for");
+  if (xForwardedFor) {
+    return xForwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+
+  const xRealIp = req.headers.get("x-real-ip");
+  if (xRealIp) {
+    return xRealIp.trim();
+  }
+
+  return "unknown";
+}
+
+function getSessionKey(req: Request) {
+  const ip = getClientIp(req);
+  const ua = req.headers.get("user-agent") || "unknown";
+  const raw = `${ip}__${ua}`;
+  return createHash("sha256").update(raw).digest("hex");
+}
+
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: { slug: string } }
 ) {
   try {
@@ -30,17 +52,31 @@ export async function GET(
     });
 
     if (!tool || !tool.website) {
-      return NextResponse.redirect(`${SITE_URL}/tool/${encodeURIComponent(slug)}`, 302);
+      return NextResponse.redirect(
+        `${SITE_URL}/tool/${encodeURIComponent(slug)}`,
+        302
+      );
     }
 
-    await prisma.tool.update({
-      where: { id: tool.id },
-      data: {
-        clicks: {
-          increment: 1,
+    const sessionKey = getSessionKey(req);
+
+    await prisma.$transaction([
+      prisma.toolOutClickEvent.create({
+        data: {
+          toolId: tool.id,
+          sessionKey,
+          targetUrl: tool.website,
         },
-      },
-    });
+      }),
+      prisma.tool.update({
+        where: { id: tool.id },
+        data: {
+          outClicks: {
+            increment: 1,
+          },
+        },
+      }),
+    ]);
 
     return NextResponse.redirect(tool.website, 302);
   } catch (error) {

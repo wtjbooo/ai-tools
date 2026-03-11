@@ -42,6 +42,8 @@ async function getCategoryTools(categoryId: string, page: number) {
       },
       orderBy: [
         { featured: "desc" },
+        { outClicks: "desc" },
+        { views: "desc" },
         { clicks: "desc" },
         { createdAt: "desc" },
       ],
@@ -150,6 +152,9 @@ function ToolCard({ tool }: { tool: any }) {
       ? tool.logoUrl
       : "/default-tool-icon.png";
 
+  const showOutClicks = typeof tool.outClicks === "number" && tool.outClicks > 0;
+  const showViews = typeof tool.views === "number" && tool.views > 0;
+
   return (
     <Link
       href={`/tool/${tool.slug}`}
@@ -190,9 +195,17 @@ function ToolCard({ tool }: { tool: any }) {
         </p>
 
         <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
-            点击 {tool.clicks}
-          </span>
+          {showOutClicks ? (
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
+              官网点击 {tool.outClicks}
+            </span>
+          ) : null}
+
+          {showViews ? (
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
+              浏览 {tool.views}
+            </span>
+          ) : null}
 
           {showPricing ? (
             <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
@@ -260,16 +273,9 @@ function EmptyCategoryState({ categoryName }: { categoryName: string }) {
 
           <Link
             href="/"
-            className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+            className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:text-gray-950 active:scale-[0.98]"
           >
             返回首页
-          </Link>
-
-          <Link
-            href="/submit"
-            className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
-          >
-            提交工具
           </Link>
         </div>
       </div>
@@ -295,70 +301,126 @@ export default async function CategoryPage({
 
   const { total, tools } = await getCategoryTools(category.id, currentPage);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = currentPage > totalPages ? totalPages : currentPage;
 
-  if (currentPage > totalPages && total > 0) {
-    notFound();
+  if (currentPage !== safePage) {
+    const canonicalHref =
+      safePage <= 1
+        ? `/category/${encodeURIComponent(category.slug)}`
+        : `/category/${encodeURIComponent(category.slug)}?page=${safePage}`;
+
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="rounded-[24px] border border-gray-200 bg-white p-6 text-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:p-8">
+          <div className="space-y-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-950">
+              页面不存在
+            </h1>
+            <p className="text-sm leading-7 text-gray-600 sm:text-base">
+              当前页码超出范围，已为你提供可访问页面入口。
+            </p>
+            <div>
+              <Link
+                href={canonicalHref}
+                className="inline-flex items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
+              >
+                前往有效页面
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  const url = getCategoryPageUrl(category.slug, currentPage);
+  const pageTitle =
+    safePage > 1 ? `${category.name} · 第 ${safePage} 页` : category.name;
 
-  const jsonLd = {
+  const canonicalUrl = getCategoryPageUrl(category.slug, safePage);
+
+  const categoryJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name:
-      currentPage > 1
-        ? `${category.name} AI 工具推荐 - 第 ${currentPage} 页`
-        : `${category.name} AI 工具推荐`,
-    description: `${category.name} 分类下收录了 ${total} 个 AI 工具，包含工具介绍、标签、价格信息和官网入口。`,
-    url,
+    name: `${category.name} AI 工具`,
+    url: canonicalUrl,
+    description: `${category.name} 分类下收录了 ${total} 个 AI 工具。`,
     isPartOf: {
       "@type": "WebSite",
       name: SITE_NAME,
       url: SITE_URL,
     },
-    mainEntity: {
-      "@type": "ItemList",
-      itemListElement: tools.map((tool, index) => ({
-        "@type": "ListItem",
-        position: (currentPage - 1) * PAGE_SIZE + index + 1,
-        url: `${SITE_URL}/tool/${tool.slug}`,
-        name: tool.name,
-      })),
-    },
+    mainEntity: tools.map((tool) => ({
+      "@type": "SoftwareApplication",
+      name: tool.name,
+      url: `${SITE_URL}/tool/${tool.slug}`,
+      applicationCategory: category.name,
+      operatingSystem: "Web",
+      description: tool.description,
+    })),
   };
+
+  const prevHref =
+    safePage > 1
+      ? safePage - 1 === 1
+        ? `/category/${encodeURIComponent(category.slug)}`
+        : `/category/${encodeURIComponent(category.slug)}?page=${safePage - 1}`
+      : null;
+
+  const nextHref =
+    safePage < totalPages
+      ? `/category/${encodeURIComponent(category.slug)}?page=${safePage + 1}`
+      : null;
 
   return (
     <>
       <Script
-        id="category-json-ld"
+        id={`category-jsonld-${category.slug}-${safePage}`}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd),
+          __html: JSON.stringify(categoryJsonLd),
         }}
       />
 
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="space-y-8">
-          <section className="relative overflow-hidden rounded-[32px] border border-gray-200 bg-white px-6 py-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:px-8 sm:py-10">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_35%),radial-gradient(circle_at_85%_20%,rgba(168,85,247,0.06),transparent_30%)]" />
-
-            <div className="relative space-y-4">
-              <Link
-                className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:text-gray-950 active:scale-[0.98]"
-                href="/"
-              >
-                ← 返回首页
-              </Link>
-
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="space-y-8 sm:space-y-10">
+          <section className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:p-8">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <h1 className="text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
-                  {category.name}
-                  {currentPage > 1 ? ` - 第 ${currentPage} 页` : ""}
+                <div className="text-sm text-gray-500">
+                  <Link
+                    href="/"
+                    className="transition-colors hover:text-gray-950"
+                  >
+                    首页
+                  </Link>
+                  <span className="mx-2">/</span>
+                  <span>{category.name}</span>
+                </div>
+
+                <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-4xl">
+                  {pageTitle}
                 </h1>
 
-                <p className="text-sm leading-7 text-gray-600 sm:text-base">
-                  共收录 {total} 个工具 · 当前第 {currentPage} / {totalPages} 页
+                <p className="max-w-3xl text-sm leading-7 text-gray-600 sm:text-base">
+                  当前分类共收录 <span className="font-medium text-gray-900">{total}</span> 个
+                  已发布工具，帮助你快速浏览这个方向下值得关注的 AI 产品。
                 </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/featured"
+                  className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+                >
+                  浏览精选推荐
+                </Link>
+
+                <Link
+                  href="/submit"
+                  className="inline-flex items-center rounded-full bg-black px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
+                >
+                  提交工具
+                </Link>
               </div>
             </div>
           </section>
@@ -367,41 +429,25 @@ export default async function CategoryPage({
             <EmptyCategoryState categoryName={category.name} />
           ) : (
             <>
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {tools.map((tool) => (
                   <ToolCard key={tool.id} tool={tool} />
                 ))}
-              </div>
+              </section>
 
-              <div className="flex items-center justify-between gap-4 pt-2">
-                {currentPage > 1 ? (
-                  <PageButton
-                    href={
-                      currentPage - 1 === 1
-                        ? `/category/${encodeURIComponent(category.slug)}`
-                        : `/category/${encodeURIComponent(category.slug)}?page=${
-                            currentPage - 1
-                          }`
-                    }
-                  >
-                    ← 上一页
-                  </PageButton>
-                ) : (
-                  <span />
-                )}
+              {totalPages > 1 ? (
+                <section className="flex flex-col items-center justify-between gap-4 rounded-[24px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:flex-row">
+                  <div className="text-sm text-gray-500">
+                    第 <span className="font-medium text-gray-900">{safePage}</span> /
+                    <span className="font-medium text-gray-900"> {totalPages}</span> 页
+                  </div>
 
-                {currentPage < totalPages ? (
-                  <PageButton
-                    href={`/category/${encodeURIComponent(category.slug)}?page=${
-                      currentPage + 1
-                    }`}
-                  >
-                    下一页 →
-                  </PageButton>
-                ) : (
-                  <span />
-                )}
-              </div>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    {prevHref ? <PageButton href={prevHref}>上一页</PageButton> : null}
+                    {nextHref ? <PageButton href={nextHref}>下一页</PageButton> : null}
+                  </div>
+                </section>
+              ) : null}
             </>
           )}
         </div>

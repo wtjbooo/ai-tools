@@ -55,7 +55,13 @@ async function getFeaturedTools(categorySlug?: string) {
         },
       },
     },
-    orderBy: [{ featuredOrder: "asc" }, { createdAt: "desc" }],
+    orderBy: [
+      { featuredOrder: "asc" },
+      { outClicks: "desc" },
+      { views: "desc" },
+      { clicks: "desc" },
+      { createdAt: "desc" },
+    ],
   });
 }
 
@@ -133,6 +139,9 @@ function ToolCard({ tool }: any) {
       ? tool.logoUrl
       : "/default-tool-icon.png";
 
+  const showOutClicks = typeof tool.outClicks === "number" && tool.outClicks > 0;
+  const showViews = typeof tool.views === "number" && tool.views > 0;
+
   return (
     <Link
       href={`/tool/${tool.slug}`}
@@ -169,9 +178,15 @@ function ToolCard({ tool }: any) {
             推荐顺序 {tool.featuredOrder ?? 0}
           </span>
 
-          {tool.clicks > 0 ? (
+          {showOutClicks ? (
             <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
-              点击 {tool.clicks}
+              官网点击 {tool.outClicks}
+            </span>
+          ) : null}
+
+          {showViews ? (
+            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
+              浏览 {tool.views}
             </span>
           ) : null}
 
