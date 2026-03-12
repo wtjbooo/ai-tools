@@ -267,7 +267,7 @@ export default async function ToolPage({
   const showPricing =
     tool.pricing && tool.pricing !== "unknown" && tool.pricing !== "未知";
 
-  const showContent = tool.content && tool.content.trim() !== "";
+ const showContent = Boolean(tool.content?.trim());
   const tagList = tool.tags.map((item) => item.tag.name).filter(Boolean);
   const url = `${SITE_URL}/tool/${tool.slug}`;
   const categoryHref = tool.category?.slug
