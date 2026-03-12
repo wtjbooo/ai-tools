@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import SearchBar from "@/components/SearchBar";
+import ToolCard from "@/components/ToolCard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -194,7 +195,13 @@ async function getHomeData() {
             },
           },
         },
-        orderBy: [{ featured: "desc" }, { clicks: "desc" }, { createdAt: "desc" }],
+        orderBy: [
+          { featured: "desc" },
+          { outClicks: "desc" },
+          { views: "desc" },
+          { clicks: "desc" },
+          { createdAt: "desc" },
+        ],
         take: CATEGORY_TOOLS_LIMIT,
       },
     },
@@ -236,9 +243,9 @@ function SectionTitle({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between">
       <div className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight text-gray-950 sm:text-3xl">
+        <h2 className="text-[26px] font-semibold tracking-tight text-gray-950 sm:text-[30px]">
           {title}
         </h2>
         {description ? (
@@ -260,96 +267,42 @@ function PillLink({
   return (
     <Link
       href={href}
-      className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+      className="inline-flex items-center rounded-full border border-black/8 bg-white/88 px-4 py-2 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/12 hover:bg-white hover:text-gray-950 active:scale-[0.98]"
     >
       {children}
     </Link>
   );
 }
 
-function ToolCard({ tool }: any) {
-  const showPricing =
-    tool.pricing && tool.pricing !== "unknown" && tool.pricing !== "未知";
-
-  const tags = tool.tags.map((item: any) => item.tag.name).slice(0, 3);
-
-  const logoSrc =
-    tool.logoUrl && tool.logoUrl.trim() !== ""
-      ? tool.logoUrl
-      : "/default-tool-icon.png";
-
-  const showOutClicks = typeof tool.outClicks === "number" && tool.outClicks > 0;
-  const showViews = typeof tool.views === "number" && tool.views > 0;
-
+function EmptyBox({ text }: { text: string }) {
   return (
-    <Link
-      href={`/tool/${tool.slug}`}
-      className="group block rounded-[22px] border border-gray-200 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.015] hover:border-gray-300 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] active:scale-[0.995] sm:rounded-[24px] sm:p-5"
-    >
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <div className="truncate text-base font-semibold tracking-tight text-gray-950 transition-colors duration-300 group-hover:text-black sm:text-lg">
-              {tool.name}
-            </div>
-            <div className="text-sm text-gray-500">
-              {tool.category?.name ?? "未分类"}
-            </div>
-          </div>
-
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gray-50 ring-1 ring-gray-100 transition-all duration-300 group-hover:bg-white group-hover:ring-gray-200 sm:h-10 sm:w-10">
-            <img
-              src={logoSrc}
-              alt={`${tool.name} logo`}
-              width={24}
-              height={24}
-              className="h-5 w-5 rounded object-cover transition-transform duration-300 group-hover:scale-105 sm:h-6 sm:w-6"
-            />
-          </div>
-        </div>
-
-        <p className="line-clamp-3 min-h-[54px] text-sm leading-6 text-gray-600 sm:min-h-[60px]">
-          {tool.description || "暂无简介"}
-        </p>
-
-        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-          {showOutClicks ? (
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
-              官网点击 {tool.outClicks}
-            </span>
-          ) : null}
-
-          {showViews ? (
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
-              浏览 {tool.views}
-            </span>
-          ) : null}
-
-          {showPricing ? (
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:bg-gray-200/70">
-              {tool.pricing}
-            </span>
-          ) : null}
-
-          {tags.map((tag: string) => (
-            <span
-              key={tag}
-              className="rounded-full border border-gray-200 px-2.5 py-1 text-gray-600 transition-colors duration-300 group-hover:border-gray-300"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      </div>
-    </Link>
+    <div className="rounded-[22px] border border-black/8 bg-white/92 p-5 text-gray-500 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      {text}
+    </div>
   );
 }
 
-function EmptyBox({ text }: { text: string }) {
+function HeroAction({
+  href,
+  children,
+  primary = false,
+}: {
+  href: string;
+  children: React.ReactNode;
+  primary?: boolean;
+}) {
   return (
-    <div className="rounded-[22px] border border-gray-200 bg-white p-5 text-gray-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:rounded-[24px] sm:p-6">
-      {text}
-    </div>
+    <Link
+      href={href}
+      className={[
+        "inline-flex items-center rounded-full px-5 py-2.5 text-sm transition-all duration-200 active:scale-[0.98]",
+        primary
+          ? "bg-black font-medium text-white hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)]"
+          : "border border-black/8 bg-white/82 text-gray-700 backdrop-blur-md hover:-translate-y-0.5 hover:border-black/12 hover:bg-white hover:text-gray-950 hover:shadow-[0_10px_24px_rgba(15,23,42,0.05)]",
+      ].join(" ")}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -366,38 +319,46 @@ export default async function HomePage() {
   } = await getHomeData();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
-      <div className="space-y-10 sm:space-y-14">
-        <section className="relative overflow-hidden rounded-[28px] border border-gray-200 bg-white px-4 py-8 text-center shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:rounded-[32px] sm:px-10 sm:py-12">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.10),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(168,85,247,0.08),transparent_30%)]" />
-          <div className="relative mx-auto max-w-4xl space-y-4 sm:space-y-5">
-            <div className="space-y-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
-                AI 工具导航
+    <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
+      <div className="space-y-8 sm:space-y-10">
+        <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-5 py-6 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-7">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.08),transparent_26%)]" />
+
+          <div className="relative mx-auto max-w-5xl space-y-4 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-xs font-medium tracking-[0.18em] text-gray-500 backdrop-blur-md">
+                CURATED AI TOOLS
+              </div>
+              <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-xs text-gray-500 backdrop-blur-md">
+                已收录 精选 {featuredTotal > 0 ? `${featuredTotal}+` : "1+"}
+              </div>
+            </div>
+
+            <div className="mx-auto max-w-3xl space-y-2.5">
+              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[50px] sm:leading-[1.02]">
+                AI工具导航
               </h1>
-              <p className="mx-auto max-w-2xl text-sm leading-7 text-gray-600 sm:text-base">
+              <p className="mx-auto max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
                 帮你快速找到值得使用的 AI 工具，覆盖聊天、写作、绘图、视频、搜索、效率等场景。
               </p>
             </div>
 
             <div className="mx-auto max-w-4xl">
-              <div className="rounded-[24px] border border-gray-200 bg-white/90 p-2 shadow-[0_8px_30px_rgba(0,0,0,0.05)] backdrop-blur sm:rounded-[28px]">
+              <div className="rounded-[22px] border border-black/8 bg-white/88 p-1.5 shadow-[0_8px_22px_rgba(15,23,42,0.045)] backdrop-blur-md">
                 <SearchBar />
               </div>
             </div>
 
-            <div>
-              <Link
-                href="/submit"
-                className="inline-flex items-center rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:text-gray-950 hover:shadow-sm active:scale-[0.98]"
-              >
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <HeroAction href="/submit" primary>
                 提交你的 AI 工具
-              </Link>
+              </HeroAction>
+              <HeroAction href="/featured">浏览精选推荐</HeroAction>
             </div>
           </div>
         </section>
 
-        <section className="space-y-4 sm:space-y-5">
+        <section className="space-y-3.5 sm:space-y-4">
           <SectionTitle
             title="热门分类"
             description="从常见需求出发，快速进入对应工具方向"
@@ -406,12 +367,9 @@ export default async function HomePage() {
           {categories.length === 0 ? (
             <EmptyBox text="暂时还没有可展示的分类。" />
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5">
               {categories.map((category) => (
-                <PillLink
-                  key={category.id}
-                  href={`/category/${category.slug}`}
-                >
+                <PillLink key={category.id} href={`/category/${category.slug}`}>
                   {category.name}
                 </PillLink>
               ))}
@@ -419,12 +377,12 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="space-y-4 sm:space-y-5">
+        <section className="space-y-3.5 sm:space-y-4">
           <SectionTitle
             title="推荐工具"
             description={`当前共收录 ${featuredTotal} 个精选推荐工具`}
             right={
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 {!hasManualFeatured ? (
                   <span className="text-gray-500">当前为自动推荐</span>
                 ) : null}
@@ -432,22 +390,17 @@ export default async function HomePage() {
                   href="/featured"
                   className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
                 >
-                  查看全部精选 →
+                  查看全部推荐
                 </Link>
               </div>
             }
           />
 
           {featuredCategories.length > 0 ? (
-            <div className="flex flex-wrap gap-3">
-              <PillLink href="/featured">全部精选（{featuredTotal}）</PillLink>
-
+            <div className="flex flex-wrap gap-2">
               {featuredCategories.map((category) => (
-                <PillLink
-                  key={category.id}
-                  href={`/featured?category=${encodeURIComponent(category.slug)}`}
-                >
-                  {category.name}（{category.count}）
+                <PillLink key={category.id} href={`/category/${category.slug}`}>
+                  {category.name} · {category.count}
                 </PillLink>
               ))}
             </div>
@@ -456,7 +409,7 @@ export default async function HomePage() {
           {featuredTools.length === 0 ? (
             <EmptyBox text="暂时还没有推荐工具。" />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+            <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
               {featuredTools.map((tool) => (
                 <ToolCard key={tool.id} tool={tool} />
               ))}
@@ -464,13 +417,24 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="space-y-4 sm:space-y-5">
-          <SectionTitle title="热门工具" />
+        <section className="space-y-3.5 sm:space-y-4">
+          <SectionTitle
+            title="热门工具"
+            description="按官网点击、浏览和历史热度综合排序"
+            right={
+              <Link
+                href="/search"
+                className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
+              >
+                去搜索更多工具
+              </Link>
+            }
+          />
 
           {popularTools.length === 0 ? (
-            <EmptyBox text="暂时还没有热门工具。" />
+            <EmptyBox text="暂时还没有可展示的热门工具。" />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+            <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
               {popularTools.map((tool) => (
                 <ToolCard key={tool.id} tool={tool} />
               ))}
@@ -478,13 +442,24 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="space-y-4 sm:space-y-5">
-          <SectionTitle title="最新收录" />
+        <section className="space-y-3.5 sm:space-y-4">
+          <SectionTitle
+            title="最新收录"
+            description="看看最近刚加入目录的新工具"
+            right={
+              <Link
+                href="/search?sort=new"
+                className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
+              >
+                查看更多最新工具
+              </Link>
+            }
+          />
 
           {latestTools.length === 0 ? (
-            <EmptyBox text="暂时还没有最新收录的工具。" />
+            <EmptyBox text="暂时还没有最新收录工具。" />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+            <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
               {latestTools.map((tool) => (
                 <ToolCard key={tool.id} tool={tool} />
               ))}
@@ -492,44 +467,32 @@ export default async function HomePage() {
           )}
         </section>
 
-        <section className="space-y-6 sm:space-y-8">
-          <SectionTitle
-            title="按分类浏览"
-            description="更像目录站的逛法"
-          />
+        {sectionCategories.map((category) => (
+          <section key={category.id} className="space-y-3.5 sm:space-y-4">
+            <SectionTitle
+              title={category.name}
+              description={`当前分类共收录 ${category.count} 个工具`}
+              right={
+                <Link
+                  href={`/category/${category.slug}`}
+                  className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
+                >
+                  查看全部
+                </Link>
+              }
+            />
 
-          {sectionCategories.length === 0 ? (
-            <EmptyBox text="暂时还没有可展示的分类模块。" />
-          ) : (
-            <div className="space-y-8 sm:space-y-10">
-              {sectionCategories.map((category) => (
-                <section key={category.id} className="space-y-4 sm:space-y-5">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <h3 className="text-xl font-semibold tracking-tight text-gray-950 sm:text-2xl">
-                      {category.name}（{category.count}）
-                    </h3>
-                    <Link
-                      href={`/category/${category.slug}`}
-                      className="text-sm text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
-                    >
-                      更多 →
-                    </Link>
-                  </div>
-
-                  {category.tools.length === 0 ? (
-                    <EmptyBox text="这个分类下暂时还没有工具。" />
-                  ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
-                      {category.tools.map((tool) => (
-                        <ToolCard key={tool.id} tool={tool} />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              ))}
-            </div>
-          )}
-        </section>
+            {category.tools.length === 0 ? (
+              <EmptyBox text={`“${category.name}” 暂时还没有可展示的工具。`} />
+            ) : (
+              <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+                {category.tools.map((tool) => (
+                  <ToolCard key={tool.id} tool={tool} />
+                ))}
+              </div>
+            )}
+          </section>
+        ))}
       </div>
     </div>
   );

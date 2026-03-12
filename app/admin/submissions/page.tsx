@@ -4,6 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+type DuplicateCandidate = {
+  id: string;
+  name: string;
+  slug: string;
+  website: string | null;
+  isPublished: boolean;
+  category: {
+    name: string;
+  } | null;
+  reasons: string[];
+};
+
 type Submission = {
   id: string;
   name: string;
@@ -15,6 +27,7 @@ type Submission = {
   reason: string;
   status: string;
   createdAt: string;
+  duplicateCandidates?: DuplicateCandidate[];
 };
 
 type EditForm = {
@@ -295,6 +308,11 @@ export default function AdminSubmissionsPage() {
     const filtered = list.filter((x) => {
       if (!q) return true;
 
+      const duplicateText = (x.duplicateCandidates ?? [])
+        .map((item) => [item.name, item.slug, item.website ?? "", item.reasons.join(" ")].join(" "))
+        .join(" ")
+        .toLowerCase();
+
       const haystack = [
         x.name,
         x.website,
@@ -304,6 +322,7 @@ export default function AdminSubmissionsPage() {
         x.contact,
         x.reason,
         x.status,
+        duplicateText,
       ]
         .join(" ")
         .toLowerCase();
@@ -313,9 +332,7 @@ export default function AdminSubmissionsPage() {
 
     const sorted = [...filtered].sort((a, b) => {
       if (sortMode === "createdAtAsc") {
-        return (
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       }
 
       if (sortMode === "name") {
@@ -383,7 +400,7 @@ export default function AdminSubmissionsPage() {
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="搜索名称 / 官网 / 分类 / 标签 / 联系方式"
+              placeholder="搜索名称 / 官网 / 分类 / 标签 / 联系方式 / 重复候选"
               className="w-full rounded-lg border px-3 py-2 text-sm"
             />
           </div>
@@ -406,7 +423,7 @@ export default function AdminSubmissionsPage() {
           <span>当前状态总数：{list.length}</span>
           <span>筛选后：{filteredAndSortedList.length}</span>
 
-          {(keyword || sortMode !== "createdAtDesc") ? (
+          {keyword || sortMode !== "createdAtDesc" ? (
             <button
               onClick={() => {
                 setKeyword("");
@@ -434,6 +451,7 @@ export default function AdminSubmissionsPage() {
             const isRejecting = actionId === x.id && actionType === "reject";
             const isSaving = actionId === x.id && actionType === "save";
             const rowBusy = actionId === x.id;
+            const duplicateCandidates = x.duplicateCandidates ?? [];
 
             return (
               <div key={x.id} className="space-y-3 rounded-xl border p-4">
@@ -571,6 +589,72 @@ export default function AdminSubmissionsPage() {
                     </div>
 
                     <div className="text-sm">{x.description}</div>
+
+                    {duplicateCandidates.length > 0 ? (
+                      <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                        <div className="text-sm font-medium text-amber-900">
+                          可能重复的已收录工具
+                        </div>
+
+                        <div className="space-y-2">
+                          {duplicateCandidates.map((tool) => (
+                            <div
+                              key={tool.id}
+                              className="rounded-lg border border-amber-200 bg-white p-3 text-sm"
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium text-gray-900">
+                                  {tool.name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  slug：{tool.slug}
+                                </span>
+                                <span
+                                  className={`rounded-full border px-2 py-0.5 text-xs ${
+                                    tool.isPublished ? "bg-gray-100" : "bg-white"
+                                  }`}
+                                >
+                                  {tool.isPublished ? "已发布" : "未发布"}
+                                </span>
+                              </div>
+
+                              <div className="mt-1 text-xs text-gray-600">
+                                分类：{tool.category?.name ?? "未分类"}
+                              </div>
+
+                              {tool.website ? (
+                                <a
+                                  className="mt-1 block break-all text-xs underline"
+                                  href={tool.website}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {tool.website}
+                                </a>
+                              ) : null}
+
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {tool.reasons.map((reason) => (
+                                  <span
+                                    key={reason}
+                                    className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs text-amber-900"
+                                  >
+                                    {reason}
+                                  </span>
+                                ))}
+
+                                <Link
+                                  href={`/tool/${tool.slug}`}
+                                  className="text-xs underline"
+                                >
+                                  查看详情
+                                </Link>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
 
                     {x.reason ? (
                       <div className="whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-700">

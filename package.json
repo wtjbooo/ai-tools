@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
+    "import:submissions": "tsx scripts/import-tools-to-submissions.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

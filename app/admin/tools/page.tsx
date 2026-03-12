@@ -23,7 +23,7 @@ type ToolItem = {
   createdAt: string;
   category: {
     name: string;
-  };
+  } | null;
   tags: {
     tag: {
       id: string;
@@ -52,6 +52,7 @@ type ActivityFilter =
   | "activeOnly"
   | "rangeOutClicksOnly"
   | "rangeViewsOnly";
+
 type SortMode =
   | "default"
   | "rangeOutClicks"
@@ -107,6 +108,27 @@ function RangeTabs({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function StatPill({
+  label,
+  value,
+  muted,
+}: {
+  label: string;
+  value: string | number;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-xl border px-3 py-2 text-sm ${
+        muted ? "border-gray-200 text-gray-500" : "border-gray-300 text-gray-800"
+      }`}
+    >
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="mt-1 font-semibold">{value}</div>
     </div>
   );
 }
@@ -168,8 +190,8 @@ export default function AdminToolsPage() {
         cache: "no-store",
       }
     );
-    const data: ToolsResponse = await res.json().catch(() => ({}));
 
+    const data: ToolsResponse = await res.json().catch(() => ({}));
     setLoading(false);
 
     if (res.status === 401 || res.status === 403) {
@@ -261,7 +283,7 @@ export default function AdminToolsPage() {
       name: tool.name,
       website: tool.website ?? "",
       logoUrl: tool.logoUrl ?? "",
-      description: tool.description,
+      description: tool.description ?? "",
       content: tool.content ?? "",
       category: tool.category?.name ?? "",
       tags: tool.tags.map((item) => item.tag.name).join(", "),
@@ -293,7 +315,6 @@ export default function AdminToolsPage() {
     });
 
     const data = await res.json().catch(() => ({}));
-
     setSaving(false);
 
     if (res.status === 401 || res.status === 403) {
@@ -326,7 +347,6 @@ export default function AdminToolsPage() {
     });
 
     const data = await res.json().catch(() => ({}));
-
     setBackfilling(false);
 
     if (res.status === 401 || res.status === 403) {
@@ -418,19 +438,15 @@ export default function AdminToolsPage() {
         return a.featured ? -1 : 1;
       }
 
-      const aFeaturedOrder =
-        typeof a.featuredOrder === "number" ? a.featuredOrder : 0;
-      const bFeaturedOrder =
-        typeof b.featuredOrder === "number" ? b.featuredOrder : 0;
+      const aFeaturedOrder = typeof a.featuredOrder === "number" ? a.featuredOrder : 0;
+      const bFeaturedOrder = typeof b.featuredOrder === "number" ? b.featuredOrder : 0;
 
       if (a.featured && b.featured && aFeaturedOrder !== bFeaturedOrder) {
         return aFeaturedOrder - bFeaturedOrder;
       }
 
-      const aRangeOutClicks =
-        typeof a.rangeOutClicks === "number" ? a.rangeOutClicks : 0;
-      const bRangeOutClicks =
-        typeof b.rangeOutClicks === "number" ? b.rangeOutClicks : 0;
+      const aRangeOutClicks = typeof a.rangeOutClicks === "number" ? a.rangeOutClicks : 0;
+      const bRangeOutClicks = typeof b.rangeOutClicks === "number" ? b.rangeOutClicks : 0;
       if (aRangeOutClicks !== bRangeOutClicks) {
         return bRangeOutClicks - aRangeOutClicks;
       }
@@ -465,16 +481,49 @@ export default function AdminToolsPage() {
     return sorted;
   }, [list, keyword, publishFilter, featuredFilter, activityFilter, sortMode]);
 
-  return (
-    <div className="mx-auto max-w-5xl space-y-4 p-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">工具管理</h1>
+  const summary = useMemo(() => {
+    const totalTools = filteredAndSortedList.length;
+    const totalRangeViews = filteredAndSortedList.reduce(
+      (sum, item) => sum + (item.rangeViews ?? 0),
+      0
+    );
+    const totalRangeOutClicks = filteredAndSortedList.reduce(
+      (sum, item) => sum + (item.rangeOutClicks ?? 0),
+      0
+    );
 
-        <div className="flex items-center gap-3">
-          <Link className="underline" href="/admin/submissions">
+    return {
+      totalTools,
+      totalRangeViews,
+      totalRangeOutClicks,
+    };
+  }, [filteredAndSortedList]);
+
+  const hasActiveFilters =
+    keyword ||
+    publishFilter !== "all" ||
+    featuredFilter !== "all" ||
+    activityFilter !== "all" ||
+    sortMode !== "default";
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-4 p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">工具管理</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            查看工具表现，按当前区间快速筛选与排序
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Link className="text-sm underline" href="/admin/submissions">
             审核队列
           </Link>
-          <Link className="underline" href="/">
+          <Link className="text-sm underline" href="/admin">
+            后台概览
+          </Link>
+          <Link className="text-sm underline" href="/">
             返回首页
           </Link>
           <button
@@ -486,12 +535,12 @@ export default function AdminToolsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border p-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="text-sm font-medium">统计范围</div>
+            <div className="text-sm font-medium text-gray-900">统计范围</div>
             <div className="mt-1 text-xs text-gray-500">
-              当前区间：{rangeLabel}。区间浏览 / 区间官网点击与对应排序都会跟随切换。
+              当前区间：{rangeLabel}。区间浏览、区间官网点击、区间排序都会一起切换。
             </div>
           </div>
 
@@ -506,7 +555,8 @@ export default function AdminToolsPage() {
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => load(range, true)}
-          className="rounded border px-3 py-1 text-sm"
+          className="rounded border px-3 py-1 text-sm disabled:opacity-60"
+          disabled={loading}
         >
           {loading ? "刷新中..." : "刷新"}
         </button>
@@ -514,7 +564,7 @@ export default function AdminToolsPage() {
         <button
           onClick={() => backfillLogos(5)}
           disabled={backfilling}
-          className="rounded border px-3 py-1 text-sm"
+          className="rounded border px-3 py-1 text-sm disabled:opacity-60"
         >
           {backfilling ? "处理中..." : "批量补 logo（5 条）"}
         </button>
@@ -522,7 +572,7 @@ export default function AdminToolsPage() {
         <button
           onClick={() => backfillLogos(20)}
           disabled={backfilling}
-          className="rounded border px-3 py-1 text-sm"
+          className="rounded border px-3 py-1 text-sm disabled:opacity-60"
         >
           {backfilling ? "处理中..." : "批量补 logo（20 条）"}
         </button>
@@ -530,14 +580,14 @@ export default function AdminToolsPage() {
         <button
           onClick={() => backfillLogos(5, true)}
           disabled={backfilling}
-          className="rounded border px-3 py-1 text-sm"
+          className="rounded border px-3 py-1 text-sm disabled:opacity-60"
         >
           {backfilling ? "处理中..." : "强制重补坏 logo（5 条）"}
         </button>
       </div>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <div className="text-sm font-medium">筛选与排序</div>
+      <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4">
+        <div className="text-sm font-medium text-gray-900">筛选与排序</div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-1">
@@ -610,14 +660,10 @@ export default function AdminToolsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-          <span>总数：{list.length}</span>
-          <span>筛选后：{filteredAndSortedList.length}</span>
+          <span>原始总数：{list.length}</span>
+          <span>当前结果：{summary.totalTools}</span>
 
-          {keyword ||
-          publishFilter !== "all" ||
-          featuredFilter !== "all" ||
-          activityFilter !== "all" ||
-          sortMode !== "default" ? (
+          {hasActiveFilters ? (
             <button
               onClick={() => {
                 setKeyword("");
@@ -634,10 +680,23 @@ export default function AdminToolsPage() {
         </div>
       </div>
 
-      {msg ? <div className="rounded border p-3 text-sm">{msg}</div> : null}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatPill label="当前结果工具数" value={summary.totalTools} />
+        <StatPill label={`${rangeLabel}总浏览`} value={summary.totalRangeViews} />
+        <StatPill
+          label={`${rangeLabel}总官网点击`}
+          value={summary.totalRangeOutClicks}
+        />
+      </div>
+
+      {msg ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
+          {msg}
+        </div>
+      ) : null}
 
       {backfillLogs.length > 0 ? (
-        <div className="space-y-1 rounded border bg-gray-50 p-3 text-sm">
+        <div className="space-y-1 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm">
           <div className="font-medium">本次批量补 logo 日志</div>
           {backfillLogs.map((log, index) => (
             <div key={`${log}-${index}`}>{log}</div>
@@ -646,24 +705,24 @@ export default function AdminToolsPage() {
       ) : null}
 
       {filteredAndSortedList.length === 0 ? (
-        <div className="text-gray-600">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
           {loading ? "加载中..." : "暂无符合条件的工具"}
         </div>
       ) : (
         <div className="space-y-3">
           {filteredAndSortedList.map((tool) => {
             const isEditing = editingId === tool.id && editForm;
-            const showOutClicks =
-              typeof tool.outClicks === "number" && tool.outClicks > 0;
-            const showViews = typeof tool.views === "number" && tool.views > 0;
-            const showClicks = typeof tool.clicks === "number" && tool.clicks > 0;
-            const showRangeViews =
-              typeof tool.rangeViews === "number" && tool.rangeViews > 0;
-            const showRangeOutClicks =
-              typeof tool.rangeOutClicks === "number" && tool.rangeOutClicks > 0;
+            const showOutClicks = (tool.outClicks ?? 0) > 0;
+            const showViews = (tool.views ?? 0) > 0;
+            const showClicks = (tool.clicks ?? 0) > 0;
+            const showRangeViews = (tool.rangeViews ?? 0) > 0;
+            const showRangeOutClicks = (tool.rangeOutClicks ?? 0) > 0;
 
             return (
-              <div key={tool.id} className="space-y-3 rounded-xl border p-4">
+              <div
+                key={tool.id}
+                className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4"
+              >
                 {isEditing ? (
                   <div className="space-y-3">
                     <div>
@@ -765,7 +824,7 @@ export default function AdminToolsPage() {
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
                       <p className="mt-1 text-xs text-gray-500">
-                        这里只填一个主分类，例如：视频生成。不要填写“聊天助手 / 视频生成”这种多个分类组合。
+                        这里只填一个主分类，例如：视频生成。不要填写多个分类组合。
                       </p>
                     </div>
 
@@ -799,7 +858,7 @@ export default function AdminToolsPage() {
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
                       <p className="mt-1 text-xs text-gray-500">
-                        数字越小越靠前。通常填 1、2、3、4……
+                        数字越小越靠前，通常填 1、2、3、4……
                       </p>
                     </div>
 
@@ -807,14 +866,14 @@ export default function AdminToolsPage() {
                       <button
                         onClick={saveEdit}
                         disabled={saving}
-                        className="rounded border px-3 py-1 text-sm"
+                        className="rounded border px-3 py-1 text-sm disabled:opacity-60"
                       >
                         {saving ? "保存中..." : "保存"}
                       </button>
                       <button
                         onClick={cancelEdit}
                         disabled={saving}
-                        className="rounded border px-3 py-1 text-sm"
+                        className="rounded border px-3 py-1 text-sm disabled:opacity-60"
                       >
                         取消
                       </button>
@@ -822,34 +881,72 @@ export default function AdminToolsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-lg font-semibold">{tool.name}</div>
-                        <div className="text-sm text-gray-600">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="truncate text-lg font-semibold text-gray-950">
+                            {tool.name}
+                          </div>
+
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-xs ${
+                              tool.isPublished ? "bg-gray-100" : "bg-white"
+                            }`}
+                          >
+                            {tool.isPublished ? "已发布" : "已隐藏"}
+                          </span>
+
+                          {tool.featured ? (
+                            <span className="rounded-full border bg-yellow-100 px-2 py-0.5 text-xs">
+                              推荐
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-1 text-sm text-gray-600">
                           slug：{tool.slug} · 分类：{tool.category?.name || "未分类"}
+                        </div>
+
+                        <div className="mt-2 line-clamp-2 text-sm text-gray-700">
+                          {tool.description || "暂无简介"}
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
-                        <div
-                          className={`rounded-full px-3 py-1 text-xs border ${
-                            tool.isPublished ? "bg-gray-100" : "bg-white"
-                          }`}
-                        >
-                          {tool.isPublished ? "已发布" : "已隐藏"}
-                        </div>
-
-                        {tool.featured ? (
-                          <div className="rounded-full border bg-yellow-100 px-3 py-1 text-xs">
-                            推荐
-                          </div>
-                        ) : null}
+                      <div className="flex shrink-0 flex-wrap gap-2 lg:max-w-[320px] lg:justify-end">
+                        <StatPill
+                          label={`${rangeLabel}官网点击`}
+                          value={tool.rangeOutClicks ?? 0}
+                          muted={!showRangeOutClicks}
+                        />
+                        <StatPill
+                          label={`${rangeLabel}浏览`}
+                          value={tool.rangeViews ?? 0}
+                          muted={!showRangeViews}
+                        />
+                        <StatPill
+                          label="累计官网点击"
+                          value={tool.outClicks ?? 0}
+                          muted={!showOutClicks}
+                        />
+                        <StatPill
+                          label="累计浏览"
+                          value={tool.views ?? 0}
+                          muted={!showViews}
+                        />
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-700">{tool.description}</div>
-
                     <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full border px-2 py-1 text-xs text-gray-600">
+                        推荐顺序：{tool.featuredOrder ?? 0}
+                      </span>
+
+                      {showClicks ? (
+                        <span className="rounded-full border px-2 py-1 text-xs text-gray-600">
+                          历史点击：{tool.clicks}
+                        </span>
+                      ) : null}
+
                       {tool.tags.map((item) => (
                         <span
                           key={item.tag.id}
@@ -858,50 +955,6 @@ export default function AdminToolsPage() {
                           {item.tag.name}
                         </span>
                       ))}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                      <span className="rounded-full border px-2 py-1">
-                        推荐顺序：{tool.featuredOrder ?? 0}
-                      </span>
-
-                      {showRangeOutClicks ? (
-                        <span className="rounded-full border px-2 py-1">
-                          {rangeLabel}官网点击：{tool.rangeOutClicks}
-                        </span>
-                      ) : (
-                        <span className="rounded-full border px-2 py-1 text-gray-400">
-                          {rangeLabel}官网点击：0
-                        </span>
-                      )}
-
-                      {showRangeViews ? (
-                        <span className="rounded-full border px-2 py-1">
-                          {rangeLabel}浏览：{tool.rangeViews}
-                        </span>
-                      ) : (
-                        <span className="rounded-full border px-2 py-1 text-gray-400">
-                          {rangeLabel}浏览：0
-                        </span>
-                      )}
-
-                      {showOutClicks ? (
-                        <span className="rounded-full border px-2 py-1">
-                          累计官网点击：{tool.outClicks}
-                        </span>
-                      ) : null}
-
-                      {showViews ? (
-                        <span className="rounded-full border px-2 py-1">
-                          累计浏览：{tool.views}
-                        </span>
-                      ) : null}
-
-                      {showClicks ? (
-                        <span className="rounded-full border px-2 py-1">
-                          历史点击：{tool.clicks}
-                        </span>
-                      ) : null}
                     </div>
 
                     {tool.logoUrl ? (
@@ -914,7 +967,7 @@ export default function AdminToolsPage() {
 
                     {tool.website ? (
                       <a
-                        className="text-sm underline"
+                        className="block break-all text-sm underline"
                         href={tool.website}
                         target="_blank"
                         rel="noreferrer"
@@ -927,7 +980,7 @@ export default function AdminToolsPage() {
                       创建时间：{new Date(tool.createdAt).toLocaleString("zh-CN")}
                     </div>
 
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex flex-wrap gap-2 pt-1">
                       <button
                         onClick={() => startEdit(tool)}
                         className="rounded border px-3 py-1 text-sm"
