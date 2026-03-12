@@ -18,6 +18,8 @@ type ToolItem = {
   clicks: number;
   views: number;
   outClicks: number;
+  rangeViews: number;
+  rangeOutClicks: number;
   createdAt: string;
   category: {
     name: string;
@@ -44,13 +46,70 @@ type EditToolForm = {
 
 type PublishFilter = "all" | "published" | "hidden";
 type FeaturedFilter = "all" | "featured" | "normal";
+type RangeMode = "7d" | "30d" | "all";
+type ActivityFilter =
+  | "all"
+  | "activeOnly"
+  | "rangeOutClicksOnly"
+  | "rangeViewsOnly";
 type SortMode =
   | "default"
+  | "rangeOutClicks"
+  | "rangeViews"
   | "outClicks"
   | "views"
   | "clicks"
   | "createdAt"
   | "name";
+
+type ToolsResponse = {
+  meta?: {
+    range?: RangeMode;
+    rangeLabel?: string;
+  };
+  list?: ToolItem[];
+  error?: string;
+};
+
+function RangeTabs({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: RangeMode;
+  onChange: (next: RangeMode) => void;
+  disabled?: boolean;
+}) {
+  const items: Array<{ value: RangeMode; label: string }> = [
+    { value: "7d", label: "7 天" },
+    { value: "30d", label: "30 天" },
+    { value: "all", label: "全部" },
+  ];
+
+  return (
+    <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1">
+      {items.map((item) => {
+        const active = item.value === value;
+
+        return (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onChange(item.value)}
+            disabled={disabled}
+            className={`rounded-lg px-3 py-1.5 text-sm transition ${
+              active
+                ? "bg-gray-950 text-white"
+                : "text-gray-600 hover:bg-gray-50"
+            } disabled:opacity-60`}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function AdminToolsPage() {
   const router = useRouter();
@@ -69,7 +128,10 @@ export default function AdminToolsPage() {
   const [keyword, setKeyword] = useState("");
   const [publishFilter, setPublishFilter] = useState<PublishFilter>("all");
   const [featuredFilter, setFeaturedFilter] = useState<FeaturedFilter>("all");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("default");
+  const [range, setRange] = useState<RangeMode>("7d");
+  const [rangeLabel, setRangeLabel] = useState("最近 7 天");
 
   function handleUnauthorized(data?: { error?: string }) {
     setMsg(data?.error ?? "登录已失效，请重新登录");
@@ -93,17 +155,20 @@ export default function AdminToolsPage() {
     router.replace("/admin");
   }
 
-  async function load(clearMsg = false) {
+  async function load(nextRange = range, clearMsg = false) {
     setLoading(true);
 
     if (clearMsg) {
       setMsg(null);
     }
 
-    const res = await fetch(`/api/admin/tools?_t=${Date.now()}`, {
-      cache: "no-store",
-    });
-    const data = await res.json().catch(() => ({}));
+    const res = await fetch(
+      `/api/admin/tools?range=${nextRange}&_t=${Date.now()}`,
+      {
+        cache: "no-store",
+      }
+    );
+    const data: ToolsResponse = await res.json().catch(() => ({}));
 
     setLoading(false);
 
@@ -119,11 +184,19 @@ export default function AdminToolsPage() {
     }
 
     setList(data.list ?? []);
+    setRangeLabel(data.meta?.rangeLabel ?? "最近 7 天");
   }
 
   useEffect(() => {
-    load(true);
+    load(range, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleRangeChange(nextRange: RangeMode) {
+    if (nextRange === range || loading) return;
+    setRange(nextRange);
+    await load(nextRange, true);
+  }
 
   async function toggleTool(id: string, isPublished: boolean) {
     setMsg(null);
@@ -150,7 +223,7 @@ export default function AdminToolsPage() {
 
     setMsg(isPublished ? "已恢复显示" : "已隐藏工具");
     router.refresh();
-    await load();
+    await load(range);
   }
 
   async function toggleFeatured(id: string, featured: boolean) {
@@ -178,7 +251,7 @@ export default function AdminToolsPage() {
 
     setMsg(featured ? "已设为推荐工具" : "已取消推荐");
     router.refresh();
-    await load();
+    await load(range);
   }
 
   function startEdit(tool: ToolItem) {
@@ -236,7 +309,7 @@ export default function AdminToolsPage() {
     setMsg("工具保存成功");
     setEditingId(null);
     setEditForm(null);
-    await load();
+    await load(range);
   }
 
   async function backfillLogos(limit: number, force = false) {
@@ -270,7 +343,7 @@ export default function AdminToolsPage() {
       `批量补 logo 完成：处理 ${data.processed} 条，成功 ${data.success}，跳过 ${data.skipped}，失败 ${data.failed}${data.force ? "（强制重补模式）" : ""}`
     );
     setBackfillLogs(data.logs ?? []);
-    await load();
+    await load(range);
   }
 
   const filteredAndSortedList = useMemo(() => {
@@ -282,6 +355,20 @@ export default function AdminToolsPage() {
 
       if (featuredFilter === "featured" && !tool.featured) return false;
       if (featuredFilter === "normal" && tool.featured) return false;
+
+      if (activityFilter === "activeOnly") {
+        const hasRangeData =
+          (tool.rangeViews ?? 0) > 0 || (tool.rangeOutClicks ?? 0) > 0;
+        if (!hasRangeData) return false;
+      }
+
+      if (activityFilter === "rangeOutClicksOnly") {
+        if ((tool.rangeOutClicks ?? 0) <= 0) return false;
+      }
+
+      if (activityFilter === "rangeViewsOnly") {
+        if ((tool.rangeViews ?? 0) <= 0) return false;
+      }
 
       if (!q) return true;
 
@@ -299,6 +386,14 @@ export default function AdminToolsPage() {
     });
 
     const sorted = [...filtered].sort((a, b) => {
+      if (sortMode === "rangeOutClicks") {
+        return (b.rangeOutClicks ?? 0) - (a.rangeOutClicks ?? 0);
+      }
+
+      if (sortMode === "rangeViews") {
+        return (b.rangeViews ?? 0) - (a.rangeViews ?? 0);
+      }
+
       if (sortMode === "outClicks") {
         return (b.outClicks ?? 0) - (a.outClicks ?? 0);
       }
@@ -312,9 +407,7 @@ export default function AdminToolsPage() {
       }
 
       if (sortMode === "createdAt") {
-        return (
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
 
       if (sortMode === "name") {
@@ -332,6 +425,20 @@ export default function AdminToolsPage() {
 
       if (a.featured && b.featured && aFeaturedOrder !== bFeaturedOrder) {
         return aFeaturedOrder - bFeaturedOrder;
+      }
+
+      const aRangeOutClicks =
+        typeof a.rangeOutClicks === "number" ? a.rangeOutClicks : 0;
+      const bRangeOutClicks =
+        typeof b.rangeOutClicks === "number" ? b.rangeOutClicks : 0;
+      if (aRangeOutClicks !== bRangeOutClicks) {
+        return bRangeOutClicks - aRangeOutClicks;
+      }
+
+      const aRangeViews = typeof a.rangeViews === "number" ? a.rangeViews : 0;
+      const bRangeViews = typeof b.rangeViews === "number" ? b.rangeViews : 0;
+      if (aRangeViews !== bRangeViews) {
+        return bRangeViews - aRangeViews;
       }
 
       const aOutClicks = typeof a.outClicks === "number" ? a.outClicks : 0;
@@ -352,16 +459,14 @@ export default function AdminToolsPage() {
         return bClicks - aClicks;
       }
 
-      return (
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
     return sorted;
-  }, [list, keyword, publishFilter, featuredFilter, sortMode]);
+  }, [list, keyword, publishFilter, featuredFilter, activityFilter, sortMode]);
 
   return (
-    <div className="mx-auto max-w-5xl p-6 space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-bold">工具管理</h1>
 
@@ -381,9 +486,26 @@ export default function AdminToolsPage() {
         </div>
       </div>
 
+      <div className="rounded-xl border p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-sm font-medium">统计范围</div>
+            <div className="mt-1 text-xs text-gray-500">
+              当前区间：{rangeLabel}。区间浏览 / 区间官网点击与对应排序都会跟随切换。
+            </div>
+          </div>
+
+          <RangeTabs
+            value={range}
+            onChange={handleRangeChange}
+            disabled={loading}
+          />
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <button
-          onClick={() => load(true)}
+          onClick={() => load(range, true)}
           className="rounded border px-3 py-1 text-sm"
         >
           {loading ? "刷新中..." : "刷新"}
@@ -414,10 +536,10 @@ export default function AdminToolsPage() {
         </button>
       </div>
 
-      <div className="rounded-xl border p-4 space-y-3">
+      <div className="space-y-3 rounded-xl border p-4">
         <div className="text-sm font-medium">筛选与排序</div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-1">
             <label className="block text-sm text-gray-600">关键词搜索</label>
             <input
@@ -455,6 +577,20 @@ export default function AdminToolsPage() {
           </div>
 
           <div className="space-y-1">
+            <label className="block text-sm text-gray-600">区间活跃</label>
+            <select
+              value={activityFilter}
+              onChange={(e) => setActivityFilter(e.target.value as ActivityFilter)}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="all">全部工具</option>
+              <option value="activeOnly">只看当前区间有数据</option>
+              <option value="rangeOutClicksOnly">只看当前区间官网点击 &gt; 0</option>
+              <option value="rangeViewsOnly">只看当前区间浏览 &gt; 0</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
             <label className="block text-sm text-gray-600">排序方式</label>
             <select
               value={sortMode}
@@ -462,8 +598,10 @@ export default function AdminToolsPage() {
               className="w-full rounded-lg border px-3 py-2 text-sm"
             >
               <option value="default">默认排序</option>
-              <option value="outClicks">官网点击最高</option>
-              <option value="views">浏览最高</option>
+              <option value="rangeOutClicks">{rangeLabel}官网点击最高</option>
+              <option value="rangeViews">{rangeLabel}浏览最高</option>
+              <option value="outClicks">累计官网点击最高</option>
+              <option value="views">累计浏览最高</option>
               <option value="clicks">历史点击最高</option>
               <option value="createdAt">最新创建</option>
               <option value="name">名称 A-Z</option>
@@ -475,12 +613,17 @@ export default function AdminToolsPage() {
           <span>总数：{list.length}</span>
           <span>筛选后：{filteredAndSortedList.length}</span>
 
-          {(keyword || publishFilter !== "all" || featuredFilter !== "all" || sortMode !== "default") ? (
+          {keyword ||
+          publishFilter !== "all" ||
+          featuredFilter !== "all" ||
+          activityFilter !== "all" ||
+          sortMode !== "default" ? (
             <button
               onClick={() => {
                 setKeyword("");
                 setPublishFilter("all");
                 setFeaturedFilter("all");
+                setActivityFilter("all");
                 setSortMode("default");
               }}
               className="rounded border px-2 py-1 text-xs text-gray-700"
@@ -494,7 +637,7 @@ export default function AdminToolsPage() {
       {msg ? <div className="rounded border p-3 text-sm">{msg}</div> : null}
 
       {backfillLogs.length > 0 ? (
-        <div className="rounded border bg-gray-50 p-3 text-sm space-y-1">
+        <div className="space-y-1 rounded border bg-gray-50 p-3 text-sm">
           <div className="font-medium">本次批量补 logo 日志</div>
           {backfillLogs.map((log, index) => (
             <div key={`${log}-${index}`}>{log}</div>
@@ -503,7 +646,9 @@ export default function AdminToolsPage() {
       ) : null}
 
       {filteredAndSortedList.length === 0 ? (
-        <div className="text-gray-600">{loading ? "加载中..." : "暂无符合条件的工具"}</div>
+        <div className="text-gray-600">
+          {loading ? "加载中..." : "暂无符合条件的工具"}
+        </div>
       ) : (
         <div className="space-y-3">
           {filteredAndSortedList.map((tool) => {
@@ -512,9 +657,13 @@ export default function AdminToolsPage() {
               typeof tool.outClicks === "number" && tool.outClicks > 0;
             const showViews = typeof tool.views === "number" && tool.views > 0;
             const showClicks = typeof tool.clicks === "number" && tool.clicks > 0;
+            const showRangeViews =
+              typeof tool.rangeViews === "number" && tool.rangeViews > 0;
+            const showRangeOutClicks =
+              typeof tool.rangeOutClicks === "number" && tool.rangeOutClicks > 0;
 
             return (
-              <div key={tool.id} className="rounded-xl border p-4 space-y-3">
+              <div key={tool.id} className="space-y-3 rounded-xl border p-4">
                 {isEditing ? (
                   <div className="space-y-3">
                     <div>
@@ -716,15 +865,35 @@ export default function AdminToolsPage() {
                         推荐顺序：{tool.featuredOrder ?? 0}
                       </span>
 
+                      {showRangeOutClicks ? (
+                        <span className="rounded-full border px-2 py-1">
+                          {rangeLabel}官网点击：{tool.rangeOutClicks}
+                        </span>
+                      ) : (
+                        <span className="rounded-full border px-2 py-1 text-gray-400">
+                          {rangeLabel}官网点击：0
+                        </span>
+                      )}
+
+                      {showRangeViews ? (
+                        <span className="rounded-full border px-2 py-1">
+                          {rangeLabel}浏览：{tool.rangeViews}
+                        </span>
+                      ) : (
+                        <span className="rounded-full border px-2 py-1 text-gray-400">
+                          {rangeLabel}浏览：0
+                        </span>
+                      )}
+
                       {showOutClicks ? (
                         <span className="rounded-full border px-2 py-1">
-                          官网点击：{tool.outClicks}
+                          累计官网点击：{tool.outClicks}
                         </span>
                       ) : null}
 
                       {showViews ? (
                         <span className="rounded-full border px-2 py-1">
-                          浏览：{tool.views}
+                          累计浏览：{tool.views}
                         </span>
                       ) : null}
 

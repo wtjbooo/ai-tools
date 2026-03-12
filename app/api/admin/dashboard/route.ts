@@ -1,9 +1,30 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/auth";
+
+type DashboardRange = "7d" | "30d" | "all";
+
+function parseRange(value: string | null): DashboardRange {
+  if (value === "30d") return "30d";
+  if (value === "all") return "all";
+  return "7d";
+}
+
+function startOfUtcDay(date: Date) {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+}
+
+function addUtcDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
 
 function formatDayKey(date: Date) {
   const year = date.getUTCFullYear();
@@ -16,28 +37,77 @@ function formatDayLabel(date: Date) {
   return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
 }
 
-function getLast7Days() {
-  const days: { key: string; label: string; start: Date; end: Date }[] = [];
-  const now = new Date();
+function getRangeLabel(range: DashboardRange) {
+  if (range === "30d") return "最近 30 天";
+  if (range === "all") return "全部时间";
+  return "最近 7 天";
+}
 
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
-    const start = new Date(d);
-    const end = new Date(d);
-    end.setUTCDate(end.getUTCDate() + 1);
+function getDateBuckets(start: Date, end: Date) {
+  const days: { key: string; label: string; start: Date; end: Date }[] = [];
+  let cursor = startOfUtcDay(start);
+  const last = startOfUtcDay(end);
+
+  while (cursor <= last) {
+    const next = addUtcDays(cursor, 1);
 
     days.push({
-      key: formatDayKey(d),
-      label: formatDayLabel(d),
-      start,
-      end,
+      key: formatDayKey(cursor),
+      label: formatDayLabel(cursor),
+      start: new Date(cursor),
+      end: new Date(next),
     });
+
+    cursor = next;
   }
 
   return days;
 }
 
-export async function GET() {
+function normalizeSqlDay(value: unknown) {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    return new Date(value);
+  }
+
+  return new Date();
+}
+
+function normalizeSqlCount(value: unknown) {
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return Number(value) || 0;
+  return 0;
+}
+
+async function getDailyCounts(
+  tableName: "ToolViewEvent" | "ToolOutClickEvent",
+  rangeStart?: Date
+) {
+  const whereSql = rangeStart
+    ? Prisma.sql`WHERE "createdAt" >= ${rangeStart}`
+    : Prisma.empty;
+
+  const rows = await prisma.$queryRaw<Array<{ day: unknown; count: unknown }>>(
+    Prisma.sql`
+      SELECT DATE_TRUNC('day', "createdAt") AS day, COUNT(*)::int AS count
+      FROM ${Prisma.raw(`"${tableName}"`)}
+      ${whereSql}
+      GROUP BY DATE_TRUNC('day', "createdAt")
+      ORDER BY DATE_TRUNC('day', "createdAt") ASC
+    `
+  );
+
+  return rows.map((row) => ({
+    day: normalizeSqlDay(row.day),
+    count: normalizeSqlCount(row.count),
+  }));
+}
+
+export async function GET(request: Request) {
   const ok = await isAdminAuthenticated();
 
   if (!ok) {
@@ -47,8 +117,11 @@ export async function GET() {
     );
   }
 
-  const days = getLast7Days();
-  const rangeStart = days[0].start;
+  const { searchParams } = new URL(request.url);
+  const range = parseRange(searchParams.get("range"));
+
+  const now = new Date();
+  const todayStart = startOfUtcDay(now);
 
   const [
     pendingCount,
@@ -64,8 +137,8 @@ export async function GET() {
     topByViews,
     topByOutClicks,
     recentSubmissions,
-    viewEvents,
-    outClickEvents,
+    minViewEvent,
+    minOutClickEvent,
   ] = await Promise.all([
     prisma.submission.count({ where: { status: "pending" } }),
     prisma.submission.count({ where: { status: "approved" } }),
@@ -125,39 +198,51 @@ export async function GET() {
         createdAt: true,
       },
     }),
-    prisma.toolViewEvent.findMany({
-      where: {
-        createdAt: {
-          gte: rangeStart,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
+    prisma.toolViewEvent.aggregate({
+      _min: { createdAt: true },
     }),
-    prisma.toolOutClickEvent.findMany({
-      where: {
-        createdAt: {
-          gte: rangeStart,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
+    prisma.toolOutClickEvent.aggregate({
+      _min: { createdAt: true },
     }),
   ]);
+
+  const earliestEventDate = [minViewEvent._min.createdAt, minOutClickEvent._min.createdAt]
+    .filter((item): item is Date => Boolean(item))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  let rangeStart: Date | undefined;
+
+  if (range === "7d") {
+    rangeStart = addUtcDays(todayStart, -6);
+  } else if (range === "30d") {
+    rangeStart = addUtcDays(todayStart, -29);
+  } else {
+    rangeStart = earliestEventDate ? startOfUtcDay(earliestEventDate) : todayStart;
+  }
+
+  const [viewDailyRows, outClickDailyRows] = await Promise.all([
+    getDailyCounts("ToolViewEvent", range === "all" ? undefined : rangeStart),
+    getDailyCounts("ToolOutClickEvent", range === "all" ? undefined : rangeStart),
+  ]);
+
+  const safeStart =
+    range === "all"
+      ? earliestEventDate
+        ? startOfUtcDay(earliestEventDate)
+        : todayStart
+      : rangeStart ?? todayStart;
+
+  const days = getDateBuckets(safeStart, todayStart);
 
   const viewCountMap = new Map<string, number>();
   const outClickCountMap = new Map<string, number>();
 
-  for (const item of viewEvents) {
-    const key = formatDayKey(item.createdAt);
-    viewCountMap.set(key, (viewCountMap.get(key) ?? 0) + 1);
+  for (const item of viewDailyRows) {
+    viewCountMap.set(formatDayKey(item.day), item.count);
   }
 
-  for (const item of outClickEvents) {
-    const key = formatDayKey(item.createdAt);
-    outClickCountMap.set(key, (outClickCountMap.get(key) ?? 0) + 1);
+  for (const item of outClickDailyRows) {
+    outClickCountMap.set(formatDayKey(item.day), item.count);
   }
 
   const trends = days.map((day) => ({
@@ -167,11 +252,23 @@ export async function GET() {
     outClicks: outClickCountMap.get(day.key) ?? 0,
   }));
 
-  const today = trends[6] ?? { views: 0, outClicks: 0 };
-  const yesterday = trends[5] ?? { views: 0, outClicks: 0 };
+  const todayKey = formatDayKey(todayStart);
+  const yesterdayKey = formatDayKey(addUtcDays(todayStart, -1));
+
+  const todayViews = viewCountMap.get(todayKey) ?? 0;
+  const yesterdayViews = viewCountMap.get(yesterdayKey) ?? 0;
+  const todayOutClicks = outClickCountMap.get(todayKey) ?? 0;
+  const yesterdayOutClicks = outClickCountMap.get(yesterdayKey) ?? 0;
+
+  const rangeViews = trends.reduce((sum, item) => sum + item.views, 0);
+  const rangeOutClicks = trends.reduce((sum, item) => sum + item.outClicks, 0);
 
   return NextResponse.json({
     ok: true,
+    meta: {
+      range,
+      rangeLabel: getRangeLabel(range),
+    },
     summary: {
       pendingCount,
       approvedCount,
@@ -183,10 +280,12 @@ export async function GET() {
       totalViews: totalViews._sum.views ?? 0,
       totalOutClicks: totalOutClicks._sum.outClicks ?? 0,
       totalHistoryClicks: totalHistoryClicks._sum.clicks ?? 0,
-      todayViews: today.views,
-      yesterdayViews: yesterday.views,
-      todayOutClicks: today.outClicks,
-      yesterdayOutClicks: yesterday.outClicks,
+      rangeViews,
+      rangeOutClicks,
+      todayViews,
+      yesterdayViews,
+      todayOutClicks,
+      yesterdayOutClicks,
     },
     topByViews,
     topByOutClicks,

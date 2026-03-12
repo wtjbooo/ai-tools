@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+type DashboardRange = "7d" | "30d" | "all";
 
 type DashboardSummary = {
   pendingCount: number;
@@ -15,6 +16,8 @@ type DashboardSummary = {
   totalViews: number;
   totalOutClicks: number;
   totalHistoryClicks: number;
+  rangeViews: number;
+  rangeOutClicks: number;
   todayViews: number;
   yesterdayViews: number;
   todayOutClicks: number;
@@ -49,6 +52,11 @@ type TrendItem = {
 };
 
 type DashboardResponse = {
+  meta: {
+    range: DashboardRange;
+    rangeLabel: string;
+    topListMode?: "range" | "allTime";
+  };
   summary: DashboardSummary;
   topByViews: RankedTool[];
   topByOutClicks: RankedTool[];
@@ -126,17 +134,22 @@ function MiniBarChart({
   }
 
   const maxValue = Math.max(...items.map((item) => item[valueKey]), 0);
+  const compactSummary = items.length > 14;
+  const summaryItems = compactSummary ? items.slice(-14) : items;
 
   return (
     <div className="space-y-4">
-      <div className="flex h-44 items-end gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 px-3 pb-3 pt-4">
+      <div className="flex h-44 items-end gap-3 overflow-x-auto rounded-2xl border border-gray-200 bg-gray-50/60 px-3 pb-3 pt-4">
         {items.map((item) => {
           const value = item[valueKey];
           const height =
             maxValue > 0 ? Math.max((value / maxValue) * 100, value > 0 ? 10 : 2) : 2;
 
           return (
-            <div key={item.key} className="flex flex-1 flex-col items-center gap-2">
+            <div
+              key={item.key}
+              className="flex min-w-[44px] flex-1 flex-col items-center gap-2"
+            >
               <div className="text-xs font-medium text-gray-600">{value}</div>
               <div className="flex h-28 w-full items-end justify-center">
                 <div
@@ -152,7 +165,7 @@ function MiniBarChart({
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {items.map((item) => (
+        {summaryItems.map((item) => (
           <div
             key={`${item.key}-summary`}
             className="rounded-xl border border-gray-200 px-3 py-2 text-sm"
@@ -162,13 +175,57 @@ function MiniBarChart({
           </div>
         ))}
       </div>
+
+      {compactSummary ? (
+        <div className="text-xs text-gray-500">
+          已仅展示最近 14 天摘要卡片，完整数据仍在上方趋势图中。
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function RangeTabs({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: DashboardRange;
+  onChange: (next: DashboardRange) => void;
+  disabled?: boolean;
+}) {
+  const items: Array<{ value: DashboardRange; label: string }> = [
+    { value: "7d", label: "7 天" },
+    { value: "30d", label: "30 天" },
+    { value: "all", label: "全部" },
+  ];
+
+  return (
+    <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1">
+      {items.map((item) => {
+        const active = item.value === value;
+
+        return (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onChange(item.value)}
+            disabled={disabled}
+            className={`rounded-lg px-3 py-1.5 text-sm transition ${
+              active
+                ? "bg-gray-950 text-white"
+                : "text-gray-600 hover:bg-gray-50"
+            } disabled:opacity-60`}
+          >
+            {item.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 export default function AdminPage() {
-  const router = useRouter();
-
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
@@ -176,6 +233,7 @@ export default function AdminPage() {
   const [loggingIn, setLoggingIn] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
+  const [range, setRange] = useState<DashboardRange>("7d");
 
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
 
@@ -187,54 +245,48 @@ export default function AdminPage() {
     return { res, data };
   }
 
-  async function checkSessionAndLoad() {
-    setChecking(true);
+  async function loadDashboard(nextRange: DashboardRange, silent = false) {
+    if (!silent) {
+      setLoadingDashboard(true);
+    }
+
     setMsg(null);
 
-    const dashboardReq = await fetchJson("/api/admin/dashboard");
+    const dashboardReq = await fetchJson(`/api/admin/dashboard?range=${nextRange}`);
 
     if (dashboardReq.res.status === 401 || dashboardReq.res.status === 403) {
       setLoggedIn(false);
+      setDashboard(null);
+      setLoadingDashboard(false);
       setChecking(false);
       return;
     }
 
     if (!dashboardReq.res.ok) {
       setMsg(dashboardReq.data?.error ?? "后台概览加载失败，请稍后重试");
-      setLoggedIn(false);
+      setLoadingDashboard(false);
       setChecking(false);
       return;
     }
 
     setDashboard(dashboardReq.data);
     setLoggedIn(true);
+    setLoadingDashboard(false);
     setChecking(false);
   }
 
-  async function reloadDashboard() {
-    setLoadingDashboard(true);
-    setMsg(null);
+  async function checkSessionAndLoad() {
+    setChecking(true);
+    await loadDashboard(range, true);
+  }
 
-    const dashboardReq = await fetchJson("/api/admin/dashboard");
-
-    if (dashboardReq.res.status === 401 || dashboardReq.res.status === 403) {
-      setLoggedIn(false);
-      setLoadingDashboard(false);
-      return;
-    }
-
-    if (!dashboardReq.res.ok) {
-      setMsg(dashboardReq.data?.error ?? "后台概览刷新失败，请稍后重试");
-      setLoadingDashboard(false);
-      return;
-    }
-
-    setDashboard(dashboardReq.data);
-    setLoadingDashboard(false);
+  async function reloadDashboard(nextRange?: DashboardRange) {
+    await loadDashboard(nextRange ?? range);
   }
 
   useEffect(() => {
     checkSessionAndLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function login() {
@@ -260,7 +312,7 @@ export default function AdminPage() {
 
     setPassword("");
     setLoggedIn(true);
-    await reloadDashboard();
+    await reloadDashboard(range);
   }
 
   async function logout() {
@@ -286,6 +338,12 @@ export default function AdminPage() {
     setDashboard(null);
   }
 
+  async function handleRangeChange(nextRange: DashboardRange) {
+    if (nextRange === range || loadingDashboard) return;
+    setRange(nextRange);
+    await reloadDashboard(nextRange);
+  }
+
   if (checking) {
     return (
       <div className="mx-auto max-w-md p-6">
@@ -298,8 +356,8 @@ export default function AdminPage() {
 
   if (!loggedIn) {
     return (
-      <div className="mx-auto max-w-md p-6 space-y-4">
-        <div className="rounded-[24px] border border-gray-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
+      <div className="mx-auto max-w-md space-y-4 p-6">
+        <div className="space-y-4 rounded-[24px] border border-gray-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
           <h1 className="text-3xl font-bold">后台登录</h1>
 
           <input
@@ -326,7 +384,7 @@ export default function AdminPage() {
 
           {msg ? <p className="text-sm text-red-600">{msg}</p> : null}
 
-          <Link className="underline text-sm block" href="/">
+          <Link className="block text-sm underline" href="/">
             ← 返回首页
           </Link>
         </div>
@@ -339,9 +397,10 @@ export default function AdminPage() {
   const topByViews = dashboard?.topByViews ?? [];
   const topByOutClicks = dashboard?.topByOutClicks ?? [];
   const recentSubmissions = dashboard?.recentSubmissions ?? [];
+  const rangeLabel = dashboard?.meta.rangeLabel ?? "最近 7 天";
 
   return (
-    <div className="mx-auto max-w-6xl p-6 space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">后台概览</h1>
@@ -351,17 +410,17 @@ export default function AdminPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Link className="underline text-sm" href="/admin/submissions">
+          <Link className="text-sm underline" href="/admin/submissions">
             审核队列
           </Link>
-          <Link className="underline text-sm" href="/admin/tools">
+          <Link className="text-sm underline" href="/admin/tools">
             工具管理
           </Link>
-          <Link className="underline text-sm" href="/">
+          <Link className="text-sm underline" href="/">
             返回首页
           </Link>
           <button
-            onClick={reloadDashboard}
+            onClick={() => reloadDashboard()}
             disabled={loadingDashboard}
             className="rounded border px-3 py-1 text-sm disabled:opacity-60"
           >
@@ -385,6 +444,27 @@ export default function AdminPage() {
 
       {summary ? (
         <>
+          <SectionCard
+            title="统计范围"
+            right={
+              <span className="text-xs text-gray-500">
+                趋势图、区间汇总、榜单都会跟随当前范围切换
+              </span>
+            }
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-gray-600">
+                当前范围：<span className="font-medium text-gray-950">{rangeLabel}</span>
+              </div>
+
+              <RangeTabs
+                value={range}
+                onChange={handleRangeChange}
+                disabled={loadingDashboard}
+              />
+            </div>
+          </SectionCard>
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="待审核" value={summary.pendingCount} />
             <StatCard label="已通过" value={summary.approvedCount} />
@@ -397,6 +477,9 @@ export default function AdminPage() {
               hint={`已隐藏 ${summary.hiddenCount}`}
             />
             <StatCard label="推荐工具" value={summary.featuredCount} />
+            <StatCard label={`${rangeLabel}浏览`} value={summary.rangeViews} />
+            <StatCard label={`${rangeLabel}官网点击`} value={summary.rangeOutClicks} />
+
             <StatCard label="总浏览" value={summary.totalViews} />
             <StatCard
               label="总官网点击"
@@ -407,7 +490,7 @@ export default function AdminPage() {
 
           <div className="grid gap-6 xl:grid-cols-2">
             <SectionCard
-              title="最近 7 天浏览趋势"
+              title={`${rangeLabel}浏览趋势`}
               right={
                 <span className="text-xs text-gray-500">
                   {getDeltaText(summary.todayViews, summary.yesterdayViews, "")}
@@ -422,7 +505,7 @@ export default function AdminPage() {
             </SectionCard>
 
             <SectionCard
-              title="最近 7 天官网点击趋势"
+              title={`${rangeLabel}官网点击趋势`}
               right={
                 <span className="text-xs text-gray-500">
                   {getDeltaText(
@@ -443,15 +526,18 @@ export default function AdminPage() {
 
           <div className="grid gap-6 xl:grid-cols-2">
             <SectionCard
-              title="浏览最高工具"
+              title={`${rangeLabel}浏览最高工具`}
               right={
-                <Link href="/admin/tools" className="text-sm underline">
-                  去工具管理
-                </Link>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500">当前区间榜单</span>
+                  <Link href="/admin/tools" className="text-sm underline">
+                    去工具管理
+                  </Link>
+                </div>
               }
             >
               {topByViews.length === 0 ? (
-                <div className="text-sm text-gray-500">暂时还没有工具数据</div>
+                <div className="text-sm text-gray-500">当前范围内还没有浏览数据</div>
               ) : (
                 <div className="space-y-3">
                   {topByViews.map((tool, index) => (
@@ -473,7 +559,7 @@ export default function AdminPage() {
                         <div className="text-lg font-semibold text-gray-950">
                           {tool.views ?? 0}
                         </div>
-                        <div className="text-xs text-gray-500">浏览</div>
+                        <div className="text-xs text-gray-500">区间浏览</div>
                       </div>
                     </div>
                   ))}
@@ -482,15 +568,18 @@ export default function AdminPage() {
             </SectionCard>
 
             <SectionCard
-              title="官网点击最高工具"
+              title={`${rangeLabel}官网点击最高工具`}
               right={
-                <Link href="/admin/tools" className="text-sm underline">
-                  去工具管理
-                </Link>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500">当前区间榜单</span>
+                  <Link href="/admin/tools" className="text-sm underline">
+                    去工具管理
+                  </Link>
+                </div>
               }
             >
               {topByOutClicks.length === 0 ? (
-                <div className="text-sm text-gray-500">暂时还没有工具数据</div>
+                <div className="text-sm text-gray-500">当前范围内还没有官网点击数据</div>
               ) : (
                 <div className="space-y-3">
                   {topByOutClicks.map((tool, index) => (
@@ -512,7 +601,7 @@ export default function AdminPage() {
                         <div className="text-lg font-semibold text-gray-950">
                           {tool.outClicks ?? 0}
                         </div>
-                        <div className="text-xs text-gray-500">官网点击</div>
+                        <div className="text-xs text-gray-500">区间官网点击</div>
                       </div>
                     </div>
                   ))}
@@ -536,7 +625,7 @@ export default function AdminPage() {
                 {recentSubmissions.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-xl border border-gray-200 p-4 space-y-2"
+                    className="space-y-2 rounded-xl border border-gray-200 p-4"
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
@@ -551,7 +640,7 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-700 line-clamp-2">
+                    <div className="line-clamp-2 text-sm text-gray-700">
                       {item.description || "暂无简介"}
                     </div>
                   </div>
