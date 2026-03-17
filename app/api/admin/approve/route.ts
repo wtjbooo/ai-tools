@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { put } from "@vercel/blob";
+import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/auth";
@@ -78,7 +79,38 @@ function buildCategorySlug(raw: string) {
   return slug;
 }
 
-async function findOrCreateCategory(rawCategory: string, tx = prisma) {
+async function findOrCreateCategory(
+  rawCategory: string,
+  tx: Prisma.TransactionClient | typeof prisma = prisma
+) {
+  const name = normalizeSingleCategoryName(rawCategory);
+  const slug = buildCategorySlug(name);
+
+  const bySlug = await tx.category.findUnique({
+    where: { slug },
+  });
+
+  if (bySlug) {
+    return bySlug;
+  }
+
+  const byName = await tx.category.findFirst({
+    where: { name },
+  });
+
+  if (byName) {
+    return byName;
+  }
+
+  return tx.category.create({
+    data: {
+      name,
+      slug,
+      order: 0,
+    },
+  });
+}
+
   const name = normalizeSingleCategoryName(rawCategory);
   const slug = buildCategorySlug(name);
 
