@@ -1,0 +1,92 @@
+[
+  {
+    "name": "AiPPT",
+    "website": "https://www.aippt.cn/",
+    "description": "AI PPT 生成工具，适合根据主题或文档快速生成演示文稿并在线编辑。",
+    "category": "PPT / 演示",
+    "tags": ["PPT", "演示文稿", "在线编辑", "文档转PPT", "办公效率"],
+    "contact": "",
+    "reason": "PPT 类产品定位明确，适合独立分类收录。"
+  },
+  {
+    "name": "博思AIPPT",
+    "website": "https://pptgo.cn/",
+    "description": "面向办公与演示场景的 AI PPT 工具，适合做大纲生成、文件转 PPT 和智能排版。",
+    "category": "PPT / 演示",
+    "tags": ["PPT", "智能排版", "文档转PPT", "办公效率", "演示"],
+    "contact": "",
+    "reason": "适合补充 PPT 工具分类内容，审核时注意与 AiPPT 做区分。"
+  },
+  {
+    "name": "通义听悟",
+    "website": "https://tingwu.aliyun.com/",
+    "description": "聚焦音视频内容记录与分析的 AI 助手，适合做转写、会议纪要和内容整理。",
+    "category": "会议与总结",
+    "tags": ["会议纪要", "语音转写", "音视频", "总结", "阿里"],
+    "contact": "",
+    "reason": "会议总结场景明确，适合独立分类，建议优先审核。"
+  },
+  {
+    "name": "飞书妙记",
+    "website": "https://www.feishu.cn/product/minutes",
+    "description": "飞书的智能会议工具，适合做录音转文字、会议纪要、待办提取和资料回顾。",
+    "category": "会议与总结",
+    "tags": ["会议纪要", "录音转文字", "待办提取", "飞书", "协作"],
+    "contact": "",
+    "reason": "会议类成熟产品，适合补充总结工具方向。"
+  },
+  {
+    "name": "讯飞智文",
+    "website": "https://zhiwen.xfyun.cn/",
+    "description": "科大讯飞推出的 AI 文档工具，适合一句话或长文本生成 Word 与 PPT。",
+    "category": "办公效率",
+    "tags": ["Word", "PPT", "文档生成", "办公效率", "讯飞"],
+    "contact": "",
+    "reason": "办公文档方向能力清晰，建议作为办公类工具收录。"
+  },
+  {
+    "name": "腾讯文档 AI 文档助手",
+    "website": "https://docs.qq.com/",
+    "description": "腾讯文档中的 AI 文档助手能力，适合生成文档、表格、幻灯片和思维导图。",
+    "category": "办公效率",
+    "tags": ["腾讯文档", "AI 文档助手", "表格", "幻灯片", "思维导图"],
+    "contact": "",
+    "reason": "办公协作类 AI 能力入口明确，适合作为办公效率补充。"
+  },
+  {
+    "name": "百度文库",
+    "website": "https://wenku.baidu.com/",
+    "description": "一站式 AI 内容获取与创作平台，适合做学习办公资料获取和内容生成。",
+    "category": "写作与文档",
+    "tags": ["文档", "内容创作", "学习办公", "百度", "资料获取"],
+    "contact": "",
+    "reason": "资料与内容平台属性强，建议作为文档类工具收录。"
+  },
+  {
+    "name": "ProcessOn",
+    "website": "https://www.processon.com/",
+    "description": "在线作图与知识整理工具，支持 AI 生成思维导图和流程图，适合可视化表达与协作。",
+    "category": "流程图 / 思维导图",
+    "tags": ["流程图", "思维导图", "在线作图", "协作", "AI 生成"],
+    "contact": "",
+    "reason": "适合作为作图与思维导图方向补充，分类清晰。"
+  },
+  {
+    "name": "boardmix 博思白板",
+    "website": "https://boardmix.cn/app/home/ppt",
+    "description": "集白板、设计、原型和 AI 能力于一体的协作工具，适合头脑风暴与可视化协作。",
+    "category": "协作白板",
+    "tags": ["白板", "协作", "原型", "设计", "AI"],
+    "contact": "",
+    "reason": "协作白板方向产品，适合和作图工具区分收录。"
+  },
+  {
+    "name": "MasterGo",
+    "website": "https://mastergo.com/",
+    "description": "面向设计与研发协作的产品设计平台，适合做原型、界面设计和团队协同。",
+    "category": "设计 / 原型",
+    "tags": ["设计", "原型", "协作", "UI", "产品设计"],
+    "contact": "",
+    "reason": "设计协作方向核心产品，建议作为设计类主条目。"
+  }
+]

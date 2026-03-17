@@ -50,41 +50,104 @@ function isBlobLogoUrl(url: string | null | undefined) {
   return url.includes("blob.vercel-storage.com");
 }
 
-async function fetchHtml(url: string) {
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (compatible; AI-Toolsss-Bot/1.0; +https://y78bq.dpdns.org)",
-      Accept: "text/html,application/xhtml+xml",
-    },
-    redirect: "follow",
-    cache: "no-store",
-  });
+function withTimeoutSignal(ms: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
 
-  if (!res.ok) {
-    throw new Error(`fetch html failed: ${res.status}`);
-  }
-
-  return res.text();
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timer),
+  };
 }
 
-function extractIconHrefFromHtml(html: string) {
-  const patterns = [
-    /<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>/i,
-    /<link[^>]+rel=["'][^"']*shortcut icon[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>/i,
-    /<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>/i,
-    /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]*>/i,
-    /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*shortcut icon[^"']*["'][^>]*>/i,
-    /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*icon[^"']*["'][^>]*>/i,
-  ];
+async function fetchHtml(url: string) {
+  const timeout = withTimeoutSignal(12000);
 
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    const href = match?.[1]?.trim();
-    if (href) return href;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; AI-Toolsss-Bot/1.0; +https://y78bq.dpdns.org)",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+      },
+      redirect: "follow",
+      cache: "no-store",
+      signal: timeout.signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(`fetch html failed: ${res.status}`);
+    }
+
+    return res.text();
+  } finally {
+    timeout.clear();
+  }
+}
+
+function extractIconHrefsFromHtml(html: string) {
+  const hrefs: string[] = [];
+  const linkTagPattern = /<link\b[^>]*>/gi;
+  const linkTags = html.match(linkTagPattern) ?? [];
+
+  for (const tag of linkTags) {
+    const relMatch = tag.match(/\brel=["']([^"']+)["']/i);
+    const hrefMatch = tag.match(/\bhref=["']([^"']+)["']/i);
+
+    const rel = relMatch?.[1]?.toLowerCase() ?? "";
+    const href = hrefMatch?.[1]?.trim() ?? "";
+
+    if (!href) continue;
+
+    const isIconRel =
+      rel.includes("icon") ||
+      rel.includes("apple-touch-icon") ||
+      rel.includes("shortcut icon") ||
+      rel.includes("mask-icon");
+
+    if (isIconRel) {
+      hrefs.push(href);
+    }
   }
 
-  return "";
+  return Array.from(new Set(hrefs));
+}
+
+function getCommonIconCandidates(website: string) {
+  try {
+    const url = new URL(website);
+    const origin = url.origin;
+
+    const candidates = [
+      "/favicon.ico",
+      "/favicon.png",
+      "/apple-touch-icon.png",
+      "/apple-touch-icon-precomposed.png",
+      "/static/favicon.ico",
+      "/assets/favicon.ico",
+    ];
+
+    return candidates.map((path) => `${origin}${path}`);
+  } catch {
+    return [];
+  }
+}
+
+function getExternalFaviconCandidates(website: string) {
+  try {
+    const url = new URL(website);
+    const origin = url.origin;
+    const host = url.hostname;
+
+    return [
+      `https://www.google.com/s2/favicons?sz=128&domain_url=${encodeURIComponent(origin)}`,
+      `https://icon.horse/icon/${host}`,
+    ];
+  } catch {
+    return [];
+  }
 }
 
 function getFileExtensionFromContentType(contentType: string | null) {
@@ -104,57 +167,89 @@ function getFileExtensionFromContentType(contentType: string | null) {
   return "png";
 }
 
-async function tryDownloadIcon(iconUrl: string) {
+function isLikelyImageContentType(contentType: string | null) {
+  if (!contentType) return false;
+  return contentType.toLowerCase().startsWith("image/");
+}
+
+async function tryDownloadIcon(iconUrl: string, refererWebsite: string) {
   if (!iconUrl) return null;
 
-  const res = await fetch(iconUrl, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (compatible; AI-Toolsss-Bot/1.0; +https://y78bq.dpdns.org)",
-      Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-      Referer: iconUrl,
-    },
-    redirect: "follow",
-    cache: "no-store",
-  });
+  const timeout = withTimeoutSignal(12000);
 
-  if (!res.ok) {
+  try {
+    const res = await fetch(iconUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; AI-Toolsss-Bot/1.0; +https://y78bq.dpdns.org)",
+        Accept:
+          "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        Referer: refererWebsite,
+      },
+      redirect: "follow",
+      cache: "no-store",
+      signal: timeout.signal,
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const contentType = res.headers.get("content-type");
+
+    if (!isLikelyImageContentType(contentType)) {
+      return null;
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      return null;
+    }
+
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      contentType,
+    };
+  } catch {
     return null;
+  } finally {
+    timeout.clear();
   }
-
-  const contentType = res.headers.get("content-type");
-  const arrayBuffer = await res.arrayBuffer();
-
-  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-    return null;
-  }
-
-  return {
-    buffer: Buffer.from(arrayBuffer),
-    contentType,
-  };
 }
 
 async function fetchWebsiteIcon(website: string) {
+  const candidateUrls: string[] = [];
+
   try {
     const html = await fetchHtml(website);
-    const iconHref = extractIconHrefFromHtml(html);
+    const iconHrefs = extractIconHrefsFromHtml(html);
 
-    if (iconHref) {
-      const iconUrl = resolveIconUrl(iconHref, website);
-      const iconFile = await tryDownloadIcon(iconUrl);
-      if (iconFile) return iconFile;
+    for (const href of iconHrefs) {
+      const resolved = resolveIconUrl(href, website);
+      if (resolved) {
+        candidateUrls.push(resolved);
+      }
     }
   } catch {
-    // ignore and fallback
+    // ignore html fetch failure and continue fallback
   }
 
-  try {
-    const faviconUrl = new URL("/favicon.ico", website).toString();
-    const iconFile = await tryDownloadIcon(faviconUrl);
-    if (iconFile) return iconFile;
-  } catch {
-    // ignore fallback
+  for (const fallbackUrl of getCommonIconCandidates(website)) {
+    candidateUrls.push(fallbackUrl);
+  }
+
+  for (const externalUrl of getExternalFaviconCandidates(website)) {
+    candidateUrls.push(externalUrl);
+  }
+
+  const uniqueCandidates = Array.from(new Set(candidateUrls));
+
+  for (const iconUrl of uniqueCandidates) {
+    const iconFile = await tryDownloadIcon(iconUrl, website);
+    if (iconFile) {
+      return iconFile;
+    }
   }
 
   return null;

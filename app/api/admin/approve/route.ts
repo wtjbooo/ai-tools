@@ -387,21 +387,21 @@ export async function POST(req: Request) {
     const logoUrl = await uploadLogoToBlob(normalizedWebsite, sub.name);
 
     const tool = await prisma.tool.create({
-      data: {
-        name: sub.name,
-        slug,
-        description: sub.description,
-        content: sub.reason || "",
-        website: normalizedWebsite,
-        pricing: "unknown",
-        featured: false,
-        clicks: 0,
-        logoUrl,
-        screenshots: "",
-        searchText: `${sub.name} ${sub.description} ${sub.category} ${sub.tags} ${sub.reason}`,
-        categoryId: category.id,
-      },
-    });
+  data: {
+    name: sub.name,
+    slug,
+    description: sub.description,
+    content: sub.description,
+    website: normalizedWebsite,
+    pricing: "unknown",
+    featured: false,
+    clicks: 0,
+    logoUrl,
+    screenshots: "",
+    searchText: `${sub.name} ${sub.description} ${sub.category} ${sub.tags}`,
+    categoryId: category.id,
+  },
+});
 
     for (const tagName of parsedTags) {
       const tagSlug = slugify(tagName) || `tag-${Date.now()}`;

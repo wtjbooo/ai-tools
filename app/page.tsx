@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { prisma } from "@/lib/db";
 import SearchBar from "@/components/SearchBar";
 import ToolCard from "@/components/ToolCard";
@@ -240,7 +241,7 @@ function SectionTitle({
 }: {
   title: string;
   description?: string;
-  right?: React.ReactNode;
+  right?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between">
@@ -262,7 +263,7 @@ function PillLink({
   children,
 }: {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Link
@@ -288,7 +289,7 @@ function HeroAction({
   primary = false,
 }: {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
   primary?: boolean;
 }) {
   return (
@@ -423,10 +424,10 @@ export default async function HomePage() {
             description="按官网点击、浏览和历史热度综合排序"
             right={
               <Link
-                href="/search"
+                href="/popular"
                 className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
               >
-                去搜索更多工具
+                查看更多热门工具
               </Link>
             }
           />
@@ -448,7 +449,7 @@ export default async function HomePage() {
             description="看看最近刚加入目录的新工具"
             right={
               <Link
-                href="/search?sort=new"
+                href="/latest"
                 className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
               >
                 查看更多最新工具

@@ -66,6 +66,42 @@ function validateItem(item: ImportItem, index: number) {
   }
 }
 
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withRetry<T>(fn: () => Promise<T>, label: string, retries = 3) {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const message =
+        error instanceof Error ? error.message : String(error ?? "未知错误");
+
+      console.warn(
+        `[重试 ${attempt}/${retries}] ${label} 失败：${message}`
+      );
+
+      if (attempt < retries) {
+        try {
+          await prisma.$disconnect();
+        } catch {}
+
+        await sleep(800 * attempt);
+
+        try {
+          await prisma.$connect();
+        } catch {}
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 async function main() {
   const inputArg = process.argv[2];
 
@@ -94,6 +130,8 @@ async function main() {
     throw new Error("导入文件为空");
   }
 
+  await prisma.$connect();
+
   let created = 0;
   let skipped = 0;
 
@@ -109,13 +147,17 @@ async function main() {
     const contact = normalizeText(item.contact);
     const reason = normalizeText(item.reason);
 
-    const existingPending = await prisma.submission.findFirst({
-      where: {
-        status: "pending",
-        OR: [{ website }, { name }],
-      },
-      select: { id: true, name: true, website: true },
-    });
+    const existingPending = await withRetry(
+      () =>
+        prisma.submission.findFirst({
+          where: {
+            status: "pending",
+            OR: [{ website }, { name }],
+          },
+          select: { id: true, name: true, website: true },
+        }),
+      `检查重复：${name}`
+    );
 
     if (existingPending) {
       skipped++;
@@ -125,18 +167,22 @@ async function main() {
       continue;
     }
 
-    await prisma.submission.create({
-      data: {
-        name,
-        website,
-        description,
-        category,
-        tags,
-        contact,
-        reason,
-        status: "pending",
-      },
-    });
+    await withRetry(
+      () =>
+        prisma.submission.create({
+          data: {
+            name,
+            website,
+            description,
+            category,
+            tags,
+            contact,
+            reason,
+            status: "pending",
+          },
+        }),
+      `创建 submission：${name}`
+    );
 
     created++;
     console.log(`导入成功：${name}`);
@@ -148,7 +194,7 @@ async function main() {
 
 main()
   .catch((error) => {
-    console.error("导入失败：", error.message);
+    console.error("导入失败：", error instanceof Error ? error.message : error);
     process.exitCode = 1;
   })
   .finally(async () => {

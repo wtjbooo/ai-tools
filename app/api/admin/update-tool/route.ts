@@ -102,6 +102,7 @@ export async function POST(req: Request) {
 
     const id = String(body?.id ?? "").trim();
     const name = String(body?.name ?? "").trim();
+    const rawSlug = String(body?.slug ?? "").trim();
     const website = String(body?.website ?? "").trim();
     const logoUrl = String(body?.logoUrl ?? "").trim();
     const description = String(body?.description ?? "").trim();
@@ -122,6 +123,22 @@ export async function POST(req: Request) {
     if (!name) {
       return NextResponse.json(
         { ok: false, error: "工具名称不能为空" },
+        { status: 400 }
+      );
+    }
+
+    if (!rawSlug) {
+      return NextResponse.json(
+        { ok: false, error: "slug 不能为空" },
+        { status: 400 }
+      );
+    }
+
+    const slug = rawSlug.toLowerCase();
+
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      return NextResponse.json(
+        { ok: false, error: "slug 只能包含小写字母、数字和连字符 -" },
         { status: 400 }
       );
     }
@@ -203,12 +220,28 @@ export async function POST(req: Request) {
 
     const tool = await prisma.tool.findUnique({
       where: { id },
+      select: { id: true, slug: true },
     });
 
     if (!tool) {
       return NextResponse.json(
         { ok: false, error: "工具不存在" },
         { status: 404 }
+      );
+    }
+
+    const existingBySlug = await prisma.tool.findFirst({
+      where: {
+        slug,
+        NOT: { id },
+      },
+      select: { id: true },
+    });
+
+    if (existingBySlug) {
+      return NextResponse.json(
+        { ok: false, error: "slug 已被其他工具占用" },
+        { status: 400 }
       );
     }
 
@@ -219,6 +252,7 @@ export async function POST(req: Request) {
       where: { id },
       data: {
         name,
+        slug,
         website: normalizedWebsite,
         logoUrl,
         description,
@@ -227,7 +261,7 @@ export async function POST(req: Request) {
         featuredOrder: Number.isFinite(featuredOrderNumber)
           ? Math.floor(featuredOrderNumber)
           : 0,
-        searchText: `${name} ${description} ${categoryName} ${tagsInput} ${content}`,
+        searchText: `${name} ${slug} ${description} ${categoryName} ${tagsInput} ${content}`,
       },
     });
 
@@ -237,7 +271,9 @@ export async function POST(req: Request) {
 
     for (const tagName of parsedTags) {
       const tagSlugBase = slugify(tagName);
-      const safeTagSlug = tagSlugBase || `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const safeTagSlug =
+        tagSlugBase ||
+        `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
       const existingTagByName = await prisma.tag.findFirst({
         where: { name: tagName },

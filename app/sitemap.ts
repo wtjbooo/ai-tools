@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/db";
 
-const baseUrl = "https://y78bq.dpdns.org";
+const SITE_URL =
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [tools, categories] = await Promise.all([
@@ -33,21 +34,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
-      lastModified: new Date(),
+      url: SITE_URL,
+      lastModified: undefined,
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: `${baseUrl}/submit`,
-      lastModified: new Date(),
+      url: `${SITE_URL}/submit`,
+      lastModified: undefined,
       changeFrequency: "monthly",
       priority: 0.3,
+    },
+    {
+      url: `${SITE_URL}/featured`,
+      lastModified: undefined,
+      changeFrequency: "weekly",
+      priority: 0.6,
     },
   ];
 
   const toolPages: MetadataRoute.Sitemap = tools.map((tool) => ({
-    url: `${baseUrl}/tool/${tool.slug}`,
+    url: `${SITE_URL}/tool/${tool.slug}`,
     lastModified: tool.updatedAt,
     changeFrequency: "weekly",
     priority: 0.8,
@@ -56,7 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const categoryPages: MetadataRoute.Sitemap = categories
     .filter((category) => category.tools.length > 0)
     .map((category) => ({
-      url: `${baseUrl}/category/${category.slug}`,
+      url: `${SITE_URL}/category/${category.slug}`,
       lastModified: category.updatedAt,
       changeFrequency: "weekly",
       priority: 0.7,

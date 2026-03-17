@@ -35,6 +35,7 @@ type ToolItem = {
 type EditToolForm = {
   id: string;
   name: string;
+  slug: string;
   website: string;
   logoUrl: string;
   description: string;
@@ -70,6 +71,7 @@ type ToolsResponse = {
   };
   list?: ToolItem[];
   error?: string;
+  message?: string;
 };
 
 function RangeTabs({
@@ -143,6 +145,7 @@ export default function AdminToolsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditToolForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [backfilling, setBackfilling] = useState(false);
   const [backfillLogs, setBackfillLogs] = useState<string[]>([]);
@@ -243,9 +246,8 @@ export default function AdminToolsPage() {
       return;
     }
 
-    setMsg(isPublished ? "已恢复显示" : "已隐藏工具");
-    router.refresh();
     await load(range);
+    setMsg(isPublished ? "已重新发布工具" : "已下线工具");
   }
 
   async function toggleFeatured(id: string, featured: boolean) {
@@ -271,9 +273,8 @@ export default function AdminToolsPage() {
       return;
     }
 
-    setMsg(featured ? "已设为推荐工具" : "已取消推荐");
-    router.refresh();
     await load(range);
+    setMsg(featured ? "已设为推荐工具" : "已取消推荐");
   }
 
   function startEdit(tool: ToolItem) {
@@ -281,6 +282,7 @@ export default function AdminToolsPage() {
     setEditForm({
       id: tool.id,
       name: tool.name,
+      slug: tool.slug ?? "",
       website: tool.website ?? "",
       logoUrl: tool.logoUrl ?? "",
       description: tool.description ?? "",
@@ -327,10 +329,50 @@ export default function AdminToolsPage() {
       return;
     }
 
-    setMsg("工具保存成功");
+    await load(range);
+    setMsg(data.message ?? "工具保存成功");
     setEditingId(null);
     setEditForm(null);
+  }
+
+  async function deleteTool(tool: ToolItem) {
+    if (tool.isPublished) {
+      setMsg("请先下线工具，再执行删除");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `确认删除「${tool.name}」吗？\n\n此操作不可恢复，且可能影响历史统计与旧链接。`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(tool.id);
+    setMsg(null);
+
+    const res = await fetch("/api/admin/delete-tool", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: tool.id }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    setDeletingId(null);
+
+    if (res.status === 401 || res.status === 403) {
+      handleUnauthorized(data);
+      return;
+    }
+
+    if (!res.ok) {
+      setMsg(data.error ?? "删除失败");
+      return;
+    }
+
     await load(range);
+    setMsg(data.message ?? "工具已删除");
   }
 
   async function backfillLogos(limit: number, force = false) {
@@ -438,21 +480,27 @@ export default function AdminToolsPage() {
         return a.featured ? -1 : 1;
       }
 
-      const aFeaturedOrder = typeof a.featuredOrder === "number" ? a.featuredOrder : 0;
-      const bFeaturedOrder = typeof b.featuredOrder === "number" ? b.featuredOrder : 0;
+      const aFeaturedOrder =
+        typeof a.featuredOrder === "number" ? a.featuredOrder : 0;
+      const bFeaturedOrder =
+        typeof b.featuredOrder === "number" ? b.featuredOrder : 0;
 
       if (a.featured && b.featured && aFeaturedOrder !== bFeaturedOrder) {
         return aFeaturedOrder - bFeaturedOrder;
       }
 
-      const aRangeOutClicks = typeof a.rangeOutClicks === "number" ? a.rangeOutClicks : 0;
-      const bRangeOutClicks = typeof b.rangeOutClicks === "number" ? b.rangeOutClicks : 0;
+      const aRangeOutClicks =
+        typeof a.rangeOutClicks === "number" ? a.rangeOutClicks : 0;
+      const bRangeOutClicks =
+        typeof b.rangeOutClicks === "number" ? b.rangeOutClicks : 0;
       if (aRangeOutClicks !== bRangeOutClicks) {
         return bRangeOutClicks - aRangeOutClicks;
       }
 
-      const aRangeViews = typeof a.rangeViews === "number" ? a.rangeViews : 0;
-      const bRangeViews = typeof b.rangeViews === "number" ? b.rangeViews : 0;
+      const aRangeViews =
+        typeof a.rangeViews === "number" ? a.rangeViews : 0;
+      const bRangeViews =
+        typeof b.rangeViews === "number" ? b.rangeViews : 0;
       if (aRangeViews !== bRangeViews) {
         return bRangeViews - aRangeViews;
       }
@@ -609,7 +657,7 @@ export default function AdminToolsPage() {
             >
               <option value="all">全部</option>
               <option value="published">已发布</option>
-              <option value="hidden">已隐藏</option>
+              <option value="hidden">已下线</option>
             </select>
           </div>
 
@@ -717,6 +765,7 @@ export default function AdminToolsPage() {
             const showClicks = (tool.clicks ?? 0) > 0;
             const showRangeViews = (tool.rangeViews ?? 0) > 0;
             const showRangeOutClicks = (tool.rangeOutClicks ?? 0) > 0;
+            const isDeleting = deletingId === tool.id;
 
             return (
               <div
@@ -725,17 +774,39 @@ export default function AdminToolsPage() {
               >
                 {isEditing ? (
                   <div className="space-y-3">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        工具名称
-                      </label>
-                      <input
-                        value={editForm.name}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, name: e.target.value })
-                        }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
-                      />
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">
+                          工具名称
+                        </label>
+                        <input
+                          value={editForm.name}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, name: e.target.value })
+                          }
+                          className="w-full rounded-lg border px-3 py-2 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">
+                          slug
+                        </label>
+                        <input
+                          value={editForm.slug}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              slug: e.target.value.toLowerCase(),
+                            })
+                          }
+                          placeholder="例如：kimi / doubao / tencent-yuanbao"
+                          className="w-full rounded-lg border px-3 py-2 text-sm"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          只建议使用小写字母、数字和连字符 -，保存后会影响详情页链接。
+                        </p>
+                      </div>
                     </div>
 
                     <div>
@@ -893,7 +964,7 @@ export default function AdminToolsPage() {
                               tool.isPublished ? "bg-gray-100" : "bg-white"
                             }`}
                           >
-                            {tool.isPublished ? "已发布" : "已隐藏"}
+                            {tool.isPublished ? "已发布" : "已下线"}
                           </span>
 
                           {tool.featured ? (
@@ -1000,16 +1071,26 @@ export default function AdminToolsPage() {
                           onClick={() => toggleTool(tool.id, false)}
                           className="rounded border px-3 py-1 text-sm"
                         >
-                          隐藏
+                          下线
                         </button>
                       ) : (
                         <button
                           onClick={() => toggleTool(tool.id, true)}
                           className="rounded border px-3 py-1 text-sm"
                         >
-                          恢复
+                          重新发布
                         </button>
                       )}
+
+                      {!tool.isPublished ? (
+                        <button
+                          onClick={() => deleteTool(tool)}
+                          disabled={isDeleting}
+                          className="rounded border border-red-200 px-3 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
+                        >
+                          {isDeleting ? "删除中..." : "删除"}
+                        </button>
+                      ) : null}
 
                       <Link
                         href={`/tool/${tool.slug}`}

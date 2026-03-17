@@ -6,13 +6,24 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const SITE_URL =
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
+
+const siteHost = (() => {
+  try {
+    return new URL(SITE_URL).host;
+  } catch {
+    return "y78bq.dpdns.org";
+  }
+})();
+
 export const metadata: Metadata = {
   title: {
     default: "AI 工具目录",
     template: "%s | AI 工具目录",
   },
   description: "收录实用 AI 工具，支持分类浏览、搜索和投稿提交。",
-  metadataBase: new URL("https://y78bq.dpdns.org"),
+  metadataBase: new URL(SITE_URL),
 };
 
 const isDev = process.env.NODE_ENV === "development";
@@ -106,8 +117,59 @@ function Footer() {
         <div className="space-y-3">
           <div className="text-sm font-semibold text-gray-900">站点信息</div>
           <div className="space-y-2 text-sm text-gray-600">
-            <p>域名：y78bq.dpdns.org</p>
+            <p>域名：{siteHost}</p>
             <p>内容持续更新中，欢迎提交优质 AI 工具。</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-200">
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 md:grid-cols-3">
+          <div className="space-y-2">
+            <div className="text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
+              了解站点
+            </div>
+            <div className="flex flex-col gap-2 text-sm text-gray-600">
+              <Link href="/about" className="transition-colors hover:text-gray-950">
+                关于我们
+              </Link>
+              <Link
+                href="/guidelines"
+                className="transition-colors hover:text-gray-950"
+              >
+                收录说明
+              </Link>
+              <Link
+                href="/business"
+                className="transition-colors hover:text-gray-950"
+              >
+                商务合作
+              </Link>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
+              政策与条款
+            </div>
+            <div className="flex flex-col gap-2 text-sm text-gray-600">
+              <Link href="/privacy" className="transition-colors hover:text-gray-950">
+                隐私政策
+              </Link>
+              <Link href="/terms" className="transition-colors hover:text-gray-950">
+                服务条款
+              </Link>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
+              当前阶段
+            </div>
+            <p className="text-sm leading-7 text-gray-600">
+              站点正处于收口与试运营准备阶段，当前重点是持续补充内容、完善 SEO、
+              建立更清晰的收录规则，并逐步开放合作入口。
+            </p>
           </div>
         </div>
       </div>
@@ -129,13 +191,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
-        <div className="min-h-screen">
-          <DevDatabaseWarning />
-          <Header />
-          <main>{children}</main>
-          <Footer />
-        </div>
+      <body
+        className={`${inter.className} min-h-screen bg-[#fafafa] text-gray-900 antialiased`}
+      >
+        <DevDatabaseWarning />
+        <Header />
+        <main>{children}</main>
+        <Footer />
       </body>
     </html>
   );

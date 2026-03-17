@@ -1,0 +1,92 @@
+[
+  {
+    "name": "智谱清言",
+    "website": "https://chatglm.cn/main/alltoolsdetail?lang=zh&redirect=%2Fmain%2Falltoolsdetail",
+    "description": "基于 GLM 模型的 AI 助手，适合做对话问答、写作、编程以及图片和文档理解。",
+    "category": "AI 助手",
+    "tags": ["AI 助手", "写作", "编程", "文档理解", "多模态"],
+    "contact": "",
+    "reason": "国内主流大模型助手，官网信息完整，适合优先审核。"
+  },
+  {
+    "name": "秘塔 AI 搜索",
+    "website": "https://metaso.cn/",
+    "description": "主打高效信息获取的 AI 搜索工具，适合做问题检索、答案整理和资料查找。",
+    "category": "AI 搜索",
+    "tags": ["AI 搜索", "信息检索", "答案整理", "中文工具", "搜索"],
+    "contact": "",
+    "reason": "搜索类定位清晰，与现有通用助手区分明显，建议优先审核。"
+  },
+  {
+    "name": "文心",
+    "website": "https://wenxiaoyan.com/",
+    "description": "百度推出的 AI 助手，适合做问答、写作、内容创作和日常工作学习辅助。",
+    "category": "AI 助手",
+    "tags": ["AI 助手", "写作", "问答", "百度", "中文工具"],
+    "contact": "",
+    "reason": "国内高认知助手产品，建议收录时注意与现有助手类命名风格统一。"
+  },
+  {
+    "name": "讯飞星火",
+    "website": "https://xinghuo.xfyun.cn/",
+    "description": "科大讯飞推出的 AI 助手，适合做问答、写作、代码、PPT 和办公辅助。",
+    "category": "AI 助手",
+    "tags": ["AI 助手", "写作", "代码", "PPT", "办公效率"],
+    "contact": "",
+    "reason": "能力覆盖广，适合作为通用助手类补充，建议优先审核。"
+  },
+  {
+    "name": "纳米 AI",
+    "website": "https://bot.n.cn/",
+    "description": "面向中文用户的 AI 搜索与问答工具，适合快速获取答案和做信息处理。",
+    "category": "AI 搜索",
+    "tags": ["AI 搜索", "问答", "知识获取", "中文工具", "效率"],
+    "contact": "",
+    "reason": "适合补充 AI 搜索方向内容，审核时注意与搜索类产品区分。"
+  },
+  {
+    "name": "万知",
+    "website": "https://www.wanzhi.com/m/login",
+    "description": "定位个人 AI 工作站，适合做提问、搜索和内容创作等日常效率工作。",
+    "category": "AI 助手",
+    "tags": ["AI 助手", "AI 工作站", "搜索", "内容创作", "效率"],
+    "contact": "",
+    "reason": "工作站定位明确，适合收录，后续可视展示效果决定是否推荐。"
+  },
+  {
+    "name": "腾讯元器",
+    "website": "https://yuanqi.tencent.com/",
+    "description": "腾讯推出的智能体创建与分发平台，适合搭建零代码 AI 智能体和知识服务。",
+    "category": "智能体平台",
+    "tags": ["智能体", "Agent", "腾讯", "零代码", "知识库"],
+    "contact": "",
+    "reason": "智能体平台方向条目，分类清晰，建议与助手类区分收录。"
+  },
+  {
+    "name": "ima",
+    "website": "https://ima.qq.com/",
+    "description": "以知识库为核心的 AI 工作台，适合做搜、读、写一体的信息处理与内容输出。",
+    "category": "知识库 / AI 工作台",
+    "tags": ["知识库", "AI 工作台", "搜索", "写作", "腾讯"],
+    "contact": "",
+    "reason": "知识库工作台属性明显，适合单独分类，不建议并入普通助手。"
+  },
+  {
+    "name": "扣子空间",
+    "website": "https://www.coze.cn/space-preview/",
+    "description": "基于 Agent 的 AI 办公空间，适合做写作、PPT、网页和 AI 设计等生产力任务。",
+    "category": "AI 工作台",
+    "tags": ["AI 工作台", "Agent", "写作", "PPT", "设计"],
+    "contact": "",
+    "reason": "平台型产品，适合作为工作台方向补充，审核时注意名称统一。"
+  },
+  {
+    "name": "WPS AI",
+    "website": "https://ai.wps.cn/",
+    "description": "面向办公场景的 AI 产品，适合做文档写作、PPT 生成、表格处理和办公提效。",
+    "category": "办公效率",
+    "tags": ["办公效率", "文档", "PPT", "表格", "WPS"],
+    "contact": "",
+    "reason": "办公类核心产品，官网信息完整，建议优先审核。"
+  }
+]

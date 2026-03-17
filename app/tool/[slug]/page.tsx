@@ -5,10 +5,10 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import ToolViewTracker from "@/components/ToolViewTracker";
 import CopyLinkButton from "@/components/CopyLinkButton";
-import SiteHeader from "@/components/SiteHeader";
 
 const SITE_NAME = "AI 工具目录";
-const SITE_URL = "https://y78bq.dpdns.org";
+const SITE_URL =
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
 
 async function getPublishedToolBySlug(slug: string) {
   return prisma.tool.findFirst({
@@ -267,7 +267,7 @@ export default async function ToolPage({
   const showPricing =
     tool.pricing && tool.pricing !== "unknown" && tool.pricing !== "未知";
 
- const showContent = Boolean(tool.content?.trim());
+  const showContent = Boolean(tool.content?.trim());
   const tagList = tool.tags.map((item) => item.tag.name).filter(Boolean);
   const url = `${SITE_URL}/tool/${tool.slug}`;
   const categoryHref = tool.category?.slug
@@ -326,8 +326,6 @@ export default async function ToolPage({
       />
 
       <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
-        <SiteHeader currentPath={categoryHref || "/tool"} />
-
         <div className="space-y-6 sm:space-y-8">
           <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] px-5 py-6 shadow-[0_20px_64px_rgba(15,23,42,0.075)] sm:px-8 sm:py-8">
             <div className="pointer-events-none absolute inset-0">
