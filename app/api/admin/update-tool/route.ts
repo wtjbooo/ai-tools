@@ -20,16 +20,39 @@ function normalizeWebsite(value: string) {
   return value.trim().replace(/\/+$/, "");
 }
 
+function normalizeSingleLineText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeContent(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function normalizeTagName(value: string) {
+  return value.replace(/\s+/g, " ").trim().slice(0, 30);
+}
+
 function parseTags(input: string) {
-  return Array.from(
-    new Set(
-      input
-        .split(/[,，]/)
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-        .slice(0, 20)
-    )
-  );
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const rawTag of input.split(/[,，]/)) {
+    const tag = normalizeTagName(rawTag);
+    if (!tag) continue;
+
+    const dedupeKey = tag.toLowerCase();
+    if (seen.has(dedupeKey)) continue;
+
+    seen.add(dedupeKey);
+    result.push(tag);
+
+    if (result.length >= 8) break;
+  }
+
+  return result;
 }
 
 function buildSafeCategorySlug(name: string) {
@@ -44,7 +67,7 @@ function buildSafeCategorySlug(name: string) {
 }
 
 async function findOrCreateCategoryByName(categoryName: string) {
-  const trimmedName = categoryName.trim();
+  const trimmedName = normalizeSingleLineText(categoryName);
 
   const existingByName = await prisma.category.findFirst({
     where: {
@@ -101,16 +124,20 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
 
     const id = String(body?.id ?? "").trim();
-    const name = String(body?.name ?? "").trim();
+    const name = normalizeSingleLineText(String(body?.name ?? ""));
     const rawSlug = String(body?.slug ?? "").trim();
     const website = String(body?.website ?? "").trim();
     const logoUrl = String(body?.logoUrl ?? "").trim();
-    const description = String(body?.description ?? "").trim();
-    const content = String(body?.content ?? "").trim();
-    const categoryName = String(body?.category ?? "").trim();
+    const description = normalizeSingleLineText(String(body?.description ?? ""));
+    const content = normalizeContent(String(body?.content ?? ""));
+    const categoryName = normalizeSingleLineText(String(body?.category ?? ""));
     const tagsInput = String(body?.tags ?? "").trim();
 
     const featuredOrderRaw = body?.featuredOrder;
+    const hasFeaturedOrder =
+      featuredOrderRaw !== undefined &&
+      featuredOrderRaw !== null &&
+      String(featuredOrderRaw).trim() !== "";
     const featuredOrderNumber = Number(featuredOrderRaw);
 
     if (!id) {
@@ -165,8 +192,7 @@ export async function POST(req: Request) {
     }
 
     if (
-      featuredOrderRaw !== undefined &&
-      featuredOrderRaw !== null &&
+      hasFeaturedOrder &&
       (!Number.isFinite(featuredOrderNumber) || featuredOrderNumber < 0)
     ) {
       return NextResponse.json(
@@ -248,82 +274,97 @@ export async function POST(req: Request) {
     const category = await findOrCreateCategoryByName(categoryName);
     const parsedTags = parseTags(tagsInput);
 
-    await prisma.tool.update({
-      where: { id },
-      data: {
-        name,
-        slug,
-        website: normalizedWebsite,
-        logoUrl,
-        description,
-        content,
-        categoryId: category.id,
-        featuredOrder: Number.isFinite(featuredOrderNumber)
-          ? Math.floor(featuredOrderNumber)
-          : 0,
-        searchText: `${name} ${slug} ${description} ${categoryName} ${tagsInput} ${content}`,
-      },
-    });
+    const updateData: {
+      name: string;
+      slug: string;
+      website: string;
+      logoUrl: string;
+      description: string;
+      content: string;
+      categoryId: string;
+      searchText: string;
+      featuredOrder?: number;
+    } = {
+      name,
+      slug,
+      website: normalizedWebsite,
+      logoUrl,
+      description,
+      content,
+      categoryId: category.id,
+      searchText: `${name} ${slug} ${description} ${categoryName} ${parsedTags.join(" ")} ${content}`.trim(),
+    };
 
-    await prisma.toolTag.deleteMany({
-      where: { toolId: id },
-    });
+    if (hasFeaturedOrder) {
+      updateData.featuredOrder = Math.floor(featuredOrderNumber);
+    }
 
-    for (const tagName of parsedTags) {
-      const tagSlugBase = slugify(tagName);
-      const safeTagSlug =
-        tagSlugBase ||
-        `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-      const existingTagByName = await prisma.tag.findFirst({
-        where: { name: tagName },
-        orderBy: { createdAt: "asc" },
+    await prisma.$transaction(async (tx) => {
+      await tx.tool.update({
+        where: { id },
+        data: updateData,
       });
 
-      let tag;
+      await tx.toolTag.deleteMany({
+        where: { toolId: id },
+      });
 
-      if (existingTagByName) {
-        tag = existingTagByName;
-      } else {
-        let finalTagSlug = safeTagSlug;
-        let counter = 1;
+      for (const tagName of parsedTags) {
+        const tagSlugBase = slugify(tagName);
+        const safeTagSlug =
+          tagSlugBase ||
+          `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-        while (true) {
-          const exists = await prisma.tag.findUnique({
-            where: { slug: finalTagSlug },
-            select: { id: true },
-          });
+        const existingTagByName = await tx.tag.findFirst({
+          where: { name: tagName },
+          orderBy: { createdAt: "asc" },
+        });
 
-          if (!exists) {
-            break;
+        let tag;
+
+        if (existingTagByName) {
+          tag = existingTagByName;
+        } else {
+          let finalTagSlug = safeTagSlug;
+          let counter = 1;
+
+          while (true) {
+            const exists = await tx.tag.findUnique({
+              where: { slug: finalTagSlug },
+              select: { id: true },
+            });
+
+            if (!exists) {
+              break;
+            }
+
+            finalTagSlug = `${safeTagSlug}-${counter}`;
+            counter += 1;
           }
 
-          finalTagSlug = `${safeTagSlug}-${counter}`;
-          counter += 1;
+          tag = await tx.tag.create({
+            data: {
+              name: tagName,
+              slug: finalTagSlug,
+            },
+          });
         }
 
-        tag = await prisma.tag.create({
-          data: {
-            name: tagName,
-            slug: finalTagSlug,
+        await tx.toolTag.upsert({
+          where: {
+            toolId_tagId: {
+              toolId: id,
+              tagId: tag.id,
+            },
           },
-        });
-      }
-
-      await prisma.toolTag.upsert({
-        where: {
-          toolId_tagId: {
+          update: {},
+          create: {
             toolId: id,
             tagId: tag.id,
           },
-        },
-        update: {},
-        create: {
-          toolId: id,
-          tagId: tag.id,
-        },
-      });
-    }
+        });
+      }
+    });
 
     return NextResponse.json({
       ok: true,

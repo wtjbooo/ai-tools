@@ -22,6 +22,21 @@ function normalizeSpaces(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function normalizeTagName(value: string) {
+  return normalizeSpaces(value).slice(0, 30);
+}
+
+function normalizeDescription(value: string) {
+  return normalizeSpaces(value);
+}
+
+function normalizeReason(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function normalizeSingleCategoryName(raw: string) {
   const value = normalizeSpaces(raw || "");
 
@@ -29,7 +44,6 @@ function normalizeSingleCategoryName(raw: string) {
     throw new Error("分类不能为空");
   }
 
-  // 禁止组合分类：聊天助手 / 视频生成、聊天助手, 视频生成、聊天助手、视频生成
   if (/[\/\\|]+/.test(value) || /,|，|、/.test(value)) {
     throw new Error(
       "分类只能填写一个主分类，不能填写“聊天助手 / 视频生成”这种组合值"
@@ -50,6 +64,26 @@ function normalizeSingleCategoryName(raw: string) {
   return value;
 }
 
+function normalizeTags(raw: string) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const part of String(raw || "").split(/[,，]/)) {
+    const tag = normalizeTagName(part);
+    if (!tag) continue;
+
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(tag);
+
+    if (result.length >= 8) break;
+  }
+
+  return result.join(", ");
+}
+
 export async function POST(req: Request) {
   try {
     const ok = await isAdminAuthenticated();
@@ -64,13 +98,13 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
 
     const id = String(body?.id ?? "").trim();
-    const name = String(body?.name ?? "").trim();
+    const name = normalizeSpaces(String(body?.name ?? ""));
     const website = normalizeWebsite(String(body?.website ?? ""));
-    const description = String(body?.description ?? "").trim();
+    const description = normalizeDescription(String(body?.description ?? ""));
     const rawCategory = String(body?.category ?? "");
-    const tags = String(body?.tags ?? "").trim();
-    const contact = String(body?.contact ?? "").trim();
-    const reason = String(body?.reason ?? "").trim();
+    const tags = normalizeTags(String(body?.tags ?? ""));
+    const contact = normalizeSpaces(String(body?.contact ?? ""));
+    const reason = normalizeReason(String(body?.reason ?? ""));
 
     if (!id) {
       return NextResponse.json(
@@ -87,8 +121,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error:
-            error instanceof Error ? error.message : "分类格式不正确",
+          error: error instanceof Error ? error.message : "分类格式不正确",
         },
         { status: 400 }
       );
@@ -129,9 +162,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (tags.length > 200) {
+    if (tags.length > 300) {
       return NextResponse.json(
-        { ok: false, error: "标签内容过长，请控制在 200 个字符以内" },
+        { ok: false, error: "标签内容过长，请控制在 300 个字符以内" },
         { status: 400 }
       );
     }
@@ -152,6 +185,7 @@ export async function POST(req: Request) {
 
     const existing = await prisma.submission.findUnique({
       where: { id },
+      select: { id: true },
     });
 
     if (!existing) {

@@ -18,12 +18,43 @@ const siteHost = (() => {
 })();
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "AI 工具目录",
     template: "%s | AI 工具目录",
   },
-  description: "收录实用 AI 工具，支持分类浏览、搜索和投稿提交。",
-  metadataBase: new URL(SITE_URL),
+  description:
+    "收录实用 AI 工具，支持分类浏览、搜索、精选推荐与投稿提交，帮助你更快找到适合自己的 AI 工具。",
+  applicationName: "AI 工具目录",
+  keywords: [
+    "AI工具",
+    "AI工具导航",
+    "AI工具目录",
+    "人工智能工具",
+    "AI写作工具",
+    "AI绘图工具",
+    "AI视频工具",
+    "AI效率工具",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "AI 工具目录",
+    title: "AI 工具目录",
+    description:
+      "收录实用 AI 工具，支持分类浏览、搜索、精选推荐与投稿提交，帮助你更快找到适合自己的 AI 工具。",
+    locale: "zh_CN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI 工具目录",
+    description:
+      "收录实用 AI 工具，支持分类浏览、搜索、精选推荐与投稿提交，帮助你更快找到适合自己的 AI 工具。",
+  },
+  category: "technology",
 };
 
 const isDev = process.env.NODE_ENV === "development";

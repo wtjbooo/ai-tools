@@ -1,47 +1,37 @@
 [
   {
-    "name": "ChatGPT",
-    "website": "https://chatgpt.com/",
-    "description": "OpenAI 推出的通用 AI 对话助手，可用于写作、总结、问答、编程和多种日常效率场景。",
-    "category": "AI聊天",
-    "tags": ["对话助手", "写作", "编程", "效率"],
+    "name": "Kimi",
+    "website": "https://kimi.moonshot.cn",
+    "description": "一款支持长文本理解、问答和写作辅助的 AI 助手。",
+    "category": "聊天助手",
+    "tags": [
+      "长文本",
+      "AI写作",
+      "中文支持"
+    ],
     "contact": "",
-    "reason": "首批基础工具导入"
-  },
-  {
-    "name": "Claude",
-    "website": "https://claude.ai/",
-    "description": "Anthropic 推出的 AI 助手，适合长文本理解、写作辅助、知识整理与代码分析。",
-    "category": "AI聊天",
-    "tags": ["对话助手", "长文本", "写作", "代码"],
-    "contact": "",
-    "reason": "首批基础工具导入"
-  },
-  {
-    "name": "Perplexity",
-    "website": "https://www.perplexity.ai/",
-    "description": "以搜索与问答结合为特点的 AI 工具，适合快速查资料、总结信息和探索主题。",
-    "category": "AI搜索",
-    "tags": ["AI搜索", "问答", "知识检索", "总结"],
-    "contact": "",
-    "reason": "首批基础工具导入"
-  },
-  {
-    "name": "Midjourney",
-    "website": "https://www.midjourney.com/",
-    "description": "热门 AI 绘图工具，可根据文本提示生成高质量图像与创意视觉内容。",
-    "category": "AI绘图",
-    "tags": ["图像生成", "AI绘画", "创意设计"],
-    "contact": "",
-    "reason": "首批基础工具导入"
+    "reason": "国内常用 AI 助手，适合补充到聊天助手分类。"
   },
   {
     "name": "Runway",
-    "website": "https://runwayml.com/",
-    "description": "AI 视频生成与编辑平台，可用于文本生成视频、视频处理和创意制作。",
-    "category": "AI视频",
-    "tags": ["视频生成", "视频编辑", "创意工具"],
+    "website": "https://runwayml.com",
+    "description": "一款面向视频生成、视频编辑和创意制作的 AI 工具。",
+    "category": "视频生成",
+    "tags": "视频生成, AI视频, 创意工具",
     "contact": "",
-    "reason": "首批基础工具导入"
+    "reason": "适合放入视频生成主分类，标签控制在 3 到 5 个即可。"
+  },
+  {
+    "name": "Perplexity",
+    "website": "https://www.perplexity.ai",
+    "description": "一款结合搜索与问答体验的 AI 搜索工具。",
+    "category": "AI搜索",
+    "tags": [
+      "AI搜索",
+      "问答",
+      "信息检索"
+    ],
+    "contact": "",
+    "reason": "适合 AI 搜索分类，简介保持一句话，不要写成营销文案。"
   }
 ]

@@ -29,7 +29,6 @@ function slugify(input: string) {
     .replace(/[()（）[\]【】]/g, " ")
     .replace(/[\/\\|]+/g, " ")
     .replace(/,|，|、/g, " ")
-    // 保留：中文、英文、数字、空格、连字符
     .replace(/[^\p{L}\p{N}\s-]+/gu, " ")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
@@ -44,7 +43,6 @@ function normalizeSingleCategoryName(raw: string) {
     throw new Error("分类不能为空");
   }
 
-  // 禁止组合分类：聊天助手 / 视频生成、聊天助手, 视频生成、聊天助手、视频生成
   if (/[\/\\|]+/.test(value) || /,|，|、/.test(value)) {
     throw new Error(
       "分类只能填写一个主分类，不能填写“聊天助手 / 视频生成”这种组合值"
@@ -80,11 +78,11 @@ function buildCategorySlug(raw: string) {
   return slug;
 }
 
-async function findOrCreateCategory(rawCategory: string) {
+async function findOrCreateCategory(rawCategory: string, tx = prisma) {
   const name = normalizeSingleCategoryName(rawCategory);
   const slug = buildCategorySlug(name);
 
-  const bySlug = await prisma.category.findUnique({
+  const bySlug = await tx.category.findUnique({
     where: { slug },
   });
 
@@ -92,7 +90,7 @@ async function findOrCreateCategory(rawCategory: string) {
     return bySlug;
   }
 
-  const byName = await prisma.category.findFirst({
+  const byName = await tx.category.findFirst({
     where: { name },
   });
 
@@ -100,7 +98,7 @@ async function findOrCreateCategory(rawCategory: string) {
     return byName;
   }
 
-  return prisma.category.create({
+  return tx.category.create({
     data: {
       name,
       slug,
@@ -125,20 +123,70 @@ function slugFromWebsite(website: string) {
   }
 }
 
+function normalizeTagName(value: string) {
+  return normalizeSpaces(value).slice(0, 30);
+}
+
 function parseTags(input: string) {
-  return Array.from(
-    new Set(
-      input
-        .split(/[,，]/)
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-        .slice(0, 10)
-    )
-  );
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const rawTag of String(input || "").split(/[,，]/)) {
+    const tag = normalizeTagName(rawTag);
+    if (!tag) continue;
+
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(tag);
+
+    if (result.length >= 8) break;
+  }
+
+  return result;
 }
 
 function normalizeWebsite(value: string) {
   return value.trim().replace(/\/+$/, "");
+}
+
+function normalizeDescription(value: string) {
+  return normalizeSpaces(value);
+}
+
+function normalizeReason(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function buildToolContentFromSubmission(sub: {
+  description: string;
+  reason: string | null;
+  category: string;
+  tags: string;
+  name: string;
+}) {
+  const cleanReason = normalizeReason(sub.reason || "");
+
+  if (cleanReason) {
+    return cleanReason;
+  }
+
+  const tagText = parseTags(sub.tags).join("、");
+  const categoryName = normalizeSingleCategoryName(sub.category);
+
+  const lines = [
+    `${sub.name} 是一款归类在「${categoryName}」方向的 AI 工具。`,
+    sub.description,
+    tagText
+      ? `当前可参考的能力标签包括：${tagText}。`
+      : `当前页面已整理基础介绍、分类信息与官网入口，方便快速判断是否值得进一步体验。`,
+  ];
+
+  return lines.join("\n\n").trim();
 }
 
 function resolveIconUrl(iconHref: string, website: string) {
@@ -323,11 +371,14 @@ export async function POST(req: Request) {
     }
 
     const normalizedWebsite = normalizeWebsite(sub.website);
+    const normalizedDescription = normalizeDescription(sub.description);
+    const normalizedReason = normalizeReason(sub.reason || "");
 
     const existingToolByWebsite = await prisma.tool.findFirst({
       where: {
         website: normalizedWebsite,
       },
+      select: { id: true, slug: true },
     });
 
     if (existingToolByWebsite) {
@@ -348,6 +399,7 @@ export async function POST(req: Request) {
       where: {
         name: sub.name,
       },
+      select: { id: true, slug: true },
     });
 
     if (existingToolByName) {
@@ -364,82 +416,131 @@ export async function POST(req: Request) {
       });
     }
 
-    const category = await findOrCreateCategory(sub.category);
-
-    const base =
-      slugFromWebsite(normalizedWebsite) ||
-      slugify(sub.name) ||
-      `tool-${Date.now()}`;
-
-    let slug = base;
-
-    for (let i = 0; i < 20; i++) {
-      const exists = await prisma.tool.findUnique({
-        where: { slug },
-      });
-
-      if (!exists) break;
-      slug = `${base}-${i + 2}`;
-    }
-
     const parsedTags = parseTags(sub.tags);
-
     const logoUrl = await uploadLogoToBlob(normalizedWebsite, sub.name);
 
-    const tool = await prisma.tool.create({
-  data: {
-    name: sub.name,
-    slug,
-    description: sub.description,
-    content: sub.description,
-    website: normalizedWebsite,
-    pricing: "unknown",
-    featured: false,
-    clicks: 0,
-    logoUrl,
-    screenshots: "",
-    searchText: `${sub.name} ${sub.description} ${sub.category} ${sub.tags}`,
-    categoryId: category.id,
-  },
-});
+    const result = await prisma.$transaction(async (tx) => {
+      const category = await findOrCreateCategory(sub.category, tx);
 
-    for (const tagName of parsedTags) {
-      const tagSlug = slugify(tagName) || `tag-${Date.now()}`;
+      const base =
+        slugFromWebsite(normalizedWebsite) ||
+        slugify(sub.name) ||
+        `tool-${Date.now()}`;
 
-      const tag = await prisma.tag.upsert({
-        where: { slug: tagSlug },
-        update: { name: tagName },
-        create: {
-          name: tagName,
-          slug: tagSlug,
+      let slug = base;
+
+      for (let i = 0; i < 20; i++) {
+        const exists = await tx.tool.findUnique({
+          where: { slug },
+          select: { id: true },
+        });
+
+        if (!exists) break;
+        slug = `${base}-${i + 2}`;
+      }
+
+      const toolContent = buildToolContentFromSubmission({
+        name: sub.name,
+        description: normalizedDescription,
+        reason: normalizedReason,
+        category: sub.category,
+        tags: sub.tags,
+      });
+
+      const tool = await tx.tool.create({
+        data: {
+          name: normalizeSpaces(sub.name),
+          slug,
+          description: normalizedDescription,
+          content: toolContent,
+          website: normalizedWebsite,
+          pricing: "unknown",
+          featured: false,
+          clicks: 0,
+          outClicks: 0,
+          views: 0,
+          logoUrl,
+          screenshots: "",
+          searchText: [
+            normalizeSpaces(sub.name),
+            normalizedDescription,
+            normalizeSingleCategoryName(sub.category),
+            parsedTags.join(" "),
+            toolContent,
+          ]
+            .join(" ")
+            .trim(),
+          categoryId: category.id,
         },
       });
 
-      await prisma.toolTag.upsert({
-        where: {
-          toolId_tagId: {
+      for (const tagName of parsedTags) {
+        const tagSlugBase = slugify(tagName);
+        const safeTagSlug =
+          tagSlugBase ||
+          `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+        const existingTagByName = await tx.tag.findFirst({
+          where: { name: tagName },
+          orderBy: { createdAt: "asc" },
+        });
+
+        let tag;
+
+        if (existingTagByName) {
+          tag = existingTagByName;
+        } else {
+          let finalTagSlug = safeTagSlug;
+          let counter = 1;
+
+          while (true) {
+            const exists = await tx.tag.findUnique({
+              where: { slug: finalTagSlug },
+              select: { id: true },
+            });
+
+            if (!exists) break;
+
+            finalTagSlug = `${safeTagSlug}-${counter}`;
+            counter += 1;
+          }
+
+          tag = await tx.tag.create({
+            data: {
+              name: tagName,
+              slug: finalTagSlug,
+            },
+          });
+        }
+
+        await tx.toolTag.upsert({
+          where: {
+            toolId_tagId: {
+              toolId: tool.id,
+              tagId: tag.id,
+            },
+          },
+          update: {},
+          create: {
             toolId: tool.id,
             tagId: tag.id,
           },
-        },
-        update: {},
-        create: {
-          toolId: tool.id,
-          tagId: tag.id,
-        },
-      });
-    }
+        });
+      }
 
-    await prisma.submission.update({
-      where: { id },
-      data: { status: "approved" },
+      await tx.submission.update({
+        where: { id },
+        data: { status: "approved" },
+      });
+
+      return tool;
     });
 
     return NextResponse.json({
       ok: true,
-      toolId: tool.id,
-      toolSlug: tool.slug,
-      logoUrl: tool.logoUrl,
+      toolId: result.id,
+      toolSlug: result.slug,
+      logoUrl: result.logoUrl,
       message: "已创建新工具",
     });
   } catch (error) {

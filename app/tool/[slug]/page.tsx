@@ -54,6 +54,37 @@ async function getRelatedTools(categoryId: string, slug: string) {
   });
 }
 
+function truncateText(text: string, maxLength: number) {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3)}...`;
+}
+
+function normalizeDescription(toolName: string, description?: string | null) {
+  const fallback = `${toolName} 的详细介绍、适用场景、分类标签和官网入口。`;
+  return truncateText((description || fallback).trim(), 160);
+}
+
+function buildKeywords(
+  toolName: string,
+  categoryName: string,
+  tagNames: string[]
+) {
+  return Array.from(
+    new Set([
+      toolName,
+      categoryName,
+      ...tagNames,
+      `${toolName} 官网`,
+      `${toolName} 介绍`,
+      `${toolName} 怎么样`,
+      `${toolName} 使用场景`,
+      "AI 工具",
+      "AI 工具目录",
+      "AI工具导航",
+    ].filter(Boolean))
+  );
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -75,36 +106,17 @@ export async function generateMetadata({
   const tagNames = tool.tags.map((item) => item.tag.name).filter(Boolean);
   const categoryName = tool.category?.name || "AI 工具";
   const url = `${SITE_URL}/tool/${tool.slug}`;
-
-  const rawDescription =
-    tool.description ||
-    `${tool.name} 的详细介绍、分类、标签、适用场景和官网入口。`;
-
-  const description =
-    rawDescription.length > 160
-      ? `${rawDescription.slice(0, 157)}...`
-      : rawDescription;
-
-  const keywords = [
-    tool.name,
-    categoryName,
-    ...tagNames,
-    `${tool.name} 官网`,
-    `${tool.name} 介绍`,
-    `${tool.name} 使用场景`,
-    "AI 工具",
-    "AI 工具目录",
-  ];
+  const description = normalizeDescription(tool.name, tool.description);
 
   return {
-    title: `${tool.name} - ${categoryName} | ${SITE_NAME}`,
+    title: `${tool.name} - ${categoryName}`,
     description,
-    keywords,
+    keywords: buildKeywords(tool.name, categoryName, tagNames),
     alternates: {
       canonical: url,
     },
     openGraph: {
-      title: `${tool.name} - ${SITE_NAME}`,
+      title: `${tool.name} - ${categoryName}`,
       description,
       url,
       siteName: SITE_NAME,
@@ -113,7 +125,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${tool.name} - ${SITE_NAME}`,
+      title: `${tool.name} - ${categoryName}`,
       description,
     },
     robots: {
@@ -223,9 +235,9 @@ function splitContentToParagraphs(content: string) {
 
 function buildUseCases(name: string, categoryName: string, tagList: string[]) {
   const base = [
-    `想快速了解 ${name} 是否适合自己工作流的人`,
-    `希望在 ${categoryName} 场景里提升效率的个人用户或团队`,
-    `需要先看功能定位、再决定是否访问官网进一步试用的人`,
+    `想快速判断 ${name} 是否适合自己工作流的人`,
+    `希望在「${categoryName}」场景里提升效率的个人用户或团队`,
+    `想先看定位与能力，再决定是否访问官网深入试用的人`,
   ];
 
   if (tagList.length > 0) {
@@ -243,10 +255,17 @@ function buildHighlights(name: string, categoryName: string, hasContent: boolean
   ];
 
   if (!hasContent) {
-    base.push("当前详细介绍仍可继续补充，后续适合增加核心功能、优缺点与典型场景");
+    base.push("当前详细介绍仍可继续补充，后续适合增加核心功能、适用人群与典型场景");
   }
 
   return base;
+}
+
+function getPricingText(pricing?: string | null) {
+  if (!pricing) return null;
+  const value = pricing.trim();
+  if (!value || value === "unknown" || value === "未知") return null;
+  return value;
 }
 
 export default async function ToolPage({
@@ -264,9 +283,7 @@ export default async function ToolPage({
     ? await getRelatedTools(tool.categoryId, tool.slug)
     : [];
 
-  const showPricing =
-    tool.pricing && tool.pricing !== "unknown" && tool.pricing !== "未知";
-
+  const pricingText = getPricingText(tool.pricing);
   const showContent = Boolean(tool.content?.trim());
   const tagList = tool.tags.map((item) => item.tag.name).filter(Boolean);
   const url = `${SITE_URL}/tool/${tool.slug}`;
@@ -286,32 +303,32 @@ export default async function ToolPage({
     typeof tool.outClicks === "number" && tool.outClicks > 0;
 
   const categoryName = tool.category?.name || "AI 工具";
-  const paragraphs = showContent ? splitContentToParagraphs(tool.content) : [];
+  const paragraphs = showContent ? splitContentToParagraphs(tool.content || "") : [];
   const useCases = buildUseCases(tool.name, categoryName, tagList);
   const highlights = buildHighlights(tool.name, categoryName, showContent);
+  const metaDescription = normalizeDescription(tool.name, tool.description);
 
-  const jsonLd = {
+  const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: tool.name,
-    applicationCategory: tool.category?.name || "AI Tool",
+    applicationCategory: categoryName,
     operatingSystem: "Web",
-    description:
-      tool.description || `${tool.name} 的详细介绍、分类、标签和官网入口。`,
+    description: metaDescription,
     url,
     sameAs: tool.website || undefined,
-    offers: showPricing
-      ? {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "USD",
-          description: tool.pricing,
-        }
-      : undefined,
     keywords: tagList.join(", "),
     datePublished: tool.createdAt.toISOString(),
     dateModified: tool.updatedAt.toISOString(),
   };
+
+  if (pricingText) {
+    jsonLd.offers = {
+      "@type": "Offer",
+      description: pricingText,
+      availability: "https://schema.org/InStock",
+    };
+  }
 
   return (
     <>
@@ -374,7 +391,7 @@ export default async function ToolPage({
                       主分类：{tool.category?.name || "未分类"}
                     </InfoBadge>
 
-                    {showPricing ? <InfoBadge>价格：{tool.pricing}</InfoBadge> : null}
+                    {pricingText ? <InfoBadge>价格：{pricingText}</InfoBadge> : null}
 
                     {showOutClicks ? (
                       <InfoBadge>官网点击：{tool.outClicks}</InfoBadge>
@@ -425,6 +442,12 @@ export default async function ToolPage({
                       浏览精选工具
                     </Link>
                   </div>
+
+                  {tool.website ? (
+                    <p className="text-sm leading-7 text-gray-500">
+                      点击“访问官网”后将跳转到官方站点，同时记录一次官网点击数据。
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-4">
@@ -445,7 +468,7 @@ export default async function ToolPage({
                           {tool.name}
                         </div>
                         <div className="mt-1 text-sm text-gray-500">
-                          {tool.category?.name || "AI 工具"}
+                          {categoryName}
                         </div>
                         <div className="mt-2 text-xs text-gray-400">
                           收录时间：{new Date(tool.createdAt).toLocaleDateString("zh-CN")}

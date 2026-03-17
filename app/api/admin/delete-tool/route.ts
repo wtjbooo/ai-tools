@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/auth";
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
       select: {
         id: true,
         name: true,
+        slug: true,
         isPublished: true,
       },
     });
@@ -56,9 +58,24 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       message: `已删除工具：${tool.name}`,
+      deleted: {
+        id: tool.id,
+        slug: tool.slug,
+        name: tool.name,
+      },
     });
   } catch (error) {
     console.error("delete-tool api error:", error);
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "工具不存在或已被删除" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(
       {

@@ -7,6 +7,7 @@ import ToolCard from "@/components/ToolCard";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const SITE_NAME = "AI 工具目录";
 const SITE_URL =
   process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
 
@@ -70,10 +71,14 @@ export async function generateMetadata({
   if (!category) {
     return {
       title: "分类不存在",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
-  const title = `${category.name} AI工具`;
+  const title = `${category.name} 分类合集`;
   const description = `查看 ${category.name} 分类下的 AI 工具，当前共收录 ${category._count.tools} 个工具。`;
 
   return {
@@ -83,17 +88,21 @@ export async function generateMetadata({
       canonical: `${SITE_URL}/category/${category.slug}`,
     },
     openGraph: {
-      title: `${title} | AI 工具目录`,
+      title,
       description,
       url: `${SITE_URL}/category/${category.slug}`,
-      siteName: "AI 工具目录",
+      siteName: SITE_NAME,
       locale: "zh_CN",
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | AI 工具目录`,
+      title,
       description,
+    },
+    robots: {
+      index: true,
+      follow: true,
     },
   };
 }

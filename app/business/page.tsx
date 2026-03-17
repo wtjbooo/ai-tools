@@ -1,7 +1,6 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import BusinessContactActions from "@/components/BusinessContactActions";
 
 const BUSINESS_EMAIL = "1966453336@qq.com";
 
@@ -43,38 +42,42 @@ const faqItems = [
   },
 ];
 
-function CopyEmailButton() {
-  const [copied, setCopied] = useState(false);
+const SITE_URL =
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
 
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(BUSINESS_EMAIL);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-      window.alert(`复制失败，请手动复制邮箱：${BUSINESS_EMAIL}`);
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="inline-flex items-center rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
-    >
-      {copied ? "已复制邮箱" : "复制邮箱"}
-    </button>
-  );
-}
+export const metadata: Metadata = {
+  title: "商务合作 - AI工具导航",
+  description:
+    "联系 AI工具导航 洽谈工具收录、精选推荐、专题合作、品牌曝光等商务合作方式。",
+  alternates: {
+    canonical: `${SITE_URL}/business`,
+  },
+  openGraph: {
+    title: "商务合作 - AI工具导航",
+    description:
+      "联系 AI工具导航 洽谈工具收录、精选推荐、专题合作、品牌曝光等商务合作方式。",
+    url: `${SITE_URL}/business`,
+    siteName: "AI 工具导航",
+    locale: "zh_CN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "商务合作 - AI工具导航",
+    description:
+      "联系 AI工具导航 洽谈工具收录、精选推荐、专题合作、品牌曝光等商务合作方式。",
+  },
+};
 
 export default function BusinessPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="space-y-10">
-        <section className="rounded-[30px] border border-gray-200 bg-white px-6 py-10 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:px-10 sm:py-14">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-gray-500">
+        <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] px-6 py-10 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-10 sm:py-14">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.08),transparent_26%)]" />
+
+          <div className="relative mx-auto max-w-3xl text-center">
+            <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-gray-500 backdrop-blur-md">
               Business & Partnerships
             </div>
 
@@ -87,22 +90,8 @@ export default function BusinessPage() {
               专题合作、品牌曝光等合作方式。
             </p>
 
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a
-                href={`mailto:${BUSINESS_EMAIL}`}
-                className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
-              >
-                邮件联系合作
-              </a>
-
-              <CopyEmailButton />
-
-              <Link
-                href="/submit"
-                className="inline-flex items-center rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
-              >
-                先提交工具
-              </Link>
+            <div className="mt-8">
+              <BusinessContactActions email={BUSINESS_EMAIL} />
             </div>
 
             <p className="mt-4 text-xs text-gray-500 sm:text-sm">
@@ -115,7 +104,7 @@ export default function BusinessPage() {
           {cooperationItems.map((item) => (
             <div
               key={item.title}
-              className="rounded-[24px] border border-gray-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+              className="rounded-[24px] border border-black/8 bg-white/92 p-6 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
             >
               <h2 className="text-lg font-semibold tracking-tight text-gray-950">
                 {item.title}
@@ -127,7 +116,7 @@ export default function BusinessPage() {
           ))}
         </section>
 
-        <section className="rounded-[24px] border border-gray-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:p-8">
+        <section className="rounded-[24px] border border-black/8 bg-white/92 p-6 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-8">
           <div className="max-w-3xl">
             <h2 className="text-xl font-semibold tracking-tight text-gray-950">
               合作前说明
@@ -146,7 +135,7 @@ export default function BusinessPage() {
           </div>
         </section>
 
-        <section className="rounded-[24px] border border-gray-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:p-8">
+        <section className="rounded-[24px] border border-black/8 bg-white/92 p-6 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-8">
           <h2 className="text-xl font-semibold tracking-tight text-gray-950">
             常见问题
           </h2>
@@ -155,7 +144,7 @@ export default function BusinessPage() {
             {faqItems.map((item) => (
               <div
                 key={item.q}
-                className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0"
+                className="border-b border-black/6 pb-6 last:border-b-0 last:pb-0"
               >
                 <h3 className="text-sm font-medium text-gray-950 sm:text-base">
                   {item.q}
@@ -165,6 +154,26 @@ export default function BusinessPage() {
                 </p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border border-black/8 bg-white/92 p-6 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-gray-950">
+                还没准备好商务合作？
+              </h2>
+              <p className="mt-2 text-sm leading-7 text-gray-600 sm:text-[15px]">
+                你也可以先提交工具，我们会先按目录标准审核和整理内容。
+              </p>
+            </div>
+
+            <Link
+              href="/submit"
+              className="inline-flex items-center justify-center rounded-full border border-black/8 bg-white px-5 py-2.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/12 hover:bg-white hover:text-gray-950 active:scale-[0.98]"
+            >
+              先提交工具
+            </Link>
           </div>
         </section>
       </div>

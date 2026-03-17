@@ -35,28 +35,70 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
-      lastModified: undefined,
+      lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: `${SITE_URL}/submit`,
-      lastModified: undefined,
-      changeFrequency: "monthly",
-      priority: 0.3,
+      url: `${SITE_URL}/featured`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
     },
     {
-      url: `${SITE_URL}/featured`,
-      lastModified: undefined,
-      changeFrequency: "weekly",
-      priority: 0.6,
+      url: `${SITE_URL}/popular`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
+      url: `${SITE_URL}/latest`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
+      url: `${SITE_URL}/submit`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/about`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/guidelines`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/business`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.2,
+    },
+    {
+      url: `${SITE_URL}/terms`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.2,
     },
   ];
 
   const toolPages: MetadataRoute.Sitemap = tools.map((tool) => ({
     url: `${SITE_URL}/tool/${tool.slug}`,
     lastModified: tool.updatedAt,
-    changeFrequency: "weekly",
+    changeFrequency: "weekly" as const,
     priority: 0.8,
   }));
 
@@ -65,7 +107,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((category) => ({
       url: `${SITE_URL}/category/${category.slug}`,
       lastModified: category.updatedAt,
-      changeFrequency: "weekly",
+      changeFrequency: "weekly" as const,
       priority: 0.7,
     }));
 

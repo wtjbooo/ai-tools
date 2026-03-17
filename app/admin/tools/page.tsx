@@ -135,6 +135,20 @@ function StatPill({
   );
 }
 
+function EditRuleBox() {
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+      <div className="font-medium">编辑规范提醒</div>
+      <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-6 sm:text-sm">
+        <li>description = 前台一句话简介，只写清楚“这是什么工具”。</li>
+        <li>content = 前台详细介绍，可写功能、适合人群、典型场景。</li>
+        <li>不要把后台审核备注写进前台文案，reason 不应出现在这里。</li>
+        <li>分类优先只保留一个主分类，标签控制在少而准。</li>
+      </ul>
+    </div>
+  );
+}
+
 export default function AdminToolsPage() {
   const router = useRouter();
 
@@ -774,6 +788,8 @@ export default function AdminToolsPage() {
               >
                 {isEditing ? (
                   <div className="space-y-3">
+                    <EditRuleBox />
+
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-sm font-medium">
@@ -786,6 +802,9 @@ export default function AdminToolsPage() {
                           }
                           className="w-full rounded-lg border px-3 py-2 text-sm"
                         />
+                        <p className="mt-1 text-xs text-gray-500">
+                          建议统一使用官方主名称，不要混入宣传语或副标题。
+                        </p>
                       </div>
 
                       <div>
@@ -867,6 +886,9 @@ export default function AdminToolsPage() {
                         }
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        这里只写前台一句话简介，建议一句话说清工具用途，不要写后台审核备注。
+                      </p>
                     </div>
 
                     <div>
@@ -881,6 +903,9 @@ export default function AdminToolsPage() {
                         }
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        这里是前台工具介绍，适合写功能、适用人群、典型场景。不要把后台审核 reason 写到这里。
+                      </p>
                     </div>
 
                     <div>
@@ -908,8 +933,12 @@ export default function AdminToolsPage() {
                         onChange={(e) =>
                           setEditForm({ ...editForm, tags: e.target.value })
                         }
+                        placeholder="例如：AI写作, 文案生成, 中文支持"
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        用英文逗号或中文逗号分隔，建议控制在 3 到 8 个，尽量少而准。
+                      </p>
                     </div>
 
                     <div>
@@ -929,7 +958,7 @@ export default function AdminToolsPage() {
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                       />
                       <p className="mt-1 text-xs text-gray-500">
-                        数字越小越靠前，通常填 1、2、3、4……
+                        数字越小越靠前，通常填 1、2、3、4…… 不改推荐位时也可以保持当前值不动。
                       </p>
                     </div>
 

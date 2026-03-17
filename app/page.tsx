@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { prisma } from "@/lib/db";
@@ -7,8 +8,35 @@ import ToolCard from "@/components/ToolCard";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const SITE_URL =
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
+
 const CATEGORY_SECTIONS_LIMIT = 4;
 const CATEGORY_TOOLS_LIMIT = 6;
+
+export const metadata: Metadata = {
+  title: "AI工具导航 - 精选 AI 工具目录",
+  description:
+    "发现值得使用的 AI 工具，覆盖聊天、写作、绘图、视频、搜索、效率等场景，快速找到适合你的 AI 产品。",
+  alternates: {
+    canonical: `${SITE_URL}/`,
+  },
+  openGraph: {
+    title: "AI工具导航 - 精选 AI 工具目录",
+    description:
+      "发现值得使用的 AI 工具，覆盖聊天、写作、绘图、视频、搜索、效率等场景，快速找到适合你的 AI 产品。",
+    url: `${SITE_URL}/`,
+    siteName: "AI 工具目录",
+    locale: "zh_CN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI工具导航 - 精选 AI 工具目录",
+    description:
+      "发现值得使用的 AI 工具，覆盖聊天、写作、绘图、视频、搜索、效率等场景，快速找到适合你的 AI 产品。",
+  },
+};
 
 async function getHomeData() {
   const featuredTotal = await prisma.tool.count({
@@ -331,7 +359,7 @@ export default async function HomePage() {
                 CURATED AI TOOLS
               </div>
               <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-xs text-gray-500 backdrop-blur-md">
-                已收录 精选 {featuredTotal > 0 ? `${featuredTotal}+` : "1+"}
+                已收录精选 {featuredTotal > 0 ? `${featuredTotal}+` : "1+"}
               </div>
             </div>
 
@@ -362,7 +390,7 @@ export default async function HomePage() {
         <section className="space-y-3.5 sm:space-y-4">
           <SectionTitle
             title="热门分类"
-            description="从常见需求出发，快速进入对应工具方向"
+            description="先从常见需求快速进入，再继续往下浏览重点分类合集"
           />
 
           {categories.length === 0 ? (
@@ -468,32 +496,45 @@ export default async function HomePage() {
           )}
         </section>
 
-        {sectionCategories.map((category) => (
-          <section key={category.id} className="space-y-3.5 sm:space-y-4">
-            <SectionTitle
-              title={category.name}
-              description={`当前分类共收录 ${category.count} 个工具`}
-              right={
-                <Link
-                  href={`/category/${category.slug}`}
-                  className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
-                >
-                  查看全部
-                </Link>
-              }
-            />
+        <section className="space-y-4">
+          <SectionTitle
+            title="重点分类合集"
+            description="首页先展开几个核心分类，点击右上角可进入对应分类完整合集页"
+          />
 
-            {category.tools.length === 0 ? (
-              <EmptyBox text={`“${category.name}” 暂时还没有可展示的工具。`} />
-            ) : (
-              <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-                {category.tools.map((tool) => (
-                  <ToolCard key={tool.id} tool={tool} />
-                ))}
-              </div>
-            )}
-          </section>
-        ))}
+          {sectionCategories.length === 0 ? (
+            <EmptyBox text="暂时还没有可展示的重点分类。" />
+          ) : (
+            <div className="space-y-8 sm:space-y-10">
+              {sectionCategories.map((category) => (
+                <section key={category.id} className="space-y-3.5 sm:space-y-4">
+                  <SectionTitle
+                    title={category.name}
+                    description={`当前分类共收录 ${category.count} 个工具`}
+                    right={
+                      <Link
+                        href={`/category/${category.slug}`}
+                        className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
+                      >
+                        查看全部
+                      </Link>
+                    }
+                  />
+
+                  {category.tools.length === 0 ? (
+                    <EmptyBox text={`“${category.name}” 暂时还没有可展示的工具。`} />
+                  ) : (
+                    <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+                      {category.tools.map((tool) => (
+                        <ToolCard key={tool.id} tool={tool} />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

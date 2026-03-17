@@ -10,7 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SITE_NAME = "AI 工具目录";
-const SITE_URL = "https://y78bq.dpdns.org";
+const SITE_URL =
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
 
 const SEARCH_SUGGESTIONS = [
   "聊天助手",
@@ -27,15 +28,30 @@ export async function generateMetadata({
   searchParams: { q?: string };
 }): Promise<Metadata> {
   const q = (searchParams.q ?? "").trim();
-
   const canonical = `${SITE_URL}/search`;
 
   if (!q) {
     return {
-      title: `搜索 AI 工具 | ${SITE_NAME}`,
-      description: "搜索 AI 工具、分类、标签和使用场景，快速找到适合你的 AI 工具。",
+      title: "搜索 AI 工具",
+      description:
+        "搜索 AI 工具、分类、标签和使用场景，快速找到适合你的 AI 工具。",
       alternates: {
         canonical,
+      },
+      openGraph: {
+        title: "搜索 AI 工具",
+        description:
+          "搜索 AI 工具、分类、标签和使用场景，快速找到适合你的 AI 工具。",
+        url: canonical,
+        siteName: SITE_NAME,
+        type: "website",
+        locale: "zh_CN",
+      },
+      twitter: {
+        card: "summary",
+        title: "搜索 AI 工具",
+        description:
+          "搜索 AI 工具、分类、标签和使用场景，快速找到适合你的 AI 工具。",
       },
       robots: {
         index: false,
@@ -45,14 +61,14 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${q} 搜索结果 | ${SITE_NAME}`,
+    title: `${q} 搜索结果`,
     description: `查看与“${q}”相关的 AI 工具搜索结果，快速找到对应的工具介绍、分类、标签和官网入口。`,
     alternates: {
       canonical,
     },
     openGraph: {
-      title: `${q} 搜索结果 | ${SITE_NAME}`,
-      description: `查看与“${q}”相关的 AI 工具搜索结果。`,
+      title: `${q} 搜索结果`,
+      description: `查看与“${q}”相关的 AI 工具搜索结果，快速找到对应的工具介绍、分类、标签和官网入口。`,
       url: canonical,
       siteName: SITE_NAME,
       type: "website",
@@ -60,7 +76,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary",
-      title: `${q} 搜索结果 | ${SITE_NAME}`,
+      title: `${q} 搜索结果`,
       description: `查看与“${q}”相关的 AI 工具搜索结果。`,
     },
     robots: {

@@ -9,18 +9,21 @@ import SiteHeader from "@/components/SiteHeader";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SITE_NAME = "AI 工具导航";
-const SITE_URL = "https://y78bq.dpdns.org";
+const SITE_NAME = "AI 工具目录";
+const SITE_URL =
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
 
 export const metadata: Metadata = {
-  title: `精选推荐 AI 工具 | ${SITE_NAME}`,
-  description: "查看站长精选推荐的 AI 工具，按推荐顺序展示高质量 AI 产品与实用工具。",
+  title: "精选推荐",
+  description:
+    "查看站长精选推荐的 AI 工具，按推荐顺序展示高质量 AI 产品与实用工具。",
   alternates: {
     canonical: `${SITE_URL}/featured`,
   },
   openGraph: {
-    title: `精选推荐 AI 工具 | ${SITE_NAME}`,
-    description: "查看站长精选推荐的 AI 工具，按推荐顺序展示高质量 AI 产品与实用工具。",
+    title: "精选推荐",
+    description:
+      "查看站长精选推荐的 AI 工具，按推荐顺序展示高质量 AI 产品与实用工具。",
     url: `${SITE_URL}/featured`,
     siteName: SITE_NAME,
     type: "website",
@@ -28,8 +31,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `精选推荐 AI 工具 | ${SITE_NAME}`,
-    description: "查看站长精选推荐的 AI 工具，按推荐顺序展示高质量 AI 产品与实用工具。",
+    title: "精选推荐",
+    description:
+      "查看站长精选推荐的 AI 工具，按推荐顺序展示高质量 AI 产品与实用工具。",
   },
   robots: {
     index: true,
@@ -152,15 +156,21 @@ export default async function FeaturedPage({
     0
   );
 
+  const pageTitle = currentCategory
+    ? `${currentCategory.name} 精选推荐`
+    : "精选推荐";
+
+  const pageDescription = currentCategory
+    ? `查看 ${currentCategory.name} 分类下的精选推荐 AI 工具，按推荐顺序展示。`
+    : "查看站长精选推荐的 AI 工具，按推荐顺序展示高质量 AI 产品与实用工具。";
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: currentCategory
       ? `${currentCategory.name} 精选推荐 AI 工具`
       : "精选推荐 AI 工具",
-    description: currentCategory
-      ? `查看 ${currentCategory.name} 分类下的精选推荐 AI 工具，按推荐顺序展示。`
-      : "查看站长精选推荐的 AI 工具，按推荐顺序展示高质量 AI 产品与实用工具。",
+    description: pageDescription,
     url: currentCategory
       ? `${SITE_URL}/featured?category=${encodeURIComponent(currentCategory.slug)}`
       : `${SITE_URL}/featured`,
@@ -195,7 +205,7 @@ export default async function FeaturedPage({
 
         <div className="space-y-5 sm:space-y-6">
           <PageHero
-            title="精选推荐"
+            title={pageTitle}
             description={`这里展示站长精选推荐的 AI 工具，按推荐顺序排列。适合从高质量、优先推荐的工具开始逛。当前共收录 ${tools.length} 个${currentCategory ? `「${currentCategory.name}」` : ""}精选推荐工具${!currentCategory ? `（总计 ${totalFeaturedCount} 个）` : ""}`}
             breadcrumbs={[
               { label: "首页", href: "/" },

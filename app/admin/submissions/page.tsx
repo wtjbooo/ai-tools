@@ -93,6 +93,20 @@ function getButtonClass(disabled = false, active = false) {
   ].join(" ");
 }
 
+function ReviewRuleBox() {
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+      <div className="font-medium">审核映射提醒</div>
+      <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-6 sm:text-sm">
+        <li>description = 前台一句话简介，只写清楚“这是什么工具”。</li>
+        <li>reason = 后台审核备注 / 投稿补充说明，不要写进前台介绍。</li>
+        <li>分类优先只保留一个主分类，不要写组合值。</li>
+        <li>标签尽量少而准，建议 3 到 8 个。</li>
+      </ul>
+    </div>
+  );
+}
+
 export default function AdminSubmissionsPage() {
   const router = useRouter();
 
@@ -309,7 +323,9 @@ export default function AdminSubmissionsPage() {
       if (!q) return true;
 
       const duplicateText = (x.duplicateCandidates ?? [])
-        .map((item) => [item.name, item.slug, item.website ?? "", item.reasons.join(" ")].join(" "))
+        .map((item) =>
+          [item.name, item.slug, item.website ?? "", item.reasons.join(" ")].join(" ")
+        )
         .join(" ")
         .toLowerCase();
 
@@ -348,7 +364,12 @@ export default function AdminSubmissionsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">审核队列</h1>
+        <div>
+          <h1 className="text-3xl font-bold">审核队列</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            先编辑再审核，尽量把前台简介、分类、标签在这一层收干净
+          </p>
+        </div>
 
         <div className="flex items-center gap-3">
           <Link className="underline" href="/admin/tools">
@@ -457,6 +478,8 @@ export default function AdminSubmissionsPage() {
               <div key={x.id} className="space-y-3 rounded-xl border p-4">
                 {isEditing ? (
                   <div className="space-y-3">
+                    <ReviewRuleBox />
+
                     <div>
                       <label className="mb-1 block text-sm font-medium">
                         工具名称
@@ -501,6 +524,9 @@ export default function AdminSubmissionsPage() {
                         disabled={isSaving}
                         className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        这是前台会直接展示的一句话简介，建议一句话讲清工具用途。
+                      </p>
                     </div>
 
                     <div>
@@ -516,7 +542,7 @@ export default function AdminSubmissionsPage() {
                         className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
                       <p className="mt-1 text-xs text-gray-500">
-                        只填写一个主分类，不要填写“聊天助手 / 视频生成”这种组合值
+                        只填写一个主分类，不要填写“聊天助手 / 视频生成”这种组合值。
                       </p>
                     </div>
 
@@ -532,6 +558,9 @@ export default function AdminSubmissionsPage() {
                         disabled={isSaving}
                         className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        用逗号分隔，建议控制在 3 到 8 个，尽量少而准。
+                      </p>
                     </div>
 
                     <div>
@@ -550,7 +579,7 @@ export default function AdminSubmissionsPage() {
 
                     <div>
                       <label className="mb-1 block text-sm font-medium">
-                        补充说明
+                        审核备注 / 投稿补充说明
                       </label>
                       <textarea
                         rows={8}
@@ -561,6 +590,9 @@ export default function AdminSubmissionsPage() {
                         disabled={isSaving}
                         className="w-full rounded-lg border px-3 py-2 text-sm disabled:opacity-60"
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        这里是后台备注，不应映射到前台工具介绍。适合记录审核判断、投稿补充信息、去重说明。
+                      </p>
                     </div>
 
                     <div className="flex gap-2 pt-2">
@@ -659,7 +691,7 @@ export default function AdminSubmissionsPage() {
                     {x.reason ? (
                       <div className="whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
                         <div className="mb-1 font-medium text-gray-900">
-                          补充说明
+                          审核备注 / 投稿补充说明
                         </div>
                         <div>{x.reason}</div>
                       </div>
