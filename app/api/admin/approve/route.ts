@@ -111,34 +111,6 @@ async function findOrCreateCategory(
   });
 }
 
-  const name = normalizeSingleCategoryName(rawCategory);
-  const slug = buildCategorySlug(name);
-
-  const bySlug = await tx.category.findUnique({
-    where: { slug },
-  });
-
-  if (bySlug) {
-    return bySlug;
-  }
-
-  const byName = await tx.category.findFirst({
-    where: { name },
-  });
-
-  if (byName) {
-    return byName;
-  }
-
-  return tx.category.create({
-    data: {
-      name,
-      slug,
-      order: 0,
-    },
-  });
-}
-
 function slugFromWebsite(website: string) {
   try {
     const url = new URL(website);
