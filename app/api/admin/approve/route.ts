@@ -423,7 +423,8 @@ export async function POST(req: Request) {
     const parsedTags = parseTags(sub.tags);
     const logoUrl = await uploadLogoToBlob(normalizedWebsite, sub.name);
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(
+  async (tx) => {
       const category = await findOrCreateCategory(sub.category, tx);
 
       const base =
@@ -537,8 +538,13 @@ export async function POST(req: Request) {
         data: { status: "approved" },
       });
 
-      return tool;
-    });
+          return tool;
+  },
+  {
+    maxWait: 10000,
+    timeout: 30000,
+  }
+);
 
     return NextResponse.json({
       ok: true,

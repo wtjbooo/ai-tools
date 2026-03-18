@@ -87,17 +87,19 @@ async function fetchHtml(url: string) {
   }
 }
 
+function extractAttribute(tag: string, attribute: string) {
+  const regex = new RegExp(`\\b${attribute}=["']([^"']+)["']`, "i");
+  return tag.match(regex)?.[1]?.trim() ?? "";
+}
+
 function extractIconHrefsFromHtml(html: string) {
   const hrefs: string[] = [];
   const linkTagPattern = /<link\b[^>]*>/gi;
   const linkTags = html.match(linkTagPattern) ?? [];
 
   for (const tag of linkTags) {
-    const relMatch = tag.match(/\brel=["']([^"']+)["']/i);
-    const hrefMatch = tag.match(/\bhref=["']([^"']+)["']/i);
-
-    const rel = relMatch?.[1]?.toLowerCase() ?? "";
-    const href = hrefMatch?.[1]?.trim() ?? "";
+    const rel = extractAttribute(tag, "rel").toLowerCase();
+    const href = extractAttribute(tag, "href");
 
     if (!href) continue;
 
@@ -115,6 +117,68 @@ function extractIconHrefsFromHtml(html: string) {
   return Array.from(new Set(hrefs));
 }
 
+function extractMetaImageCandidatesFromHtml(html: string) {
+  const results: string[] = [];
+  const metaTagPattern = /<meta\b[^>]*>/gi;
+  const metaTags = html.match(metaTagPattern) ?? [];
+
+  for (const tag of metaTags) {
+    const property = extractAttribute(tag, "property").toLowerCase();
+    const name = extractAttribute(tag, "name").toLowerCase();
+    const itemProp = extractAttribute(tag, "itemprop").toLowerCase();
+    const content = extractAttribute(tag, "content");
+
+    if (!content) continue;
+
+    const isImageMeta =
+      property === "og:image" ||
+      property === "og:image:url" ||
+      property === "og:image:secure_url" ||
+      name === "twitter:image" ||
+      name === "twitter:image:src" ||
+      name === "msapplication-tileimage" ||
+      name === "image" ||
+      name === "thumbnail" ||
+      itemProp === "image";
+
+    if (isImageMeta) {
+      results.push(content);
+    }
+  }
+
+  return Array.from(new Set(results));
+}
+
+function extractLikelyLogoImgCandidatesFromHtml(html: string) {
+  const results: string[] = [];
+  const imgTagPattern = /<img\b[^>]*>/gi;
+  const imgTags = html.match(imgTagPattern) ?? [];
+
+  for (const tag of imgTags) {
+    const src = extractAttribute(tag, "src");
+    if (!src) continue;
+
+    const alt = extractAttribute(tag, "alt").toLowerCase();
+    const className = extractAttribute(tag, "class").toLowerCase();
+    const id = extractAttribute(tag, "id").toLowerCase();
+
+    const signals = [alt, className, id].join(" ");
+    const isLikelyLogo =
+      signals.includes("logo") ||
+      signals.includes("brand") ||
+      signals.includes("navbar") ||
+      signals.includes("header") ||
+      signals.includes("site") ||
+      signals.includes("icon");
+
+    if (isLikelyLogo) {
+      results.push(src);
+    }
+  }
+
+  return Array.from(new Set(results));
+}
+
 function getCommonIconCandidates(website: string) {
   try {
     const url = new URL(website);
@@ -123,10 +187,18 @@ function getCommonIconCandidates(website: string) {
     const candidates = [
       "/favicon.ico",
       "/favicon.png",
+      "/favicon.svg",
       "/apple-touch-icon.png",
       "/apple-touch-icon-precomposed.png",
+      "/icon.png",
+      "/logo.png",
+      "/logo.svg",
       "/static/favicon.ico",
+      "/static/logo.png",
+      "/static/logo.svg",
       "/assets/favicon.ico",
+      "/assets/logo.png",
+      "/assets/logo.svg",
     ];
 
     return candidates.map((path) => `${origin}${path}`);
@@ -173,7 +245,7 @@ function isLikelyImageContentType(contentType: string | null) {
 }
 
 async function tryDownloadIcon(iconUrl: string, refererWebsite: string) {
-  if (!iconUrl) return null;
+  if (!iconUrl || iconUrl.startsWith("data:")) return null;
 
   const timeout = withTimeoutSignal(12000);
 
@@ -219,16 +291,30 @@ async function tryDownloadIcon(iconUrl: string, refererWebsite: string) {
 }
 
 async function fetchWebsiteIcon(website: string) {
-  const candidateUrls: string[] = [];
+  const primaryCandidates: string[] = [];
+  const secondaryCandidates: string[] = [];
 
   try {
     const html = await fetchHtml(website);
-    const iconHrefs = extractIconHrefsFromHtml(html);
 
-    for (const href of iconHrefs) {
+    for (const href of extractIconHrefsFromHtml(html)) {
       const resolved = resolveIconUrl(href, website);
       if (resolved) {
-        candidateUrls.push(resolved);
+        primaryCandidates.push(resolved);
+      }
+    }
+
+    for (const href of extractMetaImageCandidatesFromHtml(html)) {
+      const resolved = resolveIconUrl(href, website);
+      if (resolved) {
+        secondaryCandidates.push(resolved);
+      }
+    }
+
+    for (const href of extractLikelyLogoImgCandidatesFromHtml(html)) {
+      const resolved = resolveIconUrl(href, website);
+      if (resolved) {
+        secondaryCandidates.push(resolved);
       }
     }
   } catch {
@@ -236,16 +322,17 @@ async function fetchWebsiteIcon(website: string) {
   }
 
   for (const fallbackUrl of getCommonIconCandidates(website)) {
-    candidateUrls.push(fallbackUrl);
+    primaryCandidates.push(fallbackUrl);
   }
 
   for (const externalUrl of getExternalFaviconCandidates(website)) {
-    candidateUrls.push(externalUrl);
+    secondaryCandidates.push(externalUrl);
   }
 
-  const uniqueCandidates = Array.from(new Set(candidateUrls));
+  const uniquePrimary = Array.from(new Set(primaryCandidates));
+  const uniqueSecondary = Array.from(new Set(secondaryCandidates));
 
-  for (const iconUrl of uniqueCandidates) {
+  for (const iconUrl of [...uniquePrimary, ...uniqueSecondary]) {
     const iconFile = await tryDownloadIcon(iconUrl, website);
     if (iconFile) {
       return iconFile;

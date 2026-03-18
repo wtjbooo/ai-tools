@@ -1,0 +1,422 @@
+[
+  {
+    "name": "Kimi",
+    "website": "https://kimi.moonshot.cn",
+    "description": "一款支持在线搜索、深度思考和长文本处理的国产 AI 助手。",
+    "category": "聊天助手",
+    "tags": [
+      "中文支持",
+      "在线搜索",
+      "长文本",
+      "多模态"
+    ],
+    "contact": "",
+    "reason": "国内头部聊天助手，适合首批收录。"
+  },
+  {
+    "name": "豆包",
+    "website": "https://www.doubao.com",
+    "description": "一款支持问答、写作、翻译和编程辅助的国产 AI 助手。",
+    "category": "聊天助手",
+    "tags": [
+      "中文支持",
+      "问答",
+      "写作辅助",
+      "编程辅助"
+    ],
+    "contact": "",
+    "reason": "字节系头部通用 AI 助手，适合首批收录。"
+  },
+  {
+    "name": "腾讯元宝",
+    "website": "https://yuanbao.tencent.com",
+    "description": "一款支持写作、搜索、识图和文件理解的国产 AI 助手。",
+    "category": "聊天助手",
+    "tags": [
+      "中文支持",
+      "AI搜索",
+      "文件理解",
+      "AI识图"
+    ],
+    "contact": "",
+    "reason": "腾讯系通用 AI 助手，适合首批收录。"
+  },
+  {
+    "name": "通义",
+    "website": "https://tongyi.aliyun.com",
+    "description": "一款面向对话、创作、视觉和多模态场景的国产 AI 助手。",
+    "category": "聊天助手",
+    "tags": [
+      "中文支持",
+      "多模态",
+      "内容创作",
+      "阿里云"
+    ],
+    "contact": "",
+    "reason": "阿里通义核心入口，适合作为头部工具收录。"
+  },
+  {
+    "name": "智谱清言",
+    "website": "https://chatglm.cn/main/alltoolsdetail?lang=zh&redirect=%2Fmain%2Falltoolsdetail",
+    "description": "一款支持对话、写作、编程和文档理解的国产 AI 助手。",
+    "category": "聊天助手",
+    "tags": [
+      "中文支持",
+      "写作辅助",
+      "编程辅助",
+      "文档理解"
+    ],
+    "contact": "",
+    "reason": "智谱头部产品，适合首批收录。"
+  },
+  {
+    "name": "讯飞星火",
+    "website": "https://xinghuo.xfyun.cn",
+    "description": "一款支持问答、推理、写作和代码理解的国产 AI 助手。",
+    "category": "聊天助手",
+    "tags": [
+      "中文支持",
+      "知识问答",
+      "逻辑推理",
+      "代码理解"
+    ],
+    "contact": "",
+    "reason": "讯飞通用 AI 助手，适合首批收录。"
+  },
+  {
+    "name": "天工Skywork",
+    "website": "https://www.tiangong.cn",
+    "description": "一款面向文档、PPT、表格和深度研究的国产 AI 办公智能体。",
+    "category": "办公效率",
+    "tags": [
+      "AI办公",
+      "文档生成",
+      "PPT生成",
+      "深度研究"
+    ],
+    "contact": "",
+    "reason": "适合补充 AI 办公智能体方向。"
+  },
+  {
+    "name": "秘塔AI搜索",
+    "website": "https://metaso.cn",
+    "description": "一款主打无广告直达结果与深度研究的国产 AI 搜索工具。",
+    "category": "AI搜索",
+    "tags": [
+      "AI搜索",
+      "深度研究",
+      "中文支持",
+      "信息检索"
+    ],
+    "contact": "",
+    "reason": "适合补充 AI 搜索方向。"
+  },
+  {
+    "name": "夸克",
+    "website": "https://www.quark.cn",
+    "description": "一款集 AI 搜索、AI 助手与文件处理于一体的国产效率工具。",
+    "category": "AI搜索",
+    "tags": [
+      "AI搜索",
+      "文件处理",
+      "办公效率",
+      "浏览器"
+    ],
+    "contact": "",
+    "reason": "适合补充搜索与效率工具方向。"
+  },
+  {
+    "name": "纳米AI搜索",
+    "website": "https://www.n.cn",
+    "description": "一款主打直接给答案、拍照问和语音搜的国产 AI 搜索工具。",
+    "category": "AI搜索",
+    "tags": [
+      "AI搜索",
+      "拍照问",
+      "语音搜索",
+      "中文支持"
+    ],
+    "contact": "",
+    "reason": "适合补充 AI 搜索方向。"
+  },
+  {
+    "name": "海螺视频",
+    "website": "https://hailuoai.com",
+    "description": "一款支持文生视频、图生视频和视觉创作的国产 AI 视频工具。",
+    "category": "视频生成",
+    "tags": [
+      "文生视频",
+      "图生视频",
+      "视觉创作",
+      "MiniMax"
+    ],
+    "contact": "",
+    "reason": "适合补充国产视频生成方向。"
+  },
+  {
+    "name": "即梦AI",
+    "website": "https://jimeng.jianying.com",
+    "description": "一款支持 AI 绘画、视频生成和智能画布创作的国产 AI 工具。",
+    "category": "视频生成",
+    "tags": [
+      "文生图",
+      "文生视频",
+      "智能画布",
+      "中文支持"
+    ],
+    "contact": "",
+    "reason": "适合补充图片/视频生成方向。"
+  },
+  {
+    "name": "扣子",
+    "website": "https://space.coze.cn/space-intro",
+    "description": "一款面向办公、内容创作和工作流搭建的国产职场 AI 平台。",
+    "category": "办公效率",
+    "tags": [
+      "AI办公",
+      "工作流",
+      "内容创作",
+      "智能体"
+    ],
+    "contact": "",
+    "reason": "适合补充职场 AI 与工作流方向。"
+  },
+  {
+    "name": "ima.copilot",
+    "website": "https://ima.qq.com",
+    "description": "一款集搜、读、写于一体的国产 AI 工作台。",
+    "category": "办公效率",
+    "tags": [
+      "知识库",
+      "搜读写",
+      "办公效率",
+      "腾讯"
+    ],
+    "contact": "",
+    "reason": "适合补充知识库型工作台方向。"
+  },
+  {
+    "name": "WPS AI",
+    "website": "https://ai.wps.cn",
+    "description": "一款支持 PPT 生成、文档写作和表格处理的国产 AI 办公工具。",
+    "category": "办公效率",
+    "tags": [
+      "PPT生成",
+      "文档写作",
+      "表格处理",
+      "办公效率"
+    ],
+    "contact": "",
+    "reason": "适合补充办公效率方向。"
+  },
+  {
+    "name": "文心",
+    "website": "https://www.wenxiaoyan.com/app",
+    "description": "一款支持搜索、写作、修图和多场景创作的国产 AI 助手。",
+    "category": "聊天助手",
+    "tags": [
+      "中文支持",
+      "文章写作",
+      "图片创作",
+      "百度"
+    ],
+    "contact": "",
+    "reason": "百度系头部 AI 助手，适合首批收录。"
+  },
+  {
+    "name": "Trae",
+    "website": "https://www.trae.com.cn",
+    "description": "一款面向中文开发场景的国产 AI 原生 IDE。",
+    "category": "AI编程",
+    "tags": [
+      "AI IDE",
+      "中文开发",
+      "编程助手",
+      "开发效率"
+    ],
+    "contact": "",
+    "reason": "适合补充国产 AI IDE 方向。"
+  },
+  {
+    "name": "CodeGeeX",
+    "website": "https://codegeex.cn",
+    "description": "一款支持代码生成、补全、翻译和问答的国产 AI 编程助手。",
+    "category": "AI编程",
+    "tags": [
+      "代码生成",
+      "代码补全",
+      "代码翻译",
+      "编程助手"
+    ],
+    "contact": "",
+    "reason": "适合补充国产 AI 编程方向。"
+  },
+  {
+    "name": "通义灵码",
+    "website": "https://tongyi.aliyun.com/lingma/",
+    "description": "一款支持代码生成、问答和多文件修改的国产 AI 编码助手。",
+    "category": "AI编程",
+    "tags": [
+      "代码生成",
+      "智能问答",
+      "多文件修改",
+      "阿里云"
+    ],
+    "contact": "",
+    "reason": "适合补充国产编码助手方向。"
+  },
+  {
+    "name": "通义万相",
+    "website": "https://tongyi.aliyun.com/wanxiang/creation",
+    "description": "一款支持文生图、图生图和视频生成的国产 AI 创作平台。",
+    "category": "图片生成",
+    "tags": [
+      "文生图",
+      "图生图",
+      "文生视频",
+      "图像编辑"
+    ],
+    "contact": "",
+    "reason": "适合补充图片/视频生成方向。"
+  },
+  {
+    "name": "通义听悟",
+    "website": "https://tingwu.aliyun.com",
+    "description": "一款面向会议记录、音视频转写和内容整理的国产 AI 助手。",
+    "category": "办公效率",
+    "tags": [
+      "会议纪要",
+      "语音转写",
+      "音视频整理",
+      "办公效率"
+    ],
+    "contact": "",
+    "reason": "适合补充会议效率方向。"
+  },
+  {
+    "name": "豆包 MarsCode",
+    "website": "https://www.marscode.cn/landing",
+    "description": "一款基于豆包大模型的国产 AI 编程助手与 AI IDE。",
+    "category": "AI编程",
+    "tags": [
+      "AI IDE",
+      "代码生成",
+      "问题修复",
+      "字节跳动"
+    ],
+    "contact": "",
+    "reason": "适合补充国产 AI 编程方向。"
+  },
+  {
+    "name": "文心快码",
+    "website": "https://comate.baidu.com/zh",
+    "description": "一款支持代码生成、单测生成和智能问答的国产 AI 编程工具。",
+    "category": "AI编程",
+    "tags": [
+      "代码生成",
+      "单元测试",
+      "智能问答",
+      "百度"
+    ],
+    "contact": "",
+    "reason": "适合补充国产编码助手方向。"
+  },
+  {
+    "name": "讯飞智文",
+    "website": "https://zhiwen.xfyun.cn",
+    "description": "一款支持一键生成 Word 和 PPT 的国产 AI 文档工具。",
+    "category": "办公效率",
+    "tags": [
+      "PPT生成",
+      "Word生成",
+      "文档创作",
+      "办公效率"
+    ],
+    "contact": "",
+    "reason": "适合补充文档/PPT 生成方向。"
+  },
+  {
+    "name": "腾讯混元",
+    "website": "https://hunyuan.tencent.com",
+    "description": "一款提供文本理解、生成与多模态能力的国产大模型平台。",
+    "category": "聊天助手",
+    "tags": [
+      "大模型",
+      "文本生成",
+      "多模态",
+      "腾讯"
+    ],
+    "contact": "",
+    "reason": "适合收录为国产大模型平台入口。"
+  },
+  {
+    "name": "腾讯混元3D",
+    "website": "https://3d.hunyuan.tencent.com",
+    "description": "一款支持文生 3D、图生 3D 和纹理生成的国产 AI 3D 创作平台。",
+    "category": "3D生成",
+    "tags": [
+      "3D生成",
+      "文生3D",
+      "图生3D",
+      "腾讯"
+    ],
+    "contact": "",
+    "reason": "适合补充 3D 生成方向。"
+  },
+  {
+    "name": "百度文库智能助手",
+    "website": "https://wenku.baidu.com/ndcore/browse/aiunion",
+    "description": "一款面向内容创作、资料整理和文档获取的国产 AI 助手。",
+    "category": "办公效率",
+    "tags": [
+      "文档创作",
+      "资料整理",
+      "内容获取",
+      "百度文库"
+    ],
+    "contact": "",
+    "reason": "适合补充文档内容创作方向。"
+  },
+  {
+    "name": "小悟空",
+    "website": "https://wukong.com/tool",
+    "description": "一款面向问答与生活场景的国产 AI 智能工具。",
+    "category": "聊天助手",
+    "tags": [
+      "中文支持",
+      "问答助手",
+      "生活场景",
+      "字节系"
+    ],
+    "contact": "",
+    "reason": "适合补充轻量通用 AI 助手方向。"
+  },
+  {
+    "name": "绘蛙",
+    "website": "https://www.ihuiwa.com",
+    "description": "一款面向电商商品图、种草文案和营销视觉的国产 AI 创作平台。",
+    "category": "图片生成",
+    "tags": [
+      "电商营销",
+      "商品图",
+      "种草文案",
+      "营销视觉"
+    ],
+    "contact": "",
+    "reason": "适合补充电商视觉方向。"
+  },
+  {
+    "name": "讯飞绘文",
+    "website": "https://turbodesk.xfyun.cn",
+    "description": "一款集 AI 写作、配图、排版和发布于一体的国产内容创作平台。",
+    "category": "AI写作",
+    "tags": [
+      "AI写作",
+      "配图排版",
+      "内容运营",
+      "讯飞"
+    ],
+    "contact": "",
+    "reason": "适合补充内容创作与运营方向。"
+  }
+]
