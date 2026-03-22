@@ -143,7 +143,7 @@ function InfoBadge({
   href?: string | null;
 }) {
   const className =
-    "inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-1.5 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white";
+    "inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3 py-1.5 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white";
 
   if (href) {
     return (
@@ -166,9 +166,9 @@ function DetailCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-2.5">
       <div className="space-y-1">
-        <h2 className="text-[22px] font-semibold tracking-tight text-gray-950">
+        <h2 className="text-[20px] font-semibold tracking-tight text-gray-950">
           {title}
         </h2>
         {description ? (
@@ -176,7 +176,7 @@ function DetailCard({
         ) : null}
       </div>
 
-      <div className="rounded-[30px] border border-black/8 bg-white/92 p-6 shadow-[0_10px_40px_rgba(15,23,42,0.06)] backdrop-blur-md sm:p-7">
+      <div className="rounded-[26px] border border-black/8 bg-white/92 p-5 shadow-[0_8px_32px_rgba(15,23,42,0.05)] backdrop-blur-md sm:p-6">
         {children}
       </div>
     </section>
@@ -191,9 +191,9 @@ function StatCard({
   value: string | number;
 }) {
   return (
-    <div className="rounded-[24px] border border-black/8 bg-white/88 px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-md">
+    <div className="rounded-[20px] border border-black/8 bg-white/88 px-4 py-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-md">
       <div className="text-xs text-gray-500">{label}</div>
-      <div className="mt-1 text-xl font-semibold tracking-tight text-gray-950">
+      <div className="mt-1 text-lg font-semibold tracking-tight text-gray-950">
         {value}
       </div>
     </div>
@@ -211,12 +211,12 @@ function SoftSection({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-base font-semibold text-gray-950">{title}</h3>
+      <h3 className="text-[15px] font-semibold text-gray-950">{title}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         {items.map((item) => (
           <div
             key={item}
-            className="rounded-[22px] border border-black/8 bg-white/80 px-4 py-4 text-sm leading-7 text-gray-700"
+            className="rounded-[18px] border border-black/8 bg-white/80 px-4 py-3.5 text-sm leading-7 text-gray-700"
           >
             {item}
           </div>
@@ -342,20 +342,20 @@ export default async function ToolPage({
         }}
       />
 
-      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
-        <div className="space-y-6 sm:space-y-8">
-          <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] px-5 py-6 shadow-[0_20px_64px_rgba(15,23,42,0.075)] sm:px-8 sm:py-8">
+      <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-7">
+        <div className="space-y-5 sm:space-y-6">
+          <section className="relative overflow-hidden rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] px-5 py-5 shadow-[0_16px_48px_rgba(15,23,42,0.065)] sm:px-7 sm:py-7">
             <div className="pointer-events-none absolute inset-0">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95),transparent_42%)]" />
-              <div className="absolute -top-16 right-[-8%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(96,165,250,0.16),transparent_68%)] blur-2xl" />
-              <div className="absolute bottom-[-80px] left-[-4%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.10),transparent_70%)] blur-2xl" />
+              <div className="absolute -top-16 right-[-8%] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(96,165,250,0.16),transparent_68%)] blur-2xl" />
+              <div className="absolute bottom-[-80px] left-[-4%] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.10),transparent_70%)] blur-2xl" />
             </div>
 
-            <div className="relative space-y-5">
-              <div className="flex flex-wrap items-center gap-3">
+            <div className="relative space-y-4">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <Link
                   href="/"
-                  className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-4 py-2 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
+                  className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
                 >
                   ← 返回首页
                 </Link>
@@ -363,30 +363,30 @@ export default async function ToolPage({
                 {categoryHref ? (
                   <Link
                     href={categoryHref}
-                    className="inline-flex items-center rounded-full border border-black/10 bg-white/70 px-4 py-2 text-sm text-gray-600 backdrop-blur-md transition-all duration-200 hover:border-black/15 hover:bg-white/90 hover:text-gray-950"
+                    className="inline-flex items-center rounded-full border border-black/10 bg-white/70 px-3.5 py-2 text-sm text-gray-600 backdrop-blur-md transition-all duration-200 hover:border-black/15 hover:bg-white/90 hover:text-gray-950"
                   >
                     {categoryName}
                   </Link>
                 ) : null}
               </div>
 
-              <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr),300px] lg:items-start">
-                <div className="min-w-0 space-y-5">
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-medium tracking-[0.18em] text-gray-500 backdrop-blur-md">
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),270px] lg:items-start">
+                <div className="min-w-0 space-y-4">
+                  <div className="space-y-2.5">
+                    <div className="inline-flex items-center rounded-full border border-white/60 bg-white/70 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500 backdrop-blur-md">
                       AI TOOL PROFILE
                     </div>
 
-                    <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-5xl sm:leading-[1.04]">
+                    <h1 className="text-[34px] font-semibold tracking-tight text-gray-950 sm:text-[46px] sm:leading-[1.06]">
                       {tool.name}
                     </h1>
 
-                    <p className="max-w-3xl text-base leading-8 text-gray-600 sm:text-lg">
+                    <p className="max-w-2xl text-[15px] leading-7 text-gray-600 sm:text-[17px]">
                       {tool.description || "暂无简介"}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2.5">
                     <InfoBadge href={categoryHref}>
                       主分类：{tool.category?.name || "未分类"}
                     </InfoBadge>
@@ -405,7 +405,7 @@ export default async function ToolPage({
                   </div>
 
                   {tagList.length > 0 ? (
-                    <div className="flex flex-wrap gap-2 pt-1">
+                    <div className="flex flex-wrap gap-2 pt-0.5">
                       {tagList.slice(0, 8).map((tag) => (
                         <span
                           key={tag}
@@ -417,18 +417,18 @@ export default async function ToolPage({
                     </div>
                   ) : null}
 
-                  <div className="flex flex-wrap gap-3 pt-1">
+                  <div className="flex flex-wrap gap-2.5 pt-0.5">
                     {tool.website ? (
                       <a
                         href={outHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(15,23,42,0.22)] active:scale-[0.98]"
+                        className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.2)] active:scale-[0.98]"
                       >
                         访问官网
                       </a>
                     ) : (
-                      <span className="inline-flex items-center rounded-full border border-black/8 bg-gray-50 px-5 py-3 text-sm text-gray-500">
+                      <span className="inline-flex items-center rounded-full border border-black/8 bg-gray-50 px-5 py-2.5 text-sm text-gray-500">
                         暂未提供官网链接
                       </span>
                     )}
@@ -437,34 +437,34 @@ export default async function ToolPage({
 
                     <Link
                       href="/featured"
-                      className="inline-flex items-center rounded-full border border-black/10 bg-white/80 px-5 py-3 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950"
+                      className="inline-flex items-center rounded-full border border-black/10 bg-white/80 px-5 py-2.5 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950"
                     >
                       浏览精选工具
                     </Link>
                   </div>
 
                   {tool.website ? (
-                    <p className="text-sm leading-7 text-gray-500">
+                    <p className="text-sm leading-6 text-gray-500">
                       点击“访问官网”后将跳转到官方站点，同时记录一次官网点击数据。
                     </p>
                   ) : null}
                 </div>
 
-                <div className="space-y-4">
-                  <div className="rounded-[28px] border border-white/60 bg-white/74 p-5 shadow-[0_10px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-[24px] border border-black/8 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+                <div className="space-y-3.5">
+                  <div className="rounded-[24px] border border-white/60 bg-white/74 p-4 shadow-[0_8px_30px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+                    <div className="flex items-center gap-3.5">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-black/8 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                         <img
                           src={logoSrc}
                           alt={`${tool.name} logo`}
                           width={64}
                           height={64}
-                          className="h-12 w-12 rounded-2xl object-cover"
+                          className="h-10 w-10 rounded-2xl object-cover"
                         />
                       </div>
 
                       <div className="min-w-0">
-                        <div className="truncate text-lg font-semibold text-gray-950">
+                        <div className="truncate text-base font-semibold text-gray-950">
                           {tool.name}
                         </div>
                         <div className="mt-1 text-sm text-gray-500">
@@ -494,13 +494,13 @@ export default async function ToolPage({
             </div>
           </section>
 
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr),340px]">
-            <div className="space-y-8">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),300px]">
+            <div className="space-y-6">
               <DetailCard
                 title="工具介绍"
                 description="先快速了解这款工具的定位、特点和适合场景。"
               >
-                <div className="space-y-6 text-[15px] leading-8 text-gray-700">
+                <div className="space-y-5 text-[15px] leading-8 text-gray-700">
                   {paragraphs.length > 0 ? (
                     paragraphs.map((paragraph, index) => (
                       <p key={`${tool.id}-paragraph-${index}`}>{paragraph}</p>
@@ -537,11 +537,11 @@ export default async function ToolPage({
                   title="相关标签"
                   description="这些标签可以帮助你更快理解能力边界与定位。"
                 >
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-2.5">
                     {tagList.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center rounded-full border border-black/8 bg-white px-3.5 py-1.5 text-sm text-gray-700"
+                        className="inline-flex items-center rounded-full border border-black/8 bg-white px-3 py-1.5 text-sm text-gray-700"
                       >
                         {tag}
                       </span>
@@ -554,29 +554,29 @@ export default async function ToolPage({
                 title="基础信息"
                 description="收录信息、更新时间与公开统计数据。"
               >
-                <div className="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-[24px] bg-gray-50/90 px-4 py-4">
+                <div className="grid gap-3.5 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
                     <div className="text-xs text-gray-500">收录时间</div>
                     <div className="mt-1 font-medium text-gray-900">
                       {new Date(tool.createdAt).toLocaleString("zh-CN")}
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] bg-gray-50/90 px-4 py-4">
+                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
                     <div className="text-xs text-gray-500">最后更新</div>
                     <div className="mt-1 font-medium text-gray-900">
                       {new Date(tool.updatedAt).toLocaleString("zh-CN")}
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] bg-gray-50/90 px-4 py-4">
+                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
                     <div className="text-xs text-gray-500">浏览</div>
                     <div className="mt-1 font-medium text-gray-900">
                       {tool.views ?? 0}
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] bg-gray-50/90 px-4 py-4">
+                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
                     <div className="text-xs text-gray-500">官网点击</div>
                     <div className="mt-1 font-medium text-gray-900">
                       {tool.outClicks ?? 0}
@@ -586,39 +586,39 @@ export default async function ToolPage({
               </DetailCard>
             </div>
 
-            <aside className="space-y-6">
+            <aside className="space-y-5">
               <DetailCard
                 title="访问引导"
                 description="已经了解得差不多时，可以直接继续下一步。"
               >
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                   {tool.website ? (
                     <a
                       href={outHref}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex w-full items-center justify-center rounded-[22px] bg-black px-5 py-3.5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.22)] active:scale-[0.98]"
+                      className="flex w-full items-center justify-center rounded-[18px] bg-black px-5 py-3 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.2)] active:scale-[0.98]"
                     >
                       前往官网体验
                     </a>
                   ) : (
-                    <div className="rounded-[22px] border border-black/8 bg-gray-50 px-4 py-3 text-center text-sm text-gray-500">
+                    <div className="rounded-[18px] border border-black/8 bg-gray-50 px-4 py-3 text-center text-sm text-gray-500">
                       暂未提供官网链接
                     </div>
                   )}
 
                   <CopyLinkButton url={url} />
 
-                  <div className="rounded-[22px] border border-black/8 bg-gray-50/80 p-4 text-sm leading-7 text-gray-600">
+                  <div className="rounded-[18px] border border-black/8 bg-gray-50/80 p-4 text-sm leading-7 text-gray-600">
                     如果你正在对比同类 AI 工具，建议先结合本页的分类、标签与相关推荐继续看 2 到 3 个相近产品，再决定是否深入试用。
                   </div>
                 </div>
               </DetailCard>
 
               {relatedTools.length > 0 ? (
-                <section className="space-y-4">
+                <section className="space-y-3.5">
                   <div className="space-y-1">
-                    <h2 className="text-[22px] font-semibold tracking-tight text-gray-950">
+                    <h2 className="text-[20px] font-semibold tracking-tight text-gray-950">
                       相关工具
                     </h2>
                     <p className="text-sm leading-6 text-gray-500">
@@ -637,10 +637,10 @@ export default async function ToolPage({
                         <Link
                           key={t.id}
                           href={`/tool/${t.slug}`}
-                          className="group block rounded-[24px] border border-black/8 bg-white/92 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-black/12 hover:shadow-[0_20px_44px_rgba(15,23,42,0.08)]"
+                          className="group block rounded-[20px] border border-black/8 bg-white/92 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-black/12 hover:shadow-[0_16px_34px_rgba(15,23,42,0.07)]"
                         >
-                          <div className="flex items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-gray-50 ring-1 ring-black/5 transition-all duration-300 group-hover:bg-white">
+                          <div className="flex items-start gap-3.5">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-gray-50 ring-1 ring-black/5 transition-all duration-300 group-hover:bg-white">
                               <img
                                 src={relatedLogoSrc}
                                 alt={`${t.name} logo`}
@@ -651,7 +651,7 @@ export default async function ToolPage({
                             </div>
 
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-base font-semibold text-gray-950">
+                              <div className="truncate text-[15px] font-semibold text-gray-950">
                                 {t.name}
                               </div>
                               <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-600">
