@@ -3,53 +3,72 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-function getNavClass(active: boolean, primary = false) {
-  if (primary) {
-    return [
-      "inline-flex items-center rounded-full border px-4 py-2 text-sm transition-all duration-200 active:scale-[0.98]",
-      active
-        ? "border-black bg-black text-white shadow-[0_8px_20px_rgba(0,0,0,0.12)]"
-        : "border-gray-200 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950",
-    ].join(" ");
+type NavItem = {
+  label: string;
+  href: string;
+  match?: "exact" | "prefix";
+  badge?: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "首页", href: "/", match: "exact" },
+  { label: "精选推荐", href: "/featured", match: "prefix" },
+  { label: "最新收录", href: "/latest", match: "prefix" },
+  { label: "热门工具", href: "/popular", match: "prefix" },
+  { label: "反向提示词", href: "/reverse-prompt", match: "prefix", badge: "NEW" },
+  { label: "提交工具", href: "/submit", match: "prefix" },
+];
+
+function isActive(pathname: string, item: NavItem) {
+  if (item.match === "exact") {
+    return pathname === item.href;
   }
 
-  return [
-    "rounded-full px-3 py-2 text-sm transition-all duration-200 active:scale-[0.98]",
-    active
-      ? "bg-gray-900 text-white"
-      : "text-gray-700 hover:bg-gray-100 hover:text-gray-950",
-  ].join(" ");
+  if (item.href === "/") {
+    return pathname === "/";
+  }
+
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
-export default function NavLinks() {
+export default function NavLinks({ className = "" }: { className?: string }) {
   const pathname = usePathname();
 
-  const isHome =
-    pathname === "/" ||
-    pathname.startsWith("/category") ||
-    pathname.startsWith("/tool");
-
-  const isSearch = pathname.startsWith("/search");
-  const isFeatured = pathname.startsWith("/featured");
-  const isSubmit = pathname.startsWith("/submit");
-
   return (
-    <nav className="flex items-center gap-1 sm:gap-2">
-      <Link href="/" className={getNavClass(isHome)}>
-        首页
-      </Link>
+    <nav className={className} aria-label="Primary">
+      <div className="flex flex-wrap items-center gap-2">
+        {NAV_ITEMS.map((item) => {
+          const active = isActive(pathname, item);
 
-      <Link href="/search" className={getNavClass(isSearch)}>
-        搜索
-      </Link>
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={[
+                "group inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm transition-all duration-200",
+                active
+                  ? "bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.16)]"
+                  : "border border-black/8 bg-white/82 text-gray-700 backdrop-blur-md hover:-translate-y-0.5 hover:border-black/12 hover:bg-white hover:text-gray-950",
+              ].join(" ")}
+            >
+              <span>{item.label}</span>
 
-      <Link href="/featured" className={getNavClass(isFeatured)}>
-        精选
-      </Link>
-
-      <Link href="/submit" className={getNavClass(isSubmit, true)}>
-        提交工具
-      </Link>
+              {item.badge ? (
+                <span
+                  className={[
+                    "rounded-full px-2 py-0.5 text-[10px] font-medium tracking-[0.14em]",
+                    active
+                      ? "bg-white/14 text-white"
+                      : "border border-black/8 bg-black/[0.03] text-gray-500",
+                  ].join(" ")}
+                >
+                  {item.badge}
+                </span>
+              ) : null}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

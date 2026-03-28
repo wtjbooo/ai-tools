@@ -335,6 +335,38 @@ function HeroAction({
   );
 }
 
+function FeatureEntryStrip() {
+  return (
+    <section className="mx-auto max-w-4xl rounded-[22px] border border-black/8 bg-white/92 px-4 py-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] sm:px-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-1.5">
+          <div className="inline-flex items-center rounded-full border border-black/8 bg-white/80 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">
+            NEW FEATURE
+          </div>
+
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight text-gray-950 sm:text-[20px]">
+              AI 反向提示词
+            </h2>
+            <p className="text-sm leading-6 text-gray-600">
+              上传关键帧或短视频，自动生成可复用 Prompt。
+            </p>
+          </div>
+        </div>
+
+        <div className="shrink-0">
+          <Link
+            href="/reverse-prompt"
+            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-gray-900 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50"
+          >
+            立即体验
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function HomePage() {
   const {
     featuredTools,
@@ -349,43 +381,45 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
-      <div className="space-y-8 sm:space-y-10">
-        <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-5 py-6 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-7">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.08),transparent_26%)]" />
+      <div className="space-y-7 sm:space-y-9">
+        <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-5 py-7 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-9">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.08),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.06),transparent_26%)]" />
 
-          <div className="relative mx-auto max-w-5xl space-y-4 text-center">
+          <div className="relative mx-auto max-w-4xl space-y-5 text-center">
             <div className="flex flex-wrap items-center justify-center gap-2.5">
-              <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-xs font-medium tracking-[0.18em] text-gray-500 backdrop-blur-md">
+              <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500 backdrop-blur-md">
                 CURATED AI TOOLS
               </div>
-              <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-xs text-gray-500 backdrop-blur-md">
-                已收录精选 {featuredTotal > 0 ? `${featuredTotal}+` : "1+"}
+              <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-[11px] text-gray-500 backdrop-blur-md">
+                精选 {featuredTotal > 0 ? `${featuredTotal}+` : "1+"}
               </div>
             </div>
 
-            <div className="mx-auto max-w-3xl space-y-2.5">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[50px] sm:leading-[1.02]">
-                AI工具导航
+            <div className="mx-auto max-w-3xl space-y-3">
+              <h1 className="text-[34px] font-semibold tracking-tight text-gray-950 sm:text-[56px] sm:leading-[1.02]">
+                发现真正值得使用的 AI 工具
               </h1>
               <p className="mx-auto max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
-                帮你快速找到值得使用的 AI 工具，覆盖聊天、写作、绘图、视频、搜索、效率等场景。
+                覆盖聊天、写作、绘图、视频、搜索与效率场景，更快找到适合你的产品。
               </p>
             </div>
 
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-3xl">
               <div className="rounded-[22px] border border-black/8 bg-white/88 p-1.5 shadow-[0_8px_22px_rgba(15,23,42,0.045)] backdrop-blur-md">
                 <SearchBar />
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2.5">
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
               <HeroAction href="/submit" primary>
                 提交你的 AI 工具
               </HeroAction>
-              <HeroAction href="/featured">浏览精选推荐</HeroAction>
+              <HeroAction href="/featured">浏览精选</HeroAction>
             </div>
           </div>
         </section>
+
+        <FeatureEntryStrip />
 
         <section className="space-y-3.5 sm:space-y-4">
           <SectionTitle
@@ -411,17 +445,12 @@ export default async function HomePage() {
             title="推荐工具"
             description={`当前共收录 ${featuredTotal} 个精选推荐工具`}
             right={
-              <div className="flex flex-wrap items-center gap-3">
-                {!hasManualFeatured ? (
-                  <span className="text-gray-500">当前为自动推荐</span>
-                ) : null}
-                <Link
-                  href="/featured"
-                  className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
-                >
-                  查看全部推荐
-                </Link>
-              </div>
+              <Link
+                href="/featured"
+                className="text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-950"
+              >
+                查看全部推荐
+              </Link>
             }
           />
 
