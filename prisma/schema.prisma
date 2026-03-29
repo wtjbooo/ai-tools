@@ -8,6 +8,19 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum UserRole {
+  USER
+  EDITOR
+  ADMIN
+}
+
+enum AccountProvider {
+  PHONE
+  EMAIL
+  WECHAT
+  QQ
+}
+
 model Category {
   id        String   @id @default(cuid())
   name      String
@@ -20,34 +33,58 @@ model Category {
 }
 
 model Tag {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   tools     ToolTag[]
 }
 
 model Tool {
-  id             String              @id @default(cuid())
-  name           String
-  slug           String              @unique
-  description    String
-  content        String              @default("")
-  website        String?
-  pricing        String              @default("unknown")
-  featured       Boolean             @default(false)
-  clicks         Int                 @default(0)
-  views          Int                 @default(0)
-  outClicks      Int                 @default(0)
-  logoUrl        String              @default("")
-  screenshots    String              @default("")
-  searchText     String              @default("")
-  categoryId     String
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  isPublished    Boolean             @default(true)
-  featuredOrder  Int                 @default(0)
+  id                String  @id @default(cuid())
+  name              String
+  slug              String  @unique
+  description       String
+  content           String  @default("")
+  website           String?
+  normalizedWebsite String?
+  sourceUrl         String?
+  sourceType        String  @default("import")
+  pricing           String  @default("unknown")
+
+  featured      Boolean @default(false)
+  featuredOrder Int     @default(0)
+
+  clicks    Int @default(0)
+  views     Int @default(0)
+  outClicks Int @default(0)
+
+  logoUrl     String @default("")
+  screenshots String @default("")
+  searchText  String @default("")
+
+  categoryId           String
+  categoryConfidence   Int    @default(0)
+  tagConfidence        Int    @default(0)
+  classificationStatus String @default("unknown")
+
+  reviewStatus         String  @default("pending")
+  contentQualityStatus String  @default("unknown")
+  qualityScore         Int     @default(0)
+  needsManualReview    Boolean @default(true)
+  needsContentRewrite  Boolean @default(false)
+
+  reviewNotes  String    @default("")
+  rejectReason String    @default("")
+  reviewedBy   String    @default("")
+  reviewedAt   DateTime?
+  publishedAt  DateTime?
+  importedAt   DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isPublished Boolean  @default(false)
 
   category       Category            @relation(fields: [categoryId], references: [id])
   tags           ToolTag[]
@@ -59,6 +96,13 @@ model Tool {
   @@index([clicks])
   @@index([views])
   @@index([outClicks])
+  @@index([isPublished, reviewStatus])
+  @@index([reviewStatus, createdAt])
+  @@index([contentQualityStatus, createdAt])
+  @@index([classificationStatus, createdAt])
+  @@index([qualityScore])
+  @@index([categoryId, reviewStatus])
+  @@index([featured, featuredOrder])
 }
 
 model ToolTag {
@@ -71,18 +115,119 @@ model ToolTag {
   @@id([toolId, tagId])
 }
 
+model User {
+  id    String  @id @default(cuid())
+  name  String?
+  image String?
+
+  phone         String? @unique
+  phoneVerified Boolean @default(false)
+
+  email         String?   @unique
+  emailVerified DateTime?
+
+  role UserRole @default(USER)
+
+  accounts Account[]
+  sessions Session[]
+
+  reversePromptTasks ReversePromptTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String          @id @default(cuid())
+  userId            String
+  provider          AccountProvider
+  providerAccountId String
+
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  scope        String?
+  idToken      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PhoneVerificationCode {
+  id        String    @id @default(cuid())
+  phone     String
+  code      String
+  purpose   String    @default("login")
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([phone, createdAt])
+  @@index([phone, purpose, expiresAt])
+}
+
+model EmailVerificationCode {
+  id        String    @id @default(cuid())
+  email     String
+  code      String
+  purpose   String    @default("login")
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, createdAt])
+  @@index([email, purpose, expiresAt])
+}
+
 model Submission {
-  id          String   @id @default(cuid())
-  name        String
-  website     String
-  description String
-  category    String
-  tags        String   @default("")
-  contact     String   @default("")
-  status      String   @default("pending")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  reason      String   @default("")
+  id                String  @id @default(cuid())
+  name              String
+  website           String
+  websiteNormalized String?
+  description       String
+  category          String
+  tags              String  @default("")
+  contact           String  @default("")
+
+  sourceType        String  @default("submission")
+  status            String  @default("pending")
+  qualityScore      Int     @default(0)
+  needsManualReview Boolean @default(true)
+
+  suggestedCategory String    @default("")
+  suggestedTags     String    @default("")
+  reviewNotes       String    @default("")
+  rejectReason      String    @default("")
+  reviewedBy        String    @default("")
+  reviewedAt        DateTime?
+  convertedToolId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reason    String   @default("")
+
+  @@index([status, createdAt])
+  @@index([websiteNormalized])
+  @@index([convertedToolId])
 }
 
 model ToolViewEvent {
@@ -113,18 +258,31 @@ model ToolOutClickEvent {
 }
 
 model ReversePromptTask {
-  id             String   @id @default(cuid())
-  status         String   @default("pending")
-  inputType      String
-  inputUrls      String
-  outputLanguage String   @default("zh")
-  outputStyle    String   @default("standard")
-  targetPlatform String   @default("generic")
-  resultJson     String   @default("")
-  errorMessage   String   @default("")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  userId               String?
+  status               String    @default("pending")
+  inputType            String    @default("images")
+  sourceCount          Int       @default(0)
+  inputUrls            String    @default("[]")
+  outputLanguage       String    @default("zh")
+  outputStyle          String    @default("standard")
+  targetPlatform       String    @default("generic")
+  model                String    @default("")
+  metaJson             String    @default("{}")
+  rawResponseText      String    @default("")
+  rawResultJson        String    @default("")
+  normalizedResultJson String    @default("")
+  resultJson           String    @default("")
+  errorMessage         String    @default("")
+  startedAt            DateTime?
+  finishedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+  @@index([inputType, createdAt])
+  @@index([userId, createdAt])
   @@index([createdAt])
 }

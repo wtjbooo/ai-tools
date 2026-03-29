@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState, type FormEvent, type ReactNode } from "react";
 
 type NoticeType = "success" | "error" | "info" | null;
 
@@ -72,12 +72,15 @@ function Field({
 }: {
   label: string;
   htmlFor: string;
-  children: React.ReactNode;
+  children: ReactNode;
   hint?: string;
 }) {
   return (
-    <div className="space-y-2">
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-900">
+    <div className="space-y-2.5">
+      <label
+        htmlFor={htmlFor}
+        className="block text-sm font-medium text-gray-900"
+      >
         {label}
       </label>
       {children}
@@ -98,29 +101,29 @@ function Notice({
   const styles =
     type === "success"
       ? {
-          box: "border-green-200 bg-green-50 text-green-800",
+          box: "border-green-200 bg-green-50/90 text-green-800",
           icon: "bg-green-100 text-green-700",
-          title: "提交成功",
+          title: "已完成",
           symbol: "✓",
         }
       : type === "info"
       ? {
-          box: "border-blue-200 bg-blue-50 text-blue-800",
+          box: "border-blue-200 bg-blue-50/90 text-blue-800",
           icon: "bg-blue-100 text-blue-700",
-          title: "自动获取提示",
+          title: "提示",
           symbol: "i",
         }
       : {
-          box: "border-red-200 bg-red-50 text-red-800",
+          box: "border-red-200 bg-red-50/90 text-red-800",
           icon: "bg-red-100 text-red-700",
-          title: "操作提示",
+          title: "请检查",
           symbol: "!",
         };
 
   return (
     <div
       className={[
-        "rounded-2xl border px-4 py-4 text-sm leading-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]",
+        "rounded-[20px] border px-4 py-4 text-sm leading-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]",
         styles.box,
       ].join(" ")}
     >
@@ -147,22 +150,30 @@ function SuggestionPill({
   children,
   onClick,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+      className="inline-flex items-center rounded-full border border-black/8 bg-white px-3 py-1.5 text-xs text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/12 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
     >
       {children}
     </button>
   );
 }
 
+function IntroPill({ children }: { children: ReactNode }) {
+  return (
+    <div className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3.5 py-2 text-sm text-gray-700">
+      {children}
+    </div>
+  );
+}
+
 const inputClass =
-  "w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-gray-300 focus:bg-white focus:shadow-[0_8px_24px_rgba(0,0,0,0.06)]";
+  "w-full rounded-[20px] border border-black/10 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-black/20 focus:bg-white focus:shadow-[0_10px_24px_rgba(15,23,42,0.06)]";
 
 export default function SubmitForm() {
   const [loading, setLoading] = useState(false);
@@ -264,7 +275,7 @@ export default function SubmitForm() {
     }
   }
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMsg(null);
     setNoticeType(null);
@@ -303,7 +314,7 @@ export default function SubmitForm() {
         setSubmitted(false);
       } else {
         setMsg(
-          "我们已经收到你的工具提交，并已进入审核队列。通常会在 1 到 3 天内完成审核；如果未通过，后续也可以重新提交。"
+          "我们已经收到你的工具提交，并已进入审核队列。通常会在 1 到 3 天内完成审核。"
         );
         setNoticeType("success");
         setSubmitted(true);
@@ -325,183 +336,221 @@ export default function SubmitForm() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-10">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
       <div className="space-y-6 sm:space-y-8">
-        <section className="relative overflow-hidden rounded-[28px] border border-gray-200 bg-white px-5 py-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:rounded-[32px] sm:px-8 sm:py-10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_35%),radial-gradient(circle_at_85%_20%,rgba(168,85,247,0.06),transparent_30%)]" />
+        <section className="relative overflow-hidden rounded-[32px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-6 py-8 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-10">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.08),transparent_26%)]" />
 
-          <div className="relative space-y-4">
-            <Link
-              href="/"
-              className="inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:text-gray-950 active:scale-[0.98]"
-            >
-              ← 返回首页
-            </Link>
+          <div className="relative max-w-3xl space-y-5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link
+                href="/"
+                className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
+              >
+                ← 返回首页
+              </Link>
 
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
+              <span className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">
+                SUBMIT AI TOOL
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">
                 提交你的 AI 工具
               </h1>
-              <p className="max-w-3xl text-sm leading-7 text-gray-600 sm:text-base">
-                欢迎提交优质的 AI 工具。请尽量填写完整信息，方便我们更快审核和收录。
+
+              <p className="max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
+                填写官网、简介与分类信息，我们会在审核后决定是否收录进目录。
               </p>
             </div>
-          </div>
-        </section>
 
-        <section className="rounded-[22px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:rounded-[24px] sm:p-6">
-          <div className="space-y-3">
-            <h2 className="text-lg font-semibold tracking-tight text-gray-950">
-              收录说明
-            </h2>
-            <div className="space-y-2 text-sm leading-7 text-gray-700">
-              <p>1. 一般会在 1 到 3 天内完成审核。</p>
-              <p>2. 仅收录可正常访问、内容清晰、用途明确的 AI 工具或相关产品。</p>
-              <p>3. 不收录违法违规、长期失效、内容空白或明显低质量的网站。</p>
-              <p>4. 如果信息不完整，可能不会通过审核。</p>
-              <p>5. 分类只填写一个主分类，不要填写“聊天助手 / 视频生成”这种组合值。</p>
+            <div className="flex flex-wrap gap-2.5">
+              <IntroPill>支持自动获取网站信息</IntroPill>
+              <IntroPill>只填写一个主分类</IntroPill>
+              <IntroPill>通常 1～3 天审核</IntroPill>
             </div>
           </div>
         </section>
 
         <form
           onSubmit={onSubmit}
-          className="rounded-[22px] border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:rounded-[24px] sm:p-6"
+          className="rounded-[28px] border border-black/8 bg-white/94 p-5 shadow-[0_10px_32px_rgba(15,23,42,0.05)] sm:p-6"
         >
-          <div className="grid gap-5">
-            <Field label="官网链接" htmlFor="website">
-              <div className="space-y-3">
+          <div className="grid gap-8 lg:grid-cols-[1.02fr_0.98fr]">
+            <div className="space-y-5">
+              <div className="space-y-1">
+                <h2 className="text-[22px] font-semibold tracking-tight text-gray-950">
+                  基础信息
+                </h2>
+                <p className="text-sm leading-6 text-gray-500">
+                  先填写官网、名称与一句话简介。
+                </p>
+              </div>
+
+              <Field
+                label="官网链接"
+                htmlFor="website"
+                hint="建议优先填写官网链接，通常可以自动补全名称和简介。"
+              >
+                <div className="space-y-3">
+                  <input
+                    id="website"
+                    name="website"
+                    type="url"
+                    placeholder="https://example.com"
+                    className={inputClass}
+                    required
+                    value={websiteValue}
+                    onChange={(e) => setWebsiteValue(e.target.value)}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleExtractWebsiteInfo}
+                    disabled={extracting || loading}
+                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {extracting ? "自动获取中..." : "自动获取网站信息"}
+                  </button>
+                </div>
+              </Field>
+
+              <Field label="工具名称" htmlFor="name">
                 <input
-                  id="website"
-                  name="website"
-                  type="url"
-                  placeholder="https://example.com"
+                  id="name"
+                  name="name"
+                  placeholder="例如：ChatGPT"
                   className={inputClass}
                   required
-                  value={websiteValue}
-                  onChange={(e) => setWebsiteValue(e.target.value)}
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
                 />
+              </Field>
 
-                <button
-                  type="button"
-                  onClick={handleExtractWebsiteInfo}
-                  disabled={extracting || loading}
-                  className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {extracting ? "自动获取中..." : "自动获取网站信息"}
-                </button>
+              <Field label="一句话简介" htmlFor="description">
+                <input
+                  id="description"
+                  name="description"
+                  placeholder="例如：OpenAI 推出的 AI 对话助手"
+                  className={inputClass}
+                  required
+                  value={descriptionValue}
+                  onChange={(e) => setDescriptionValue(e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-1">
+                <h2 className="text-[22px] font-semibold tracking-tight text-gray-950">
+                  分类与补充
+                </h2>
+                <p className="text-sm leading-6 text-gray-500">
+                  用更少但更准确的信息，帮助我们更快判断是否收录。
+                </p>
               </div>
-            </Field>
 
-            <Field label="工具名称" htmlFor="name">
-              <input
-                id="name"
-                name="name"
-                placeholder="例如：ChatGPT"
-                className={inputClass}
-                required
-                value={nameValue}
-                onChange={(e) => setNameValue(e.target.value)}
-              />
-            </Field>
+              <Field
+                label="分类"
+                htmlFor="category"
+                hint="只填写一个主分类，例如：聊天助手、图像生成、视频生成、知识检索"
+              >
+                <input
+                  id="category"
+                  name="category"
+                  placeholder="例如：聊天助手"
+                  className={inputClass}
+                  required
+                  value={categoryValue}
+                  onChange={(e) => setCategoryValue(e.target.value)}
+                />
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {CATEGORY_SUGGESTIONS.map((item) => (
+                    <SuggestionPill
+                      key={item}
+                      onClick={() => applyCategorySuggestion(item)}
+                    >
+                      {item}
+                    </SuggestionPill>
+                  ))}
+                </div>
+              </Field>
 
-            <Field label="一句话简介" htmlFor="description">
-              <input
-                id="description"
-                name="description"
-                placeholder="例如：OpenAI 推出的 AI 对话助手"
-                className={inputClass}
-                required
-                value={descriptionValue}
-                onChange={(e) => setDescriptionValue(e.target.value)}
-              />
-            </Field>
+              <Field
+                label="标签"
+                htmlFor="tags"
+                hint="多个标签可用英文逗号或中文逗号分隔"
+              >
+                <input
+                  id="tags"
+                  name="tags"
+                  placeholder="例如：免费试用, 文生图, 办公效率"
+                  className={inputClass}
+                  value={tagsValue}
+                  onChange={(e) => setTagsValue(e.target.value)}
+                />
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {TAG_SUGGESTIONS.map((item) => (
+                    <SuggestionPill
+                      key={item}
+                      onClick={() => applyTagSuggestion(item)}
+                    >
+                      {item}
+                    </SuggestionPill>
+                  ))}
+                </div>
+              </Field>
 
-            <Field
-              label="分类"
-              htmlFor="category"
-              hint="只填写一个主分类，例如：聊天助手、图像生成、视频生成、知识检索"
-            >
-              <input
-                id="category"
-                name="category"
-                placeholder="例如：聊天助手"
-                className={inputClass}
-                required
-                value={categoryValue}
-                onChange={(e) => setCategoryValue(e.target.value)}
-              />
-              <div className="flex flex-wrap gap-2 pt-1">
-                {CATEGORY_SUGGESTIONS.map((item) => (
-                  <SuggestionPill
-                    key={item}
-                    onClick={() => applyCategorySuggestion(item)}
-                  >
-                    {item}
-                  </SuggestionPill>
-                ))}
-              </div>
-            </Field>
+              <Field label="联系方式" htmlFor="contact">
+                <input
+                  id="contact"
+                  name="contact"
+                  placeholder="邮箱、微信或其他联系方式"
+                  className={inputClass}
+                />
+              </Field>
 
-            <Field
-              label="标签"
-              htmlFor="tags"
-              hint="多个标签可用英文逗号或中文逗号分隔"
-            >
-              <input
-                id="tags"
-                name="tags"
-                placeholder="例如：免费试用, 文生图, 办公效率"
-                className={inputClass}
-                value={tagsValue}
-                onChange={(e) => setTagsValue(e.target.value)}
-              />
-              <div className="flex flex-wrap gap-2 pt-1">
-                {TAG_SUGGESTIONS.map((item) => (
-                  <SuggestionPill
-                    key={item}
-                    onClick={() => applyTagSuggestion(item)}
-                  >
-                    {item}
-                  </SuggestionPill>
-                ))}
-              </div>
-            </Field>
-
-            <Field label="联系方式" htmlFor="contact">
-              <input
-                id="contact"
-                name="contact"
-                placeholder="邮箱、微信或其他联系方式"
-                className={inputClass}
-              />
-            </Field>
-
-            <Field
-              label="补充说明"
-              htmlFor="reason"
-              hint="可以补充工具特点、适合人群、价格模式、核心功能等信息"
-            >
-              <textarea
-                id="reason"
-                name="reason"
-                rows={6}
-                placeholder="例如：支持多模型切换、适合内容创作者、提供免费额度等"
-                className={`${inputClass} resize-none`}
-              />
-            </Field>
+              <Field
+                label="补充说明"
+                htmlFor="reason"
+                hint="可补充适合人群、价格模式、核心功能或与同类工具的差异。"
+              >
+                <textarea
+                  id="reason"
+                  name="reason"
+                  rows={6}
+                  placeholder="例如：支持多模型切换、适合内容创作者、提供免费额度等"
+                  className={`${inputClass} resize-none`}
+                />
+              </Field>
+            </div>
           </div>
 
-          <div className="mt-6 space-y-4">
-            {msg ? <Notice type={noticeType} message={msg} /> : null}
+          <div className="mt-6 border-t border-black/8 pt-5 space-y-4">
+            {msg && !submitted ? (
+              <Notice type={noticeType} message={msg} />
+            ) : null}
 
             {submitted ? (
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-sm text-gray-700">
-                <div className="font-medium text-gray-900">接下来会发生什么？</div>
-                <div className="mt-2 space-y-1 leading-6">
-                  <p>• 我们会检查官网是否可访问、信息是否完整、分类是否合理。</p>
-                  <p>• 如果审核通过，工具会进入站内展示，并可被搜索与分类页收录。</p>
-                  <p>• 如果这次没有通过，后续仍然可以重新提交。</p>
+              <div className="rounded-[22px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 sm:p-5">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-gray-950">
+                    已进入审核队列
+                  </div>
+                  <p className="text-sm leading-6 text-gray-600">{msg}</p>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-[18px] border border-black/8 bg-white px-4 py-3 text-sm leading-6 text-gray-700">
+                    检查官网是否可访问，信息是否完整。
+                  </div>
+                  <div className="rounded-[18px] border border-black/8 bg-white px-4 py-3 text-sm leading-6 text-gray-700">
+                    判断分类、标签与目录定位是否匹配。
+                  </div>
+                  <div className="rounded-[18px] border border-black/8 bg-white px-4 py-3 text-sm leading-6 text-gray-700">
+                    通过后会进入站内展示与分类收录。
+                  </div>
                 </div>
 
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -514,7 +563,7 @@ export default function SubmitForm() {
 
                   <Link
                     href="/"
-                    className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
                   >
                     返回首页
                   </Link>
@@ -533,7 +582,7 @@ export default function SubmitForm() {
 
               {!msg ? (
                 <p className="text-sm leading-6 text-gray-500">
-                  支持先填写官网链接，再自动获取名称和简介。
+                  提交前尽量确认官网可访问、简介清晰、分类准确。
                 </p>
               ) : null}
             </div>

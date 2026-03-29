@@ -16,6 +16,11 @@ type DuplicateCandidate = {
   reasons: string[];
 };
 
+type ReviewFlag = {
+  label: string;
+  tone: "good" | "warn" | "danger";
+};
+
 type Submission = {
   id: string;
   name: string;
@@ -28,6 +33,9 @@ type Submission = {
   status: string;
   createdAt: string;
   duplicateCandidates?: DuplicateCandidate[];
+  reviewFlags?: ReviewFlag[];
+  reviewSummary?: string;
+  shouldFixBeforeApprove?: boolean;
 };
 
 type EditForm = {
@@ -91,6 +99,18 @@ function getButtonClass(disabled = false, active = false) {
     active ? "bg-gray-100" : "bg-white",
     disabled ? "cursor-not-allowed opacity-60" : "hover:bg-gray-50",
   ].join(" ");
+}
+
+function getFlagClassName(tone: ReviewFlag["tone"]) {
+  if (tone === "danger") {
+    return "rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs text-red-700";
+  }
+
+  if (tone === "warn") {
+    return "rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-800";
+  }
+
+  return "rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700";
 }
 
 function ReviewRuleBox() {
@@ -224,7 +244,7 @@ export default function AdminSubmissionsPage() {
     setActionType("reject");
     setMsg(null);
 
-    const res = await fetch("/api/admin", {
+    const res = await fetch("/api/admin/reject", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
@@ -324,8 +344,13 @@ export default function AdminSubmissionsPage() {
 
       const duplicateText = (x.duplicateCandidates ?? [])
         .map((item) =>
-          [item.name, item.slug, item.website ?? "", item.reasons.join(" ")].join(" ")
+          [item.name, item.slug, item.website ?? "", item.reasons.join(" ")].join(" "),
         )
+        .join(" ")
+        .toLowerCase();
+
+      const reviewText = (x.reviewFlags ?? [])
+        .map((item) => item.label)
         .join(" ")
         .toLowerCase();
 
@@ -338,6 +363,8 @@ export default function AdminSubmissionsPage() {
         x.contact,
         x.reason,
         x.status,
+        x.reviewSummary ?? "",
+        reviewText,
         duplicateText,
       ]
         .join(" ")
@@ -362,12 +389,12 @@ export default function AdminSubmissionsPage() {
   }, [list, keyword, sortMode]);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-6">
+    <div className="mx-auto max-w-5xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">审核队列</h1>
           <p className="mt-1 text-sm text-gray-500">
-            先编辑再审核，尽量把前台简介、分类、标签在这一层收干净
+            先把简介、分类、标签收干净，再决定通过或拒绝。
           </p>
         </div>
 
@@ -396,7 +423,7 @@ export default function AdminSubmissionsPage() {
             disabled={loading || !!actionId || loggingOut}
             className={getButtonClass(
               loading || !!actionId || loggingOut,
-              status === item.value
+              status === item.value,
             )}
           >
             {item.label}
@@ -421,7 +448,7 @@ export default function AdminSubmissionsPage() {
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="搜索名称 / 官网 / 分类 / 标签 / 联系方式 / 重复候选"
+              placeholder="搜索名称 / 官网 / 分类 / 标签 / 联系方式 / 风险提示"
               className="w-full rounded-lg border px-3 py-2 text-sm"
             />
           </div>
@@ -473,6 +500,7 @@ export default function AdminSubmissionsPage() {
             const isSaving = actionId === x.id && actionType === "save";
             const rowBusy = actionId === x.id;
             const duplicateCandidates = x.duplicateCandidates ?? [];
+            const reviewFlags = x.reviewFlags ?? [];
 
             return (
               <div key={x.id} className="space-y-3 rounded-xl border p-4">
@@ -614,13 +642,43 @@ export default function AdminSubmissionsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="text-lg font-semibold">{x.name}</div>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-lg font-semibold">{x.name}</div>
+                        <div className="mt-1 text-sm text-gray-600">
+                          分类：{x.category} · 标签：{x.tags || "-"} · 联系方式：
+                          {" "}
+                          {x.contact || "-"}
+                        </div>
+                      </div>
 
-                    <div className="text-sm text-gray-600">
-                      分类：{x.category} · 标签：{x.tags || "-"} · 联系方式：{x.contact || "-"}
+                      {x.reviewSummary ? (
+                        <div className="rounded-full border px-3 py-1 text-xs text-gray-700">
+                          {x.reviewSummary}
+                        </div>
+                      ) : null}
                     </div>
 
-                    <div className="text-sm">{x.description}</div>
+                    {reviewFlags.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {reviewFlags.map((flag) => (
+                          <span
+                            key={`${x.id}-${flag.label}`}
+                            className={getFlagClassName(flag.tone)}
+                          >
+                            {flag.label}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {x.shouldFixBeforeApprove ? (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        当前这条投稿建议先编辑再通过。
+                      </div>
+                    ) : null}
+
+                    <div className="text-sm leading-7">{x.description}</div>
 
                     {duplicateCandidates.length > 0 ? (
                       <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -720,13 +778,26 @@ export default function AdminSubmissionsPage() {
                           >
                             编辑
                           </button>
+
                           <button
                             onClick={() => approve(x.id)}
-                            disabled={isBusy}
-                            className={getButtonClass(rowBusy)}
+                            disabled={isBusy || !!x.shouldFixBeforeApprove}
+                            className={getButtonClass(
+                              isBusy || !!x.shouldFixBeforeApprove,
+                            )}
+                            title={
+                              x.shouldFixBeforeApprove
+                                ? "请先编辑简介、分类或链接，再进行通过"
+                                : undefined
+                            }
                           >
-                            {isApproving ? "通过中..." : "通过"}
+                            {isApproving
+                              ? "通过中..."
+                              : x.shouldFixBeforeApprove
+                                ? "先编辑"
+                                : "通过"}
                           </button>
+
                           <button
                             onClick={() => reject(x.id)}
                             disabled={isBusy}

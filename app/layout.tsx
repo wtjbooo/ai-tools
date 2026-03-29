@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import NavLinks from "./NavLinks";
 import "./globals.css";
@@ -63,7 +64,7 @@ function DevDatabaseWarning() {
   if (!isDev) return null;
 
   return (
-    <div className="border-b border-amber-200 bg-amber-50">
+    <div className="border-b border-amber-200/80 bg-amber-50/92">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-xs text-amber-900 sm:px-6 sm:text-sm">
         <div className="flex min-w-0 items-center gap-2">
           <span className="inline-flex shrink-0 items-center rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
@@ -80,135 +81,115 @@ function DevDatabaseWarning() {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <Link
-          href="/"
-          className="inline-flex min-w-0 items-center gap-3 transition-opacity hover:opacity-90"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-            <span className="text-sm font-semibold text-gray-900">AI</span>
-          </div>
-
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold tracking-tight text-gray-950 sm:text-base">
-              AI 工具目录
+    <header className="sticky top-0 z-40">
+      <div className="border-b border-black/6 bg-white/78 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3.5 sm:px-6">
+          <Link
+            href="/"
+            className="inline-flex shrink-0 items-center gap-3 transition-opacity hover:opacity-90"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+              <span className="text-sm font-semibold tracking-tight text-gray-950">
+                AI
+              </span>
             </div>
-            <div className="hidden text-xs text-gray-500 sm:block">
-              简约、高效、持续收录
+
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold tracking-tight text-gray-950 sm:text-[15px]">
+                AI 工具目录
+              </div>
+              <div className="hidden text-xs text-gray-500 sm:block">
+                精选、克制、持续更新
+              </div>
+            </div>
+          </Link>
+
+          <div className="min-w-0 flex-1 overflow-x-auto">
+            <div className="flex justify-end">
+              <NavLinks />
             </div>
           </div>
-        </Link>
-
-        <div className="overflow-x-auto">
-          <NavLinks />
         </div>
       </div>
     </header>
   );
 }
 
+function FooterLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="text-sm text-gray-600 transition-colors hover:text-gray-950"
+    >
+      {children}
+    </Link>
+  );
+}
+
 function Footer() {
   return (
-    <footer className="border-t border-gray-200 bg-white">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-3">
-        <div className="space-y-3">
-          <div className="text-base font-semibold tracking-tight text-gray-950">
-            AI 工具目录
+    <footer className="mt-14 border-t border-black/8 bg-white/88">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr_0.9fr]">
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+              <span className="text-sm font-semibold tracking-tight text-gray-950">
+                AI
+              </span>
+            </div>
+
+            <div>
+              <div className="text-[15px] font-semibold tracking-tight text-gray-950">
+                AI 工具目录
+              </div>
+              <div className="text-xs text-gray-500">精选、克制、持续更新</div>
+            </div>
           </div>
-          <p className="text-sm leading-7 text-gray-600">
-            收录实用 AI 工具，支持分类浏览、搜索和投稿提交，帮助你更快找到适合自己的 AI 工具。
+
+          <p className="max-w-md text-sm leading-7 text-gray-600">
+            收录真正值得使用的 AI 工具，也持续补充更贴近创作与效率场景的高质量入口。
           </p>
         </div>
 
         <div className="space-y-3">
           <div className="text-sm font-semibold text-gray-900">快速入口</div>
-          <div className="flex flex-col gap-2 text-sm text-gray-600">
-            <Link href="/" className="transition-colors hover:text-gray-950">
-              首页
-            </Link>
-            <Link href="/search" className="transition-colors hover:text-gray-950">
-              搜索工具
-            </Link>
-            <Link
-              href="/featured"
-              className="transition-colors hover:text-gray-950"
-            >
-              精选推荐
-            </Link>
-            <Link
-              href="/submit"
-              className="transition-colors hover:text-gray-950"
-            >
-              提交工具
-            </Link>
+          <div className="flex flex-col gap-2">
+            <FooterLink href="/">首页</FooterLink>
+            <FooterLink href="/featured">精选推荐</FooterLink>
+            <FooterLink href="/reverse-prompt">反向提示词</FooterLink>
+            <FooterLink href="/submit">提交工具</FooterLink>
           </div>
         </div>
 
         <div className="space-y-3">
           <div className="text-sm font-semibold text-gray-900">站点信息</div>
-          <div className="space-y-2 text-sm text-gray-600">
+          <div className="space-y-2 text-sm leading-7 text-gray-600">
             <p>域名：{siteHost}</p>
-            <p>内容持续更新中，欢迎提交优质 AI 工具。</p>
+            <p>内容持续更新，欢迎提交高质量 AI 工具与产品入口。</p>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-200">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 md:grid-cols-3">
-          <div className="space-y-2">
-            <div className="text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
-              了解站点
-            </div>
-            <div className="flex flex-col gap-2 text-sm text-gray-600">
-              <Link href="/about" className="transition-colors hover:text-gray-950">
-                关于我们
-              </Link>
-              <Link
-                href="/guidelines"
-                className="transition-colors hover:text-gray-950"
-              >
-                收录说明
-              </Link>
-              <Link
-                href="/business"
-                className="transition-colors hover:text-gray-950"
-              >
-                商务合作
-              </Link>
-            </div>
+      <div className="border-t border-black/8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <FooterLink href="/about">关于我们</FooterLink>
+            <FooterLink href="/guidelines">收录说明</FooterLink>
+            <FooterLink href="/business">商务合作</FooterLink>
+            <FooterLink href="/privacy">隐私政策</FooterLink>
+            <FooterLink href="/terms">服务条款</FooterLink>
           </div>
 
-          <div className="space-y-2">
-            <div className="text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
-              政策与条款
-            </div>
-            <div className="flex flex-col gap-2 text-sm text-gray-600">
-              <Link href="/privacy" className="transition-colors hover:text-gray-950">
-                隐私政策
-              </Link>
-              <Link href="/terms" className="transition-colors hover:text-gray-950">
-                服务条款
-              </Link>
-            </div>
+          <div className="flex flex-col gap-1 text-xs text-gray-500 lg:items-end">
+            <p>© 2026 AI 工具目录</p>
+            <p>让发现 AI 工具更简单，也更值得。</p>
           </div>
-
-          <div className="space-y-2">
-            <div className="text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
-              当前阶段
-            </div>
-            <p className="text-sm leading-7 text-gray-600">
-              站点正处于收口与试运营准备阶段，当前重点是持续补充内容、完善 SEO、
-              建立更清晰的收录规则，并逐步开放合作入口。
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-xs text-gray-500 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 AI 工具目录. All rights reserved.</p>
-          <p>让发现 AI 工具这件事，变得更简单一点。</p>
         </div>
       </div>
     </footer>
@@ -218,12 +199,12 @@ function Footer() {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="zh-CN">
       <body
-        className={`${inter.className} min-h-screen bg-[#fafafa] text-gray-900 antialiased`}
+        className={`${inter.className} min-h-screen bg-[linear-gradient(180deg,#fafafa_0%,#f7f7f8_100%)] text-gray-900 antialiased`}
       >
         <DevDatabaseWarning />
         <Header />

@@ -20,7 +20,7 @@ export default function CopyLinkButton({ url }: { url: string }) {
 
     const timer = window.setTimeout(() => {
       setCopied(false);
-    }, 1800);
+    }, 1600);
 
     return () => window.clearTimeout(timer);
   }, [copied]);
@@ -30,13 +30,13 @@ export default function CopyLinkButton({ url }: { url: string }) {
       type="button"
       onClick={handleCopy}
       className={[
-        "inline-flex items-center rounded-full border px-5 py-3 text-sm transition-all duration-200 active:scale-[0.98]",
+        "inline-flex items-center justify-center rounded-full border px-5 py-3 text-sm transition-all duration-200 active:scale-[0.98]",
         copied
-          ? "border-gray-900 bg-gray-900 text-white shadow-[0_12px_28px_rgba(0,0,0,0.18)]"
-          : "border-gray-200 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950",
+          ? "border-black/12 bg-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)]"
+          : "border-black/10 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50 hover:text-gray-950",
       ].join(" ")}
     >
-      {copied ? "已复制链接" : "复制链接"}
+      {copied ? "已复制" : "复制链接"}
     </button>
   );
 }

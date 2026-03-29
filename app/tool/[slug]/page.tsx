@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Script from "next/script";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { prisma } from "@/lib/db";
 import ToolViewTracker from "@/components/ToolViewTracker";
 import CopyLinkButton from "@/components/CopyLinkButton";
@@ -59,30 +60,249 @@ function truncateText(text: string, maxLength: number) {
   return `${text.slice(0, maxLength - 3)}...`;
 }
 
-function normalizeDescription(toolName: string, description?: string | null) {
-  const fallback = `${toolName} 的详细介绍、适用场景、分类标签和官网入口。`;
-  return truncateText((description || fallback).trim(), 160);
+function isWeakText(text?: string | null) {
+  if (!text) return true;
+  const value = text.trim();
+  if (!value) return true;
+
+  const weakPatterns = [
+    /这里写/i,
+    /待补充/i,
+    /后续补充/i,
+    /测试/i,
+    /演示/i,
+    /暂无简介/i,
+  ];
+
+  return weakPatterns.some((pattern) => pattern.test(value));
+}
+
+function normalizeDescription(
+  toolName: string,
+  categoryName: string,
+  description?: string | null,
+) {
+  const fallback = `${toolName} 是一款归类在「${categoryName}」方向的 AI 工具，这里整理了它的定位、基础信息、标签与官网入口，方便你快速判断是否值得继续体验。`;
+
+  const value = isWeakText(description) ? fallback : description!.trim();
+  return truncateText(value, 160);
 }
 
 function buildKeywords(
   toolName: string,
   categoryName: string,
-  tagNames: string[]
+  tagNames: string[],
 ) {
   return Array.from(
-    new Set([
-      toolName,
-      categoryName,
-      ...tagNames,
-      `${toolName} 官网`,
-      `${toolName} 介绍`,
-      `${toolName} 怎么样`,
-      `${toolName} 使用场景`,
-      "AI 工具",
-      "AI 工具目录",
-      "AI工具导航",
-    ].filter(Boolean))
+    new Set(
+      [
+        toolName,
+        categoryName,
+        ...tagNames,
+        `${toolName} 官网`,
+        `${toolName} 介绍`,
+        `${toolName} 怎么样`,
+        `${toolName} 使用场景`,
+        "AI 工具",
+        "AI 工具目录",
+        "AI工具导航",
+      ].filter(Boolean),
+    ),
   );
+}
+
+function getPricingText(pricing?: string | null) {
+  if (!pricing) return null;
+  const value = pricing.trim();
+  if (!value || value === "unknown" || value === "未知") return null;
+  return value;
+}
+
+function formatDate(value: Date) {
+  return new Date(value).toLocaleDateString("zh-CN");
+}
+
+function formatDateTime(value: Date) {
+  return new Date(value).toLocaleString("zh-CN");
+}
+
+function InfoBadge({
+  children,
+  href,
+}: {
+  children: ReactNode;
+  href?: string | null;
+}) {
+  const className =
+    "inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3 py-1.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950";
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+
+  return <span className={className}>{children}</span>;
+}
+
+function DetailCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-2.5">
+      <div className="space-y-1">
+        <h2 className="text-[20px] font-semibold tracking-tight text-gray-950">
+          {title}
+        </h2>
+        {description ? (
+          <p className="text-sm leading-6 text-gray-500">{description}</p>
+        ) : null}
+      </div>
+
+      <div className="rounded-[26px] border border-black/8 bg-white/92 p-5 shadow-[0_8px_28px_rgba(15,23,42,0.045)] sm:p-6">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-4 py-3.5">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="mt-1 text-[17px] font-semibold tracking-tight text-gray-950">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function SoftList({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {items.map((item) => (
+        <div
+          key={item}
+          className="rounded-[18px] border border-black/8 bg-white/84 px-4 py-3.5 text-sm leading-7 text-gray-700"
+        >
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RelatedToolLink({
+  name,
+  slug,
+  description,
+  logoUrl,
+}: {
+  name: string;
+  slug: string;
+  description?: string | null;
+  logoUrl?: string | null;
+}) {
+  const relatedLogoSrc =
+    logoUrl && logoUrl.trim() !== "" ? logoUrl : "/default-tool-icon.png";
+
+  return (
+    <Link
+      href={`/tool/${slug}`}
+      className="group block rounded-[20px] border border-black/8 bg-white/92 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-black/12 hover:shadow-[0_14px_30px_rgba(15,23,42,0.06)]"
+    >
+      <div className="flex items-start gap-3.5">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-gray-50 ring-1 ring-black/5 transition-all duration-300 group-hover:bg-white">
+          <img
+            src={relatedLogoSrc}
+            alt={`${name} logo`}
+            width={24}
+            height={24}
+            className="h-6 w-6 rounded object-cover"
+          />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-semibold text-gray-950">
+            {name}
+          </div>
+          <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-600">
+            {isWeakText(description)
+              ? "查看这款同类 AI 工具的定位与详情。"
+              : description}
+          </p>
+          <span className="mt-2 inline-block text-sm text-gray-700 underline underline-offset-4 transition-colors group-hover:text-gray-950">
+            查看详情
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function splitContentToParagraphs(content: string) {
+  return content
+    .split(/\n{2,}/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item) => !isWeakText(item));
+}
+
+function buildUseCases(
+  name: string,
+  categoryName: string,
+  tagList: string[],
+  pricingText: string | null,
+) {
+  const items = [
+    `想快速判断 ${name} 是否适合自己当前工作流的人`,
+    `需要在「${categoryName}」场景中提升效率或生成质量的个人用户与团队`,
+  ];
+
+  if (tagList.length > 0) {
+    items.push(`关注 ${tagList.slice(0, 3).join("、")} 等能力方向的用户`);
+  }
+
+  if (pricingText) {
+    items.push(`希望先结合价格方式与能力定位，再决定是否深入试用的人`);
+  }
+
+  return items.slice(0, 4);
+}
+
+function buildFallbackParagraphs(
+  name: string,
+  categoryName: string,
+  tagList: string[],
+  pricingText: string | null,
+) {
+  const tagText =
+    tagList.length > 0 ? `，并与 ${tagList.slice(0, 3).join("、")} 等标签相关` : "";
+
+  const pricingSentence = pricingText
+    ? `当前页面也整理了它的价格方式：${pricingText}。`
+    : "当前页面整理了它的分类、标签和访问入口，方便快速判断是否值得继续了解。";
+
+  return [
+    `${name} 是一款归类在「${categoryName}」方向的 AI 工具${tagText}。如果你正在寻找这一类产品，这个页面可以先帮你快速了解它的大致定位。`,
+    pricingSentence,
+  ];
 }
 
 export async function generateMetadata({
@@ -106,7 +326,11 @@ export async function generateMetadata({
   const tagNames = tool.tags.map((item) => item.tag.name).filter(Boolean);
   const categoryName = tool.category?.name || "AI 工具";
   const url = `${SITE_URL}/tool/${tool.slug}`;
-  const description = normalizeDescription(tool.name, tool.description);
+  const description = normalizeDescription(
+    tool.name,
+    categoryName,
+    tool.description,
+  );
 
   return {
     title: `${tool.name} - ${categoryName}`,
@@ -135,139 +359,6 @@ export async function generateMetadata({
   };
 }
 
-function InfoBadge({
-  children,
-  href,
-}: {
-  children: React.ReactNode;
-  href?: string | null;
-}) {
-  const className =
-    "inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3 py-1.5 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white";
-
-  if (href) {
-    return (
-      <Link href={href} className={className}>
-        {children}
-      </Link>
-    );
-  }
-
-  return <span className={className}>{children}</span>;
-}
-
-function DetailCard({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-2.5">
-      <div className="space-y-1">
-        <h2 className="text-[20px] font-semibold tracking-tight text-gray-950">
-          {title}
-        </h2>
-        {description ? (
-          <p className="text-sm leading-6 text-gray-500">{description}</p>
-        ) : null}
-      </div>
-
-      <div className="rounded-[26px] border border-black/8 bg-white/92 p-5 shadow-[0_8px_32px_rgba(15,23,42,0.05)] backdrop-blur-md sm:p-6">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-[20px] border border-black/8 bg-white/88 px-4 py-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-md">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="mt-1 text-lg font-semibold tracking-tight text-gray-950">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function SoftSection({
-  title,
-  items,
-}: {
-  title: string;
-  items: string[];
-}) {
-  if (items.length === 0) return null;
-
-  return (
-    <div className="space-y-3">
-      <h3 className="text-[15px] font-semibold text-gray-950">{title}</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {items.map((item) => (
-          <div
-            key={item}
-            className="rounded-[18px] border border-black/8 bg-white/80 px-4 py-3.5 text-sm leading-7 text-gray-700"
-          >
-            {item}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function splitContentToParagraphs(content: string) {
-  return content
-    .split(/\n{2,}/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function buildUseCases(name: string, categoryName: string, tagList: string[]) {
-  const base = [
-    `想快速判断 ${name} 是否适合自己工作流的人`,
-    `希望在「${categoryName}」场景里提升效率的个人用户或团队`,
-    `想先看定位与能力，再决定是否访问官网深入试用的人`,
-  ];
-
-  if (tagList.length > 0) {
-    base.push(`关注 ${tagList.slice(0, 3).join("、")} 等能力方向的用户`);
-  }
-
-  return base;
-}
-
-function buildHighlights(name: string, categoryName: string, hasContent: boolean) {
-  const base = [
-    `${name} 已按目录站统一结构整理，方便快速判断定位与价值`,
-    `页面内可直接查看分类、标签、统计信息与官网入口`,
-    `在 ${categoryName} 类工具里，可结合相关推荐继续横向对比`,
-  ];
-
-  if (!hasContent) {
-    base.push("当前详细介绍仍可继续补充，后续适合增加核心功能、适用人群与典型场景");
-  }
-
-  return base;
-}
-
-function getPricingText(pricing?: string | null) {
-  if (!pricing) return null;
-  const value = pricing.trim();
-  if (!value || value === "unknown" || value === "未知") return null;
-  return value;
-}
-
 export default async function ToolPage({
   params,
 }: {
@@ -284,29 +375,42 @@ export default async function ToolPage({
     : [];
 
   const pricingText = getPricingText(tool.pricing);
-  const showContent = Boolean(tool.content?.trim());
   const tagList = tool.tags.map((item) => item.tag.name).filter(Boolean);
-  const url = `${SITE_URL}/tool/${tool.slug}`;
+  const categoryName = tool.category?.name || "AI 工具";
   const categoryHref = tool.category?.slug
     ? `/category/${encodeURIComponent(tool.category.slug)}`
     : null;
+  const url = `${SITE_URL}/tool/${tool.slug}`;
+  const outHref = `/out/${tool.slug}`;
+  const secondaryHref = categoryHref || "/featured";
+  const secondaryLabel = categoryHref ? `更多 ${categoryName}` : "浏览精选工具";
+
+  const normalizedDescription = normalizeDescription(
+    tool.name,
+    categoryName,
+    tool.description,
+  );
+
+  const paragraphs = tool.content?.trim()
+    ? splitContentToParagraphs(tool.content)
+    : [];
+
+  const finalParagraphs =
+    paragraphs.length > 0
+      ? paragraphs
+      : buildFallbackParagraphs(tool.name, categoryName, tagList, pricingText);
+
+  const useCases = buildUseCases(
+    tool.name,
+    categoryName,
+    tagList,
+    pricingText,
+  );
 
   const logoSrc =
     tool.logoUrl && tool.logoUrl.trim() !== ""
       ? tool.logoUrl
       : "/default-tool-icon.png";
-
-  const outHref = `/out/${tool.slug}`;
-
-  const showViews = typeof tool.views === "number" && tool.views > 0;
-  const showOutClicks =
-    typeof tool.outClicks === "number" && tool.outClicks > 0;
-
-  const categoryName = tool.category?.name || "AI 工具";
-  const paragraphs = showContent ? splitContentToParagraphs(tool.content || "") : [];
-  const useCases = buildUseCases(tool.name, categoryName, tagList);
-  const highlights = buildHighlights(tool.name, categoryName, showContent);
-  const metaDescription = normalizeDescription(tool.name, tool.description);
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -314,7 +418,7 @@ export default async function ToolPage({
     name: tool.name,
     applicationCategory: categoryName,
     operatingSystem: "Web",
-    description: metaDescription,
+    description: normalizedDescription,
     url,
     sameAs: tool.website || undefined,
     keywords: tagList.join(", "),
@@ -342,20 +446,16 @@ export default async function ToolPage({
         }}
       />
 
-      <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-7">
-        <div className="space-y-5 sm:space-y-6">
-          <section className="relative overflow-hidden rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] px-5 py-5 shadow-[0_16px_48px_rgba(15,23,42,0.065)] sm:px-7 sm:py-7">
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95),transparent_42%)]" />
-              <div className="absolute -top-16 right-[-8%] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(96,165,250,0.16),transparent_68%)] blur-2xl" />
-              <div className="absolute bottom-[-80px] left-[-4%] h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.10),transparent_70%)] blur-2xl" />
-            </div>
+      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
+        <div className="space-y-6">
+          <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-5 py-6 shadow-[0_16px_48px_rgba(15,23,42,0.06)] sm:px-7 sm:py-8">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.08),transparent_28%)]" />
 
-            <div className="relative space-y-4">
+            <div className="relative space-y-5">
               <div className="flex flex-wrap items-center gap-2.5">
                 <Link
                   href="/"
-                  className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
+                  className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
                 >
                   ← 返回首页
                 </Link>
@@ -363,59 +463,38 @@ export default async function ToolPage({
                 {categoryHref ? (
                   <Link
                     href={categoryHref}
-                    className="inline-flex items-center rounded-full border border-black/10 bg-white/70 px-3.5 py-2 text-sm text-gray-600 backdrop-blur-md transition-all duration-200 hover:border-black/15 hover:bg-white/90 hover:text-gray-950"
+                    className="inline-flex items-center rounded-full border border-black/10 bg-white/78 px-3.5 py-2 text-sm text-gray-600 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950"
                   >
                     {categoryName}
                   </Link>
                 ) : null}
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),270px] lg:items-start">
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),280px] lg:items-start">
                 <div className="min-w-0 space-y-4">
                   <div className="space-y-2.5">
-                    <div className="inline-flex items-center rounded-full border border-white/60 bg-white/70 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500 backdrop-blur-md">
-                      AI TOOL PROFILE
+                    <div className="inline-flex items-center rounded-full border border-white/60 bg-white/74 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">
+                      TOOL PROFILE
                     </div>
 
                     <h1 className="text-[34px] font-semibold tracking-tight text-gray-950 sm:text-[46px] sm:leading-[1.06]">
                       {tool.name}
                     </h1>
 
-                    <p className="max-w-2xl text-[15px] leading-7 text-gray-600 sm:text-[17px]">
-                      {tool.description || "暂无简介"}
+                    <p className="max-w-3xl text-[15px] leading-7 text-gray-600 sm:text-[17px]">
+                      {normalizedDescription}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2.5">
-                    <InfoBadge href={categoryHref}>
-                      主分类：{tool.category?.name || "未分类"}
-                    </InfoBadge>
+                    <InfoBadge href={categoryHref}>主分类：{categoryName}</InfoBadge>
 
                     {pricingText ? <InfoBadge>价格：{pricingText}</InfoBadge> : null}
 
-                    {showOutClicks ? (
-                      <InfoBadge>官网点击：{tool.outClicks}</InfoBadge>
-                    ) : null}
-
-                    {showViews ? <InfoBadge>浏览：{tool.views}</InfoBadge> : null}
-
-                    {!showViews && !showOutClicks ? (
-                      <InfoBadge>已收录工具详情页</InfoBadge>
-                    ) : null}
+                    {tagList.slice(0, 2).map((tag) => (
+                      <InfoBadge key={tag}>{tag}</InfoBadge>
+                    ))}
                   </div>
-
-                  {tagList.length > 0 ? (
-                    <div className="flex flex-wrap gap-2 pt-0.5">
-                      {tagList.slice(0, 8).map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center rounded-full border border-black/8 bg-white/70 px-3 py-1.5 text-xs text-gray-600 backdrop-blur-md"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
 
                   <div className="flex flex-wrap gap-2.5 pt-0.5">
                     {tool.website ? (
@@ -436,24 +515,18 @@ export default async function ToolPage({
                     <CopyLinkButton url={url} />
 
                     <Link
-                      href="/featured"
-                      className="inline-flex items-center rounded-full border border-black/10 bg-white/80 px-5 py-2.5 text-sm text-gray-700 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950"
+                      href={secondaryHref}
+                      className="inline-flex items-center rounded-full border border-black/10 bg-white/82 px-5 py-2.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950"
                     >
-                      浏览精选工具
+                      {secondaryLabel}
                     </Link>
                   </div>
-
-                  {tool.website ? (
-                    <p className="text-sm leading-6 text-gray-500">
-                      点击“访问官网”后将跳转到官方站点，同时记录一次官网点击数据。
-                    </p>
-                  ) : null}
                 </div>
 
                 <div className="space-y-3.5">
-                  <div className="rounded-[24px] border border-white/60 bg-white/74 p-4 shadow-[0_8px_30px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+                  <div className="rounded-[24px] border border-white/60 bg-white/78 p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)]">
                     <div className="flex items-center gap-3.5">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-black/8 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-black/8 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.05)]">
                         <img
                           src={logoSrc}
                           alt={`${tool.name} logo`}
@@ -471,7 +544,7 @@ export default async function ToolPage({
                           {categoryName}
                         </div>
                         <div className="mt-2 text-xs text-gray-400">
-                          收录时间：{new Date(tool.createdAt).toLocaleDateString("zh-CN")}
+                          收录时间：{formatDate(tool.createdAt)}
                         </div>
                       </div>
                     </div>
@@ -480,14 +553,8 @@ export default async function ToolPage({
                   <div className="grid grid-cols-2 gap-3">
                     <StatCard label="浏览" value={tool.views ?? 0} />
                     <StatCard label="官网点击" value={tool.outClicks ?? 0} />
-                    <StatCard
-                      label="更新时间"
-                      value={new Date(tool.updatedAt).toLocaleDateString("zh-CN")}
-                    />
-                    <StatCard
-                      label="状态"
-                      value={tool.isPublished ? "已发布" : "未发布"}
-                    />
+                    <StatCard label="收录时间" value={formatDate(tool.createdAt)} />
+                    <StatCard label="更新时间" value={formatDate(tool.updatedAt)} />
                   </div>
                 </div>
               </div>
@@ -497,45 +564,27 @@ export default async function ToolPage({
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),300px]">
             <div className="space-y-6">
               <DetailCard
-                title="工具介绍"
-                description="先快速了解这款工具的定位、特点和适合场景。"
+                title="工具简介"
+                description="先快速了解这款工具的大致定位与使用方向。"
               >
                 <div className="space-y-5 text-[15px] leading-8 text-gray-700">
-                  {paragraphs.length > 0 ? (
-                    paragraphs.map((paragraph, index) => (
-                      <p key={`${tool.id}-paragraph-${index}`}>{paragraph}</p>
-                    ))
-                  ) : (
-                    <>
-                      <p>
-                        {tool.name} 是一款归类在「{categoryName}」方向的 AI 工具，当前页面已经整理了它的基础信息、标签、官网入口以及相关推荐，方便你快速判断它是否值得进一步体验。
-                      </p>
-                      <p>
-                        如果你正在寻找同类工具，可以先结合它的分类、标签和相关工具做横向对比；如果你已经对它有明确需求，也可以直接通过官网入口继续试用或了解更多功能。
-                      </p>
-                    </>
-                  )}
+                  {finalParagraphs.map((paragraph, index) => (
+                    <p key={`${tool.id}-paragraph-${index}`}>{paragraph}</p>
+                  ))}
                 </div>
               </DetailCard>
 
               <DetailCard
-                title="适合谁用"
-                description="不做夸张包装，只告诉你这类工具通常适合哪些人。"
+                title="适合场景"
+                description="更适合哪些人优先进一步体验这款工具。"
               >
-                <SoftSection title="适用人群" items={useCases} />
-              </DetailCard>
-
-              <DetailCard
-                title="为什么值得关注"
-                description="用更结构化的方式，帮你更快判断是否要点进官网。"
-              >
-                <SoftSection title="亮点概览" items={highlights} />
+                <SoftList items={useCases} />
               </DetailCard>
 
               {tagList.length > 0 ? (
                 <DetailCard
                   title="相关标签"
-                  description="这些标签可以帮助你更快理解能力边界与定位。"
+                  description="这些标签可以帮助你更快判断它的能力方向。"
                 >
                   <div className="flex flex-wrap gap-2.5">
                     {tagList.map((tag) => (
@@ -556,30 +605,30 @@ export default async function ToolPage({
               >
                 <div className="grid gap-3.5 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
+                    <div className="text-xs text-gray-500">分类</div>
+                    <div className="mt-1 font-medium text-gray-900">
+                      {categoryName}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
+                    <div className="text-xs text-gray-500">价格</div>
+                    <div className="mt-1 font-medium text-gray-900">
+                      {pricingText || "未标注"}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
                     <div className="text-xs text-gray-500">收录时间</div>
                     <div className="mt-1 font-medium text-gray-900">
-                      {new Date(tool.createdAt).toLocaleString("zh-CN")}
+                      {formatDateTime(tool.createdAt)}
                     </div>
                   </div>
 
                   <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
                     <div className="text-xs text-gray-500">最后更新</div>
                     <div className="mt-1 font-medium text-gray-900">
-                      {new Date(tool.updatedAt).toLocaleString("zh-CN")}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
-                    <div className="text-xs text-gray-500">浏览</div>
-                    <div className="mt-1 font-medium text-gray-900">
-                      {tool.views ?? 0}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
-                    <div className="text-xs text-gray-500">官网点击</div>
-                    <div className="mt-1 font-medium text-gray-900">
-                      {tool.outClicks ?? 0}
+                      {formatDateTime(tool.updatedAt)}
                     </div>
                   </div>
                 </div>
@@ -589,7 +638,7 @@ export default async function ToolPage({
             <aside className="space-y-5">
               <DetailCard
                 title="访问引导"
-                description="已经了解得差不多时，可以直接继续下一步。"
+                description="已经判断得差不多时，可以直接继续下一步。"
               >
                 <div className="space-y-3.5">
                   {tool.website ? (
@@ -610,7 +659,7 @@ export default async function ToolPage({
                   <CopyLinkButton url={url} />
 
                   <div className="rounded-[18px] border border-black/8 bg-gray-50/80 p-4 text-sm leading-7 text-gray-600">
-                    如果你正在对比同类 AI 工具，建议先结合本页的分类、标签与相关推荐继续看 2 到 3 个相近产品，再决定是否深入试用。
+                    先结合本页的分类、标签与相关推荐判断方向，再决定是否继续深入试用。
                   </div>
                 </div>
               </DetailCard>
@@ -622,49 +671,20 @@ export default async function ToolPage({
                       相关工具
                     </h2>
                     <p className="text-sm leading-6 text-gray-500">
-                      同分类下继续浏览，通常更容易找到替代方案或更适合自己的工具。
+                      同分类下继续浏览，通常更容易找到替代方案。
                     </p>
                   </div>
 
                   <div className="space-y-3">
-                    {relatedTools.map((t) => {
-                      const relatedLogoSrc =
-                        t.logoUrl && t.logoUrl.trim() !== ""
-                          ? t.logoUrl
-                          : "/default-tool-icon.png";
-
-                      return (
-                        <Link
-                          key={t.id}
-                          href={`/tool/${t.slug}`}
-                          className="group block rounded-[20px] border border-black/8 bg-white/92 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-black/12 hover:shadow-[0_16px_34px_rgba(15,23,42,0.07)]"
-                        >
-                          <div className="flex items-start gap-3.5">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-gray-50 ring-1 ring-black/5 transition-all duration-300 group-hover:bg-white">
-                              <img
-                                src={relatedLogoSrc}
-                                alt={`${t.name} logo`}
-                                width={24}
-                                height={24}
-                                className="h-6 w-6 rounded object-cover"
-                              />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-[15px] font-semibold text-gray-950">
-                                {t.name}
-                              </div>
-                              <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-600">
-                                {t.description ?? "暂无简介"}
-                              </p>
-                              <span className="mt-2 inline-block text-sm text-gray-700 underline underline-offset-4">
-                                查看详情 →
-                              </span>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                    {relatedTools.map((t) => (
+                      <RelatedToolLink
+                        key={t.id}
+                        name={t.name}
+                        slug={t.slug}
+                        description={t.description}
+                        logoUrl={t.logoUrl}
+                      />
+                    ))}
                   </div>
                 </section>
               ) : null}

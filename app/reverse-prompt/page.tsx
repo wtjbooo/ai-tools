@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { type ChangeEvent, type ReactNode, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-type InputType = "images" | "video";
 type OutputLanguage = "zh" | "en" | "bilingual";
 type OutputStyle = "simple" | "standard" | "pro";
 type TargetPlatform = "generic" | "jimeng" | "keling" | "runway" | "pika";
@@ -27,6 +33,22 @@ type ReversePromptResult = {
   disclaimer: string;
 };
 
+type PreviewItem = {
+  key: string;
+  name: string;
+  size: number;
+  url: string;
+};
+
+type TaskMeta = {
+  taskId?: string;
+  model?: string;
+  fileCount?: number;
+  outputLanguage?: OutputLanguage;
+  outputStyle?: OutputStyle;
+  targetPlatform?: TargetPlatform;
+};
+
 const STYLE_LABELS: Record<OutputStyle, string> = {
   simple: "精简版",
   standard: "标准版",
@@ -47,6 +69,14 @@ const LANGUAGE_LABELS: Record<OutputLanguage, string> = {
   bilingual: "中英双语",
 };
 
+const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<
+  [OutputStyle, string]
+>;
+const PLATFORM_OPTIONS = Object.entries(PLATFORM_LABELS) as Array<
+  [TargetPlatform, string]
+>;
+
+const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/webp";
 const MAX_IMAGE_COUNT = 4;
 const MAX_TOTAL_BYTES = 4 * 1024 * 1024;
 
@@ -60,6 +90,33 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function validateFiles(
+  selectedFiles: File[],
+  options?: { requireAtLeastOne?: boolean },
+) {
+  const requireAtLeastOne = options?.requireAtLeastOne ?? true;
+
+  if (requireAtLeastOne && selectedFiles.length === 0) {
+    return "请先上传 1～4 张关键帧图片";
+  }
+
+  if (selectedFiles.length > MAX_IMAGE_COUNT) {
+    return `当前最多支持 ${MAX_IMAGE_COUNT} 张关键帧图片`;
+  }
+
+  if (selectedFiles.some((file) => !file.type.startsWith("image/"))) {
+    return "当前仅支持 JPG / PNG / WEBP 图片";
+  }
+
+  const totalBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+
+  if (totalBytes > MAX_TOTAL_BYTES) {
+    return "当前总图片体积请控制在 4MB 内";
+  }
+
+  return "";
 }
 
 function PanelTitle({
@@ -154,27 +211,151 @@ function SoftCard({
   );
 }
 
+function setTaskIdToUrl(taskId: string) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("task", taskId);
+  window.history.replaceState({}, "", url.toString());
+}
+
+function removeTaskIdFromUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("task");
+  window.history.replaceState({}, "", url.toString());
+}
+
+function getTaskIdFromUrl() {
+  if (typeof window === "undefined") return "";
+  return new URL(window.location.href).searchParams.get("task") || "";
+}
+
 export default function ReversePromptPage() {
-  const [inputType, setInputType] = useState<InputType>("images");
   const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>("zh");
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("standard");
   const [targetPlatform, setTargetPlatform] =
     useState<TargetPlatform>("generic");
   const [files, setFiles] = useState<File[]>([]);
   const [result, setResult] = useState<ReversePromptResult | null>(null);
+  const [taskMeta, setTaskMeta] = useState<TaskMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState("");
-
-  const acceptedTypes = useMemo(() => {
-    return inputType === "images"
-      ? "image/png,image/jpeg,image/webp"
-      : "video/mp4,video/quicktime,video/webm";
-  }, [inputType]);
+  const [pickerKey, setPickerKey] = useState(0);
+  const hasTriedRestore = useRef(false);
 
   const totalBytes = useMemo(
     () => files.reduce((sum, file) => sum + file.size, 0),
     [files],
   );
+
+  const previewItems = useMemo<PreviewItem[]>(
+    () =>
+      files.map((file) => ({
+        key: `${file.name}-${file.lastModified}`,
+        name: file.name,
+        size: file.size,
+        url: URL.createObjectURL(file),
+      })),
+    [files],
+  );
+
+  useEffect(() => {
+    return () => {
+      previewItems.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [previewItems]);
+
+  useEffect(() => {
+    if (hasTriedRestore.current) return;
+    hasTriedRestore.current = true;
+
+    const taskId = getTaskIdFromUrl();
+    if (!taskId) return;
+
+    let cancelled = false;
+
+    async function restoreTask() {
+      try {
+        setIsRestoring(true);
+        setError("");
+
+        const response = await fetch(
+          `/api/reverse-prompt?taskId=${encodeURIComponent(taskId)}`,
+          {
+            method: "GET",
+          },
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload?.error || "恢复结果失败，请稍后再试");
+        }
+
+        if (cancelled) return;
+
+        const task = payload?.task ?? {};
+        const restoredResult = payload?.result as ReversePromptResult | null;
+
+        if (restoredResult) {
+          setResult(restoredResult);
+        }
+
+        setTaskMeta({
+          taskId: task.id,
+          model: task.model,
+          fileCount: task.sourceCount,
+          outputLanguage: task.outputLanguage,
+          outputStyle: task.outputStyle,
+          targetPlatform: task.targetPlatform,
+        });
+
+        if (
+          task.outputLanguage === "zh" ||
+          task.outputLanguage === "en" ||
+          task.outputLanguage === "bilingual"
+        ) {
+          setOutputLanguage(task.outputLanguage);
+        }
+
+        if (
+          task.outputStyle === "simple" ||
+          task.outputStyle === "standard" ||
+          task.outputStyle === "pro"
+        ) {
+          setOutputStyle(task.outputStyle);
+        }
+
+        if (
+          task.targetPlatform === "generic" ||
+          task.targetPlatform === "jimeng" ||
+          task.targetPlatform === "keling" ||
+          task.targetPlatform === "runway" ||
+          task.targetPlatform === "pika"
+        ) {
+          setTargetPlatform(task.targetPlatform);
+        }
+
+        window.setTimeout(() => {
+          document
+            .getElementById("reverse-prompt-result")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "恢复结果失败，请稍后再试");
+      } finally {
+        if (!cancelled) {
+          setIsRestoring(false);
+        }
+      }
+    }
+
+    void restoreTask();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const primaryPrompt = result
     ? getPromptByLanguage(result.prompts[outputStyle], outputLanguage)
@@ -185,59 +366,54 @@ export default function ReversePromptPage() {
     : "";
 
   const primaryPlatformPrompt = result
-    ? getPromptByLanguage(result.platformVariants[targetPlatform], outputLanguage)
+    ? getPromptByLanguage(
+        result.platformVariants[targetPlatform],
+        outputLanguage,
+      )
     : "";
-
-  const otherPromptVariants = result
-    ? (
-        Object.entries(result.prompts) as Array<[OutputStyle, PromptText]>
-      ).filter(([key]) => key !== outputStyle)
-    : [];
-
-  const otherPlatformVariants = result
-    ? (
-        Object.entries(result.platformVariants) as Array<
-          [TargetPlatform, PromptText]
-        >
-      ).filter(([key]) => key !== targetPlatform)
-    : [];
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files || []);
+
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    const nextError = validateFiles(selectedFiles);
+
+    if (nextError) {
+      setFiles([]);
+      setResult(null);
+      setTaskMeta(null);
+      setError(nextError);
+      setPickerKey((value) => value + 1);
+      removeTaskIdFromUrl();
+      return;
+    }
+
     setFiles(selectedFiles);
+    setResult(null);
+    setTaskMeta(null);
     setError("");
+    removeTaskIdFromUrl();
   }
 
   function resetForm() {
     setFiles([]);
     setResult(null);
+    setTaskMeta(null);
     setError("");
     setIsLoading(false);
+    setIsRestoring(false);
+    setPickerKey((value) => value + 1);
+    removeTaskIdFromUrl();
   }
 
   async function handleAnalyze() {
-    if (inputType === "video") {
-      window.alert("当前版本先支持关键帧图片分析。短视频解析下一步接入。");
-      return;
-    }
+    const validationError = validateFiles(files);
 
-    if (files.length === 0) {
-      window.alert("请先上传关键帧图片");
-      return;
-    }
-
-    if (files.length > MAX_IMAGE_COUNT) {
-      window.alert(`当前最多支持 ${MAX_IMAGE_COUNT} 张关键帧图片`);
-      return;
-    }
-
-    if (files.some((file) => !file.type.startsWith("image/"))) {
-      window.alert("当前仅支持 JPG / PNG / WEBP 图片");
-      return;
-    }
-
-    if (totalBytes > MAX_TOTAL_BYTES) {
-      window.alert("当前总图片体积请控制在 4MB 内");
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -245,9 +421,10 @@ export default function ReversePromptPage() {
       setIsLoading(true);
       setError("");
       setResult(null);
+      setTaskMeta(null);
 
       const formData = new FormData();
-      formData.append("inputType", inputType);
+      formData.append("inputType", "images");
       formData.append("outputLanguage", outputLanguage);
       formData.append("outputStyle", outputStyle);
       formData.append("targetPlatform", targetPlatform);
@@ -267,7 +444,21 @@ export default function ReversePromptPage() {
         throw new Error(payload?.error || "分析失败，请稍后再试");
       }
 
+      const nextTaskMeta: TaskMeta = {
+        taskId: payload?.meta?.taskId,
+        model: payload?.meta?.model,
+        fileCount: payload?.meta?.fileCount,
+        outputLanguage: payload?.meta?.outputLanguage,
+        outputStyle: payload?.meta?.outputStyle,
+        targetPlatform: payload?.meta?.targetPlatform,
+      };
+
       setResult(payload.result as ReversePromptResult);
+      setTaskMeta(nextTaskMeta);
+
+      if (nextTaskMeta.taskId) {
+        setTaskIdToUrl(nextTaskMeta.taskId);
+      }
 
       window.setTimeout(() => {
         document
@@ -287,7 +478,7 @@ export default function ReversePromptPage() {
         <section className="relative overflow-hidden rounded-[32px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-6 py-8 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-10">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.08),transparent_26%)]" />
 
-          <div className="relative space-y-6">
+          <div className="relative max-w-3xl space-y-5">
             <div className="flex flex-wrap items-center gap-2.5">
               <Link
                 href="/"
@@ -301,85 +492,31 @@ export default function ReversePromptPage() {
               </span>
             </div>
 
-            <div className="max-w-3xl space-y-3">
+            <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">
                 从关键帧反推出可复用 Prompt
               </h1>
 
               <p className="max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
-                上传关键帧图片，自动拆解主体、镜头语言与风格特征，输出更适合继续创作的结果。
+                上传 1～4 张关键帧，自动拆解主体、场景、镜头语言与风格特征，整理成更适合继续创作的结果。
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[20px] border border-black/8 bg-white/78 px-4 py-3">
-                <div className="text-[11px] tracking-[0.16em] text-gray-500">
-                  INPUT
-                </div>
-                <div className="mt-1 text-sm font-medium text-gray-900">
-                  关键帧图片
-                </div>
-              </div>
-
-              <div className="rounded-[20px] border border-black/8 bg-white/78 px-4 py-3">
-                <div className="text-[11px] tracking-[0.16em] text-gray-500">
-                  ANALYSIS
-                </div>
-                <div className="mt-1 text-sm font-medium text-gray-900">
-                  内容 + 镜头 + 风格
-                </div>
-              </div>
-
-              <div className="rounded-[20px] border border-black/8 bg-white/78 px-4 py-3">
-                <div className="text-[11px] tracking-[0.16em] text-gray-500">
-                  OUTPUT
-                </div>
-                <div className="mt-1 text-sm font-medium text-gray-900">
-                  Prompt / 负面词 / 平台适配
-                </div>
-              </div>
+            <div className="text-sm text-gray-500">
+              1～4 张关键帧 · 中英双语输出 · 平台适配版
             </div>
           </div>
         </section>
 
         <SoftCard>
-          <div className="space-y-5">
-            <PanelTitle
-              title="输入配置"
-              description="选择输出偏好，然后上传关键帧开始分析。"
-            />
+          <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr]">
+            <div className="space-y-6">
+              <PanelTitle
+                title="分析偏好"
+                description="先设定输出语言、风格与目标平台。"
+              />
 
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-900">输入方式</div>
-                <div className="flex flex-wrap gap-2.5">
-                  <OptionButton
-                    active={inputType === "images"}
-                    onClick={() => {
-                      setInputType("images");
-                      setFiles([]);
-                      setResult(null);
-                      setError("");
-                    }}
-                  >
-                    上传关键帧图片
-                  </OptionButton>
-
-                  <OptionButton
-                    active={inputType === "video"}
-                    onClick={() => {
-                      setInputType("video");
-                      setFiles([]);
-                      setResult(null);
-                      setError("");
-                    }}
-                  >
-                    上传短视频
-                  </OptionButton>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-900">
                     输出语言
@@ -434,118 +571,166 @@ export default function ReversePromptPage() {
                 </div>
               </div>
 
+              <div className="text-xs leading-6 text-gray-500">
+                结果会尽量保留更稳定、可复用的画面描述，方便继续延展为图像或视频生成 Prompt。
+              </div>
+
+              {taskMeta?.taskId ? (
+                <div className="rounded-[18px] border border-black/8 bg-gray-50/80 px-4 py-3 text-xs leading-6 text-gray-500">
+                  当前结果已保存，可通过当前链接再次打开。任务编号：
+                  <span className="ml-1 font-medium text-gray-700">
+                    {taskMeta.taskId}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="space-y-4">
+              <PanelTitle
+                title="上传素材"
+                description="优先选择风格稳定、构图明确的关键帧。"
+              />
+
               <div className="rounded-[24px] border border-dashed border-black/12 bg-[linear-gradient(180deg,rgba(250,250,250,0.72),rgba(255,255,255,0.98))] p-5 sm:p-6">
                 <div className="space-y-4">
-                  <div className="space-y-1">
+                  <label className="flex min-h-[190px] cursor-pointer flex-col items-center justify-center rounded-[22px] border border-black/10 bg-white px-6 py-8 text-center transition hover:border-black/15 hover:bg-gray-50">
                     <div className="text-sm font-medium text-gray-900">
-                      {inputType === "images" ? "上传关键帧图片" : "上传短视频"}
-                    </div>
-                    <p className="text-sm leading-6 text-gray-500">
-                      {inputType === "images"
-                        ? `建议上传 1～${MAX_IMAGE_COUNT} 张关键帧，优先选择风格最稳定、构图最明确的画面。`
-                        : "短视频解析下一步接入。当前建议先上传关键帧图片，以获得更稳定结果。"}
-                    </p>
-                  </div>
-
-                  <label className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-[22px] border border-black/10 bg-white px-6 py-8 text-center transition hover:border-black/15 hover:bg-gray-50">
-                    <div className="text-sm font-medium text-gray-900">
-                      点击上传或拖拽文件到这里
+                      点击上传关键帧图片
                     </div>
                     <div className="mt-2 text-xs leading-6 text-gray-500">
-                      {inputType === "images"
-                        ? "支持 PNG / JPG / WEBP"
-                        : "支持 MP4 / MOV / WEBM"}
+                      支持 PNG / JPG / WEBP · 最多 4 张 · 总体积不超过 4MB
                     </div>
 
                     <input
+                      key={pickerKey}
                       type="file"
-                      accept={acceptedTypes}
-                      multiple={inputType === "images"}
+                      accept={ACCEPTED_IMAGE_TYPES}
+                      multiple
                       onChange={handleFileChange}
                       className="hidden"
                     />
                   </label>
 
-                  {files.length > 0 ? (
-                    <div className="rounded-[20px] border border-black/8 bg-white/84 p-4">
+                  {previewItems.length > 0 ? (
+                    <div className="space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          已选择 {files.length} 个文件
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            已选择 {files.length} 张关键帧
+                          </div>
+                          <div className="mt-1 text-xs text-gray-500">
+                            总大小：{formatBytes(totalBytes)} / 4.00 MB
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">
+
+                        <div className="text-xs leading-5 text-gray-500">
                           {LANGUAGE_LABELS[outputLanguage]} ·{" "}
                           {STYLE_LABELS[outputStyle]} ·{" "}
                           {PLATFORM_LABELS[targetPlatform]}
                         </div>
                       </div>
 
-                      <div className="mt-2 text-xs text-gray-500">
-                        总大小：{formatBytes(totalBytes)} / 4.00 MB
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {files.map((file) => (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {previewItems.map((item) => (
                           <div
-                            key={`${file.name}-${file.lastModified}`}
-                            className="inline-flex max-w-full items-center rounded-full border border-black/8 bg-white px-3 py-2 text-sm text-gray-700"
+                            key={item.key}
+                            className="overflow-hidden rounded-[18px] border border-black/8 bg-white"
                           >
-                            <span className="truncate">
-                              {file.name} · {formatBytes(file.size)}
-                            </span>
+                            <div className="aspect-[16/10] bg-gray-100">
+                              <img
+                                src={item.url}
+                                alt={item.name}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="space-y-1 px-3 py-3">
+                              <div className="truncate text-sm font-medium text-gray-900">
+                                {item.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {formatBytes(item.size)}
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                  ) : null}
-
-                  <div className="flex flex-wrap gap-2.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleAnalyze}
-                      disabled={isLoading}
-                      className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-                    >
-                      {isLoading ? "分析中..." : "开始分析"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      disabled={isLoading}
-                      className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-                    >
-                      清空
-                    </button>
-                  </div>
-
-                  {error ? (
-                    <div className="rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                      {error}
+                  ) : (
+                    <div className="text-xs leading-6 text-gray-500">
+                      建议优先选择主体清晰、光线稳定、构图完整的画面。
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={isLoading || isRestoring}
+                  className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                >
+                  {isLoading
+                    ? "分析中..."
+                    : isRestoring
+                    ? "恢复中..."
+                    : "开始分析"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  disabled={isLoading || isRestoring}
+                  className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                >
+                  清空
+                </button>
+              </div>
+
+              {error ? (
+                <div className="rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {error}
+                </div>
+              ) : (
+                <div className="text-xs leading-6 text-gray-500">
+                  分析结果会根据当前偏好生成，并可继续切换查看不同版本。
+                </div>
+              )}
             </div>
           </div>
         </SoftCard>
 
-        {isLoading ? (
+        {isLoading || isRestoring ? (
           <SoftCard>
             <PanelTitle
-              title="正在分析"
-              description="正在解析画面内容、镜头语言与风格特征。"
+              title={isRestoring ? "正在恢复结果" : "正在生成结果"}
+              description={
+                isRestoring
+                  ? "正在读取已保存的任务结果。"
+                  : "正在解析画面内容、镜头语言与风格特征。"
+              }
             />
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[18px] border border-black/8 bg-white/86 px-4 py-4 text-sm text-gray-700">
-                正在识别主体与场景
-              </div>
-              <div className="rounded-[18px] border border-black/8 bg-white/86 px-4 py-4 text-sm text-gray-700">
-                正在整理镜头与风格特征
-              </div>
-              <div className="rounded-[18px] border border-black/8 bg-white/86 px-4 py-4 text-sm text-gray-700">
-                正在生成 Prompt 与平台适配版
-              </div>
+              {[
+                isRestoring ? "正在读取任务信息" : "正在识别主体与场景",
+                isRestoring ? "正在恢复分析结果" : "正在整理镜头与风格特征",
+                isRestoring ? "正在同步页面状态" : "正在生成 Prompt 与平台适配版",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-[18px] border border-black/8 bg-white/86 p-4"
+                >
+                  <div className="text-sm font-medium text-gray-900">
+                    {item}
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <div className="h-2.5 w-4/5 animate-pulse rounded-full bg-gray-200" />
+                    <div className="h-2.5 w-3/5 animate-pulse rounded-full bg-gray-200" />
+                    <div className="h-2.5 w-2/3 animate-pulse rounded-full bg-gray-200" />
+                  </div>
+                </div>
+              ))}
             </div>
           </SoftCard>
         ) : null}
@@ -555,7 +740,7 @@ export default function ReversePromptPage() {
             <SoftCard>
               <PanelTitle
                 title="内容拆解"
-                description="提取画面中更稳定、可复用的核心特征。"
+                description="提取更稳定的主体关系、环境信息与画面结构。"
               />
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -576,7 +761,7 @@ export default function ReversePromptPage() {
             <SoftCard>
               <PanelTitle
                 title="镜头与风格分析"
-                description="更贴近视频生成场景需要的镜头语言与氛围表达。"
+                description="聚焦镜头语言、光线、氛围与整体风格。"
               />
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -597,49 +782,40 @@ export default function ReversePromptPage() {
             <SoftCard>
               <PanelTitle
                 title="Prompt 结果"
-                description="优先给出一版更适合直接复用的结果。"
+                description="按当前风格偏好生成，可直接复制继续使用。"
                 action={<CopyButton text={primaryPrompt} />}
               />
 
               <div className="mt-5 space-y-4">
+                <div className="flex flex-wrap gap-2.5">
+                  {STYLE_OPTIONS.map(([key, label]) => (
+                    <OptionButton
+                      key={key}
+                      active={outputStyle === key}
+                      onClick={() => setOutputStyle(key)}
+                    >
+                      {label}
+                    </OptionButton>
+                  ))}
+                </div>
+
                 <div className="rounded-[22px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 sm:p-5">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      推荐 Prompt
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {STYLE_LABELS[outputStyle]}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        {LANGUAGE_LABELS[outputLanguage]}
+                      </div>
                     </div>
-                    <div className="mt-1 text-xs text-gray-500">
-                      {STYLE_LABELS[outputStyle]} ·{" "}
-                      {LANGUAGE_LABELS[outputLanguage]}
-                    </div>
+
+                    <div className="text-xs text-gray-500">已按当前偏好整理</div>
                   </div>
 
                   <div className="mt-4 whitespace-pre-line rounded-[18px] bg-gray-50/90 px-4 py-4 text-sm leading-7 text-gray-800">
                     {primaryPrompt}
                   </div>
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {otherPromptVariants.map(([key, value]) => {
-                    const text = getPromptByLanguage(value, outputLanguage);
-
-                    return (
-                      <div
-                        key={key}
-                        className="rounded-[20px] border border-black/8 bg-white/86 p-4"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {STYLE_LABELS[key]}
-                          </div>
-                          <CopyButton text={text} />
-                        </div>
-
-                        <div className="mt-3 whitespace-pre-line rounded-[16px] bg-gray-50/90 px-4 py-3 text-sm leading-7 text-gray-800">
-                          {text}
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
             </SoftCard>
@@ -647,7 +823,7 @@ export default function ReversePromptPage() {
             <SoftCard>
               <PanelTitle
                 title="推荐负面词"
-                description="用于规避常见瑕疵与画面失真。"
+                description="用于减少常见瑕疵、漂移与多余元素。"
                 action={<CopyButton text={primaryNegativePrompt} />}
               />
 
@@ -659,18 +835,36 @@ export default function ReversePromptPage() {
             <SoftCard>
               <PanelTitle
                 title="平台适配版"
-                description="保留当前平台偏好，同时提供其他版本便于对比。"
+                description="按不同平台的常用表达方式整理。"
                 action={<CopyButton text={primaryPlatformPrompt} />}
               />
 
               <div className="mt-5 space-y-4">
+                <div className="flex flex-wrap gap-2.5">
+                  {PLATFORM_OPTIONS.map(([key, label]) => (
+                    <OptionButton
+                      key={key}
+                      active={targetPlatform === key}
+                      onClick={() => setTargetPlatform(key)}
+                    >
+                      {label}
+                    </OptionButton>
+                  ))}
+                </div>
+
                 <div className="rounded-[22px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 sm:p-5">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {PLATFORM_LABELS[targetPlatform]}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {PLATFORM_LABELS[targetPlatform]}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        当前平台偏好
+                      </div>
                     </div>
-                    <div className="mt-1 text-xs text-gray-500">
-                      当前平台偏好
+
+                    <div className="text-xs text-gray-500">
+                      {LANGUAGE_LABELS[outputLanguage]}
                     </div>
                   </div>
 
@@ -678,34 +872,10 @@ export default function ReversePromptPage() {
                     {primaryPlatformPrompt}
                   </div>
                 </div>
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {otherPlatformVariants.map(([key, value]) => {
-                    const text = getPromptByLanguage(value, outputLanguage);
-
-                    return (
-                      <div
-                        key={key}
-                        className="rounded-[20px] border border-black/8 bg-white/86 p-4"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {PLATFORM_LABELS[key]}
-                          </div>
-                          <CopyButton text={text} />
-                        </div>
-
-                        <div className="mt-3 whitespace-pre-line rounded-[16px] bg-gray-50/90 px-4 py-3 text-sm leading-7 text-gray-800">
-                          {text}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
             </SoftCard>
 
-            <div className="px-1 text-xs leading-6 text-gray-500">
+            <div className="border-t border-black/10 px-1 pt-4 text-center text-xs leading-6 text-gray-500">
               {result.disclaimer}
             </div>
           </div>
