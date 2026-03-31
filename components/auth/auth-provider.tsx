@@ -347,10 +347,11 @@ function LoginModal({ open, onClose }: LoginModalProps) {
   if (!mounted || !open) return null;
 
 const handleEmailLogin = () => {
-    onClose();
-    // 放弃 API 重定向，直接原生跳转到前端页面！
-    window.location.href = "/auth/email";
-  };
+  onClose();
+  // 获取当前路径和参数，让登录完能跳回来
+  const currentPath = window.location.pathname + window.location.search;
+  window.location.href = `/auth/email?redirectTo=${encodeURIComponent(currentPath)}`;
+};
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
