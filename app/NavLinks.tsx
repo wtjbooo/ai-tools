@@ -27,35 +27,50 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 function isActive(pathname: string, item: NavItem) {
-  if (item.match === "exact") return pathname === item.href;
-  if (item.href === "/") return pathname === "/";
+  if (item.match === "exact") {
+    return pathname === item.href;
+  }
+
+  if (item.href === "/") {
+    return pathname === "/";
+  }
+
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
-function getItemClassName(active: boolean, tone: NavItem["tone"] = "default") {
-  // 基础样式：取消缩放动画，改用极其细微的位移
+function getItemClassName(
+  active: boolean,
+  tone: NavItem["tone"] = "default",
+) {
   const base =
-    "group relative inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-[14px] font-medium transition-all duration-300 focus:outline-none";
+    "group inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10";
 
   if (active) {
-    // 激活态：高级黑，带一点点光泽感和投影
     return [
       base,
-      "text-zinc-950 font-semibold",
+      "bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]",
     ].join(" ");
   }
 
   if (tone === "feature") {
-    // 特色项：轻微强调，但不抢主色
     return [
       base,
-      "text-zinc-600 hover:text-zinc-950",
+      "border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(248,250,252,0.90))] text-gray-800 hover:-translate-y-0.5 hover:border-black/12 hover:bg-white hover:text-gray-950",
     ].join(" ");
   }
 
   return [
     base,
-    "text-zinc-500 hover:text-zinc-950",
+    "text-gray-700 hover:-translate-y-0.5 hover:bg-white/82 hover:text-gray-950",
+  ].join(" ");
+}
+
+function getBadgeClassName(active: boolean) {
+  return [
+    "hidden items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:inline-flex",
+    active
+      ? "bg-white/12 text-white"
+      : "border border-black/8 bg-white/90 text-gray-500",
   ].join(" ");
 }
 
@@ -63,15 +78,8 @@ export default function NavLinks({ className = "" }: { className?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav 
-      className={`${className} relative flex items-center overflow-x-auto overflow-y-hidden scrollbar-hide`}
-      style={{ 
-        maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)'
-      }}
-      aria-label="Primary"
-    >
-      <div className="flex items-center gap-2 px-4 sm:gap-1 sm:px-0">
+    <nav className={className} aria-label="Primary">
+      <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item);
 
@@ -82,34 +90,15 @@ export default function NavLinks({ className = "" }: { className?: string }) {
               aria-current={active ? "page" : undefined}
               className={getItemClassName(active, item.tone)}
             >
-              <span className="relative z-10">{item.label}</span>
-              
-              {/* 激活态的下划线/底色：这里用 Apple 风格的指示线或极其浅的背景 */}
-              {active && (
-                <span className="absolute inset-x-3 bottom-1.5 h-[1.5px] bg-zinc-950 rounded-full" />
-              )}
+              <span>{item.label}</span>
 
-              {item.badge && (
-                <span className={`
-                  ml-0.5 inline-flex h-1.5 w-1.5 rounded-full 
-                  ${active ? 'bg-zinc-950' : 'bg-zinc-400'}
-                `} />
-              )}
+              {item.badge ? (
+                <span className={getBadgeClassName(active)}>{item.badge}</span>
+              ) : null}
             </Link>
           );
         })}
       </div>
-
-      {/* 注入一个全局 CSS 隐藏滚动条，避免在 layout 里写太多 */}
-      <style jsx global>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </nav>
   );
 }
