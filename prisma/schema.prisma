@@ -42,32 +42,32 @@ model Tag {
 }
 
 model Tool {
-  id                String  @id @default(cuid())
-  name              String
-  slug              String  @unique
-  description       String
-  content           String  @default("")
-  website           String?
-  normalizedWebsite String?
-  sourceUrl         String?
-  sourceType        String  @default("import")
-  pricing           String  @default("unknown")
+  id                   String  @id @default(cuid())
+  name                 String
+  slug                 String  @unique
+  description          String
+  content              String  @default("")
+  website              String?
+  normalizedWebsite    String?
+  sourceUrl            String?
+  sourceType           String  @default("import")
+  pricing              String  @default("unknown")
 
-  featured      Boolean @default(false)
-  featuredOrder Int     @default(0)
+  featured             Boolean @default(false)
+  featuredOrder        Int     @default(0)
 
-  clicks    Int @default(0)
-  views     Int @default(0)
-  outClicks Int @default(0)
+  clicks               Int     @default(0)
+  views                Int     @default(0)
+  outClicks            Int     @default(0)
 
-  logoUrl     String @default("")
-  screenshots String @default("")
-  searchText  String @default("")
+  logoUrl              String  @default("")
+  screenshots          String  @default("")
+  searchText           String  @default("")
 
   categoryId           String
-  categoryConfidence   Int    @default(0)
-  tagConfidence        Int    @default(0)
-  classificationStatus String @default("unknown")
+  categoryConfidence   Int     @default(0)
+  tagConfidence        Int     @default(0)
+  classificationStatus String  @default("unknown")
 
   reviewStatus         String  @default("pending")
   contentQualityStatus String  @default("unknown")
@@ -75,21 +75,21 @@ model Tool {
   needsManualReview    Boolean @default(true)
   needsContentRewrite  Boolean @default(false)
 
-  reviewNotes  String    @default("")
-  rejectReason String    @default("")
-  reviewedBy   String    @default("")
-  reviewedAt   DateTime?
-  publishedAt  DateTime?
-  importedAt   DateTime?
+  reviewNotes          String    @default("")
+  rejectReason         String    @default("")
+  reviewedBy           String    @default("")
+  reviewedAt           DateTime?
+  publishedAt          DateTime?
+  importedAt           DateTime?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  isPublished Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  isPublished          Boolean  @default(false)
 
-  category       Category            @relation(fields: [categoryId], references: [id])
-  tags           ToolTag[]
-  viewEvents     ToolViewEvent[]
-  outClickEvents ToolOutClickEvent[]
+  category             Category            @relation(fields: [categoryId], references: [id])
+  tags                 ToolTag[]
+  viewEvents           ToolViewEvent[]
+  outClickEvents       ToolOutClickEvent[]
 
   @@index([categoryId])
   @@index([slug])
@@ -109,32 +109,31 @@ model ToolTag {
   toolId String
   tagId  String
 
-  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tool   Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@id([toolId, tagId])
 }
 
 model User {
-  id    String  @id @default(cuid())
-  name  String?
-  image String?
+  id            String  @id @default(cuid())
+  name          String?
+  image         String?
 
-  phone         String? @unique
-  phoneVerified Boolean @default(false)
+  phone         String?   @unique
+  phoneVerified Boolean   @default(false)
 
   email         String?   @unique
   emailVerified DateTime?
+  role          UserRole  @default(USER)
 
-  role UserRole @default(USER)
-
-  accounts Account[]
-  sessions Session[]
+  accounts      Account[]
+  sessions      Session[]
 
   reversePromptTasks ReversePromptTask[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Account {
@@ -143,16 +142,16 @@ model Account {
   provider          AccountProvider
   providerAccountId String
 
-  accessToken  String?
-  refreshToken String?
-  expiresAt    DateTime?
-  scope        String?
-  idToken      String?
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  scope             String?
+  idToken           String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -164,10 +163,10 @@ model Session {
   userId       String
   expires      DateTime
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -221,9 +220,9 @@ model Submission {
   reviewedAt        DateTime?
   convertedToolId   String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  reason    String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  reason            String   @default("")
 
   @@index([status, createdAt])
   @@index([websiteNormalized])
@@ -237,7 +236,7 @@ model ToolViewEvent {
   dayBucket  String
   createdAt  DateTime @default(now())
 
-  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  tool       Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@unique([toolId, sessionKey, dayBucket])
   @@index([toolId, createdAt])
@@ -251,7 +250,7 @@ model ToolOutClickEvent {
   targetUrl  String?
   createdAt  DateTime @default(now())
 
-  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  tool       Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@index([toolId, createdAt])
   @@index([createdAt])
@@ -279,7 +278,7 @@ model ReversePromptTask {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([inputType, createdAt])

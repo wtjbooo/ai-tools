@@ -361,6 +361,7 @@ export async function GET(request: Request) {
         status: true,
         inputType: true,
         sourceCount: true,
+        inputUrls: true,
         outputLanguage: true,
         outputStyle: true,
         targetPlatform: true,
@@ -380,6 +381,7 @@ export async function GET(request: Request) {
 
     const result = safeJsonParse(task.resultJson, null);
     const normalized = safeJsonParse(task.normalizedResultJson, null);
+    const inputFiles = safeJsonParse(task.inputUrls, []);
 
     return NextResponse.json({
       ok: true,
@@ -388,6 +390,7 @@ export async function GET(request: Request) {
         status: task.status,
         inputType: task.inputType,
         sourceCount: task.sourceCount,
+        inputFiles,
         outputLanguage: task.outputLanguage,
         outputStyle: task.outputStyle,
         targetPlatform: task.targetPlatform,

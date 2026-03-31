@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import NavLinks from "./NavLinks";
+import { AuthButton, AuthProvider } from "../components/auth/auth-provider";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -109,6 +110,8 @@ function Header() {
               <NavLinks />
             </div>
           </div>
+
+          <AuthButton />
         </div>
       </div>
     </header>
@@ -206,10 +209,12 @@ export default function RootLayout({
       <body
         className={`${inter.className} min-h-screen bg-[linear-gradient(180deg,#fafafa_0%,#f7f7f8_100%)] text-gray-900 antialiased`}
       >
-        <DevDatabaseWarning />
-        <Header />
-        <main>{children}</main>
-        <Footer />
+        <AuthProvider>
+          <DevDatabaseWarning />
+          <Header />
+          <main>{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

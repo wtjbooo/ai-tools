@@ -49,6 +49,11 @@ type TaskMeta = {
   targetPlatform?: TargetPlatform;
 };
 
+type RestoredFile = {
+  name: string;
+  size: number;
+};
+
 const STYLE_LABELS: Record<OutputStyle, string> = {
   simple: "精简版",
   standard: "标准版",
@@ -228,12 +233,30 @@ function getTaskIdFromUrl() {
   return new URL(window.location.href).searchParams.get("task") || "";
 }
 
+function recordTaskHistory(task: {
+  taskId: string;
+  fileCount: number;
+  firstFileName: string;
+  createdAt: number;
+}) {
+  if (typeof window === "undefined") return;
+  try {
+    const history = JSON.parse(localStorage.getItem("rp_history") || "[]");
+    const filtered = history.filter((h: any) => h.taskId !== task.taskId);
+    filtered.unshift(task);
+    localStorage.setItem("rp_history", JSON.stringify(filtered.slice(0, 50)));
+  } catch (e) {
+    // 忽略缓存错误
+  }
+}
+
 export default function ReversePromptPage() {
   const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>("zh");
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("standard");
   const [targetPlatform, setTargetPlatform] =
     useState<TargetPlatform>("generic");
   const [files, setFiles] = useState<File[]>([]);
+  const [restoredFiles, setRestoredFiles] = useState<RestoredFile[]>([]);
   const [result, setResult] = useState<ReversePromptResult | null>(null);
   const [taskMeta, setTaskMeta] = useState<TaskMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -242,25 +265,38 @@ export default function ReversePromptPage() {
   const [pickerKey, setPickerKey] = useState(0);
   const hasTriedRestore = useRef(false);
 
-  const totalBytes = useMemo(
-    () => files.reduce((sum, file) => sum + file.size, 0),
-    [files],
-  );
+  const displayTotalBytes = useMemo(() => {
+    if (files.length > 0) return files.reduce((sum, f) => sum + f.size, 0);
+    if (restoredFiles.length > 0)
+      return restoredFiles.reduce((sum, f) => sum + f.size, 0);
+    return 0;
+  }, [files, restoredFiles]);
 
-  const previewItems = useMemo<PreviewItem[]>(
-    () =>
-      files.map((file) => ({
+  const previewItems = useMemo<PreviewItem[]>(() => {
+    if (files.length > 0) {
+      return files.map((file) => ({
         key: `${file.name}-${file.lastModified}`,
         name: file.name,
         size: file.size,
         url: URL.createObjectURL(file),
-      })),
-    [files],
-  );
+      }));
+    }
+    if (restoredFiles.length > 0) {
+      return restoredFiles.map((file, idx) => ({
+        key: `restored-${idx}`,
+        name: file.name,
+        size: file.size,
+        url: "",
+      }));
+    }
+    return [];
+  }, [files, restoredFiles]);
 
   useEffect(() => {
     return () => {
-      previewItems.forEach((item) => URL.revokeObjectURL(item.url));
+      previewItems.forEach((item) => {
+        if (item.url) URL.revokeObjectURL(item.url);
+      });
     };
   }, [previewItems]);
 
@@ -280,9 +316,7 @@ export default function ReversePromptPage() {
 
         const response = await fetch(
           `/api/reverse-prompt?taskId=${encodeURIComponent(taskId)}`,
-          {
-            method: "GET",
-          },
+          { method: "GET" },
         );
 
         const payload = await response.json();
@@ -298,6 +332,10 @@ export default function ReversePromptPage() {
 
         if (restoredResult) {
           setResult(restoredResult);
+        }
+
+        if (Array.isArray(task.inputFiles)) {
+          setRestoredFiles(task.inputFiles);
         }
 
         setTaskMeta({
@@ -333,6 +371,20 @@ export default function ReversePromptPage() {
           task.targetPlatform === "pika"
         ) {
           setTargetPlatform(task.targetPlatform);
+        }
+
+        if (task.id) {
+          recordTaskHistory({
+            taskId: task.id,
+            fileCount: task.sourceCount || 0,
+            firstFileName:
+              Array.isArray(task.inputFiles) && task.inputFiles.length > 0
+                ? task.inputFiles[0].name
+                : "已归档图片",
+            createdAt: task.createdAt
+              ? new Date(task.createdAt).getTime()
+              : Date.now(),
+          });
         }
 
         window.setTimeout(() => {
@@ -383,6 +435,7 @@ export default function ReversePromptPage() {
 
     if (nextError) {
       setFiles([]);
+      setRestoredFiles([]);
       setResult(null);
       setTaskMeta(null);
       setError(nextError);
@@ -392,6 +445,7 @@ export default function ReversePromptPage() {
     }
 
     setFiles(selectedFiles);
+    setRestoredFiles([]);
     setResult(null);
     setTaskMeta(null);
     setError("");
@@ -400,6 +454,7 @@ export default function ReversePromptPage() {
 
   function resetForm() {
     setFiles([]);
+    setRestoredFiles([]);
     setResult(null);
     setTaskMeta(null);
     setError("");
@@ -458,6 +513,12 @@ export default function ReversePromptPage() {
 
       if (nextTaskMeta.taskId) {
         setTaskIdToUrl(nextTaskMeta.taskId);
+        recordTaskHistory({
+          taskId: nextTaskMeta.taskId,
+          fileCount: files.length,
+          firstFileName: files[0]?.name || "已归档图片",
+          createdAt: Date.now(),
+        });
       }
 
       window.setTimeout(() => {
@@ -490,6 +551,13 @@ export default function ReversePromptPage() {
               <span className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">
                 AI REVERSE PROMPT
               </span>
+
+              <Link
+                href="/reverse-prompt/history"
+                className="inline-flex items-center rounded-full border border-transparent px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-400 transition hover:border-black/10 hover:bg-white hover:text-gray-700 hover:shadow-sm"
+              >
+                HISTORY
+              </Link>
             </div>
 
             <div className="space-y-3">
@@ -616,10 +684,12 @@ export default function ReversePromptPage() {
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            已选择 {files.length} 张关键帧
+                            已{files.length > 0 ? "选择" : "归档"}{" "}
+                            {files.length || restoredFiles.length} 张关键帧
                           </div>
                           <div className="mt-1 text-xs text-gray-500">
-                            总大小：{formatBytes(totalBytes)} / 4.00 MB
+                            总大小：{formatBytes(displayTotalBytes)}{" "}
+                            {files.length > 0 ? "/ 4.00 MB" : ""}
                           </div>
                         </div>
 
@@ -636,12 +706,18 @@ export default function ReversePromptPage() {
                             key={item.key}
                             className="overflow-hidden rounded-[18px] border border-black/8 bg-white"
                           >
-                            <div className="aspect-[16/10] bg-gray-100">
-                              <img
-                                src={item.url}
-                                alt={item.name}
-                                className="h-full w-full object-cover"
-                              />
+                            <div className="flex aspect-[16/10] items-center justify-center bg-gray-50">
+                              {item.url ? (
+                                <img
+                                  src={item.url}
+                                  alt={item.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-[11px] tracking-widest text-gray-400">
+                                  ARCHIVED
+                                </span>
+                              )}
                             </div>
                             <div className="space-y-1 px-3 py-3">
                               <div className="truncate text-sm font-medium text-gray-900">
