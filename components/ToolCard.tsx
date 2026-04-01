@@ -25,6 +25,7 @@ export type ToolCardData = {
   tags?: ToolTagItem[];
 };
 
+// 升级版：毛玻璃/磨砂质感的标签
 function MetaPill({
   children,
   subtle = false,
@@ -35,10 +36,10 @@ function MetaPill({
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300",
+        "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium tracking-wide transition-all duration-300",
         subtle
-          ? "border border-black/7 bg-gray-50 text-gray-500"
-          : "border border-black/8 bg-white text-gray-700",
+          ? "bg-zinc-100/70 text-zinc-500 group-hover:bg-zinc-100"
+          : "border border-zinc-200/50 bg-white/80 backdrop-blur-md text-zinc-700 shadow-[0_2px_8px_rgba(0,0,0,0.02)]",
       ].join(" ")}
     >
       {children}
@@ -96,38 +97,42 @@ export default function ToolCard({ tool }: { tool: ToolCardData }) {
   return (
     <Link
       href={`/tool/${tool.slug}`}
-      className="group relative block h-full overflow-hidden rounded-[26px] border border-black/7 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(249,250,251,0.95))] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.045)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-black/10 hover:shadow-[0_18px_44px_rgba(15,23,42,0.08)] active:scale-[0.994] sm:p-5"
+      // 核心卡片容器：引入了阻尼动画 ease-[cubic-bezier(0.23,1,0.32,1)] 和更清透的阴影
+      className="group relative flex h-full flex-col overflow-hidden rounded-[28px] border border-black/[0.04] bg-white p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1.5 hover:border-black/[0.08] hover:shadow-[0_20px_40px_-8px_rgba(0,0,0,0.08)] active:scale-[0.98] sm:p-6"
     >
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.07),transparent_30%),radial-gradient(circle_at_16%_100%,rgba(168,85,247,0.05),transparent_24%)]" />
+      {/* 极弱的渐变光晕，鼠标悬浮时慢慢浮现 */}
+      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.04),transparent_40%),radial-gradient(circle_at_20%_100%,rgba(168,85,247,0.03),transparent_30%)]" />
       </div>
 
       <div className="relative flex h-full flex-col">
-        <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border border-black/6 bg-white/88 shadow-[0_6px_18px_rgba(15,23,42,0.045)] transition-all duration-300 group-hover:bg-white group-hover:shadow-[0_10px_24px_rgba(15,23,42,0.065)]">
+        <div className="flex items-start gap-4">
+          {/* iOS 图标风格的 Logo 框：细微内圈、圆角调优、独立悬浮放大 */}
+          <div className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[16px] border border-black/[0.03] bg-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] ring-1 ring-black/[0.02] transition-transform duration-500 ease-out group-hover:scale-105 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
             <img
               src={logoSrc}
               alt={`${tool.name} logo`}
-              width={28}
-              height={28}
-              className="h-7 w-7 rounded-md object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-[8px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
             />
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="truncate text-[17px] font-semibold tracking-tight text-gray-950 transition-colors duration-300 group-hover:text-black sm:text-[18px]">
+              <div className="truncate text-[17px] font-semibold tracking-tight text-zinc-900 transition-colors duration-300 group-hover:text-black sm:text-[18px]">
                 {tool.name}
               </div>
 
               {tool.featured ? <MetaPill>精选</MetaPill> : null}
             </div>
 
-            <div className="mt-1 text-[13px] text-gray-500">{categoryName}</div>
+            <div className="mt-1 text-[13px] font-medium text-zinc-400 transition-colors duration-300 group-hover:text-zinc-500">{categoryName}</div>
           </div>
         </div>
 
-        <p className="mt-4 line-clamp-3 min-h-[72px] text-[14px] leading-6 text-gray-600">
+        {/* 简介文本：行高微调，颜色选用更有质感的 zinc-500 */}
+        <p className="mt-4 line-clamp-3 min-h-[72px] text-[14px] leading-relaxed text-zinc-500 transition-colors duration-300 group-hover:text-zinc-600">
           {getDisplayDescription(tool.name, categoryName, tool.description)}
         </p>
 
@@ -145,15 +150,17 @@ export default function ToolCard({ tool }: { tool: ToolCardData }) {
           ) : null}
         </div>
 
-        <div className="mt-auto flex items-center justify-between border-t border-black/6 pt-3.5">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-gray-500">
+        {/* 底部信息栏：加上了箭头动画 */}
+        <div className="mt-auto flex items-center justify-between border-t border-black/[0.04] pt-4 mt-5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-zinc-400 transition-colors duration-300 group-hover:text-zinc-500">
             {showOutClicks ? <MetricText>官网点击 {tool.outClicks}</MetricText> : null}
             {showViews ? <MetricText>浏览 {tool.views}</MetricText> : null}
           </div>
 
-          <span className="inline-flex items-center gap-1 text-[13px] font-medium text-gray-700 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-gray-950">
+          <span className="inline-flex items-center text-[13px] font-medium text-zinc-400 transition-colors duration-300 group-hover:text-zinc-900">
             查看详情
-            <span aria-hidden="true">→</span>
+            {/* 弹簧效果的箭头位移 */}
+            <span className="ml-1 inline-block transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-1">→</span>
           </span>
         </div>
       </div>
