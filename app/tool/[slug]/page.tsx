@@ -126,6 +126,7 @@ function formatDateTime(value: Date) {
   return new Date(value).toLocaleString("zh-CN");
 }
 
+// 优化后的标签 Badge，增加毛玻璃质感
 function InfoBadge({
   children,
   href,
@@ -134,7 +135,7 @@ function InfoBadge({
   href?: string | null;
 }) {
   const className =
-    "inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3 py-1.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950";
+    "inline-flex items-center rounded-full border border-zinc-200/60 bg-white/80 backdrop-blur-md px-3.5 py-1.5 text-[13px] font-medium text-zinc-700 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-zinc-950";
 
   if (href) {
     return (
@@ -147,6 +148,7 @@ function InfoBadge({
   return <span className={className}>{children}</span>;
 }
 
+// 优化后的内容卡片，边框更柔和，背景更干净
 function DetailCard({
   title,
   description,
@@ -157,23 +159,24 @@ function DetailCard({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-2.5">
+    <section className="space-y-3">
       <div className="space-y-1">
-        <h2 className="text-[20px] font-semibold tracking-tight text-gray-950">
+        <h2 className="text-[20px] font-semibold tracking-tight text-zinc-900">
           {title}
         </h2>
         {description ? (
-          <p className="text-sm leading-6 text-gray-500">{description}</p>
+          <p className="text-[14px] leading-6 text-zinc-500">{description}</p>
         ) : null}
       </div>
 
-      <div className="rounded-[26px] border border-black/8 bg-white/92 p-5 shadow-[0_8px_28px_rgba(15,23,42,0.045)] sm:p-6">
+      <div className="rounded-[28px] border border-black/[0.04] bg-white p-6 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.02)] sm:p-8">
         {children}
       </div>
     </section>
   );
 }
 
+// 优化后的数据展示卡片
 function StatCard({
   label,
   value,
@@ -182,9 +185,9 @@ function StatCard({
   value: string | number;
 }) {
   return (
-    <div className="rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-4 py-3.5">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="mt-1 text-[17px] font-semibold tracking-tight text-gray-950">
+    <div className="rounded-[20px] border border-black/[0.03] bg-zinc-50/50 px-4 py-4 transition-colors hover:bg-zinc-50">
+      <div className="text-[12px] font-medium text-zinc-500">{label}</div>
+      <div className="mt-1.5 text-[18px] font-semibold tracking-tight text-zinc-900">
         {value}
       </div>
     </div>
@@ -199,7 +202,7 @@ function SoftList({ items }: { items: string[] }) {
       {items.map((item) => (
         <div
           key={item}
-          className="rounded-[18px] border border-black/8 bg-white/84 px-4 py-3.5 text-sm leading-7 text-gray-700"
+          className="rounded-[20px] border border-black/[0.03] bg-zinc-50/80 px-5 py-4 text-[14px] leading-7 text-zinc-700"
         >
           {item}
         </div>
@@ -208,6 +211,7 @@ function SoftList({ items }: { items: string[] }) {
   );
 }
 
+// 优化后的关联工具链接，引入了和首页卡片一致的阻尼悬浮特效
 function RelatedToolLink({
   name,
   slug,
@@ -225,30 +229,30 @@ function RelatedToolLink({
   return (
     <Link
       href={`/tool/${slug}`}
-      className="group block rounded-[20px] border border-black/8 bg-white/92 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-black/12 hover:shadow-[0_14px_30px_rgba(15,23,42,0.06)]"
+      className="group block rounded-[24px] border border-black/[0.04] bg-white p-4 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.02)] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-black/[0.08] hover:shadow-[0_14px_30px_-6px_rgba(0,0,0,0.06)]"
     >
       <div className="flex items-start gap-3.5">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-gray-50 ring-1 ring-black/5 transition-all duration-300 group-hover:bg-white">
+        <div className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[14px] bg-zinc-50 ring-1 ring-black/[0.04] transition-transform duration-500 group-hover:scale-105 group-hover:bg-white">
           <img
             src={relatedLogoSrc}
             alt={`${name} logo`}
             width={24}
             height={24}
-            className="h-6 w-6 rounded object-cover"
+            className="h-6 w-6 rounded-md object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           />
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[15px] font-semibold text-gray-950">
+        <div className="min-w-0 flex-1 pt-0.5">
+          <div className="truncate text-[15px] font-semibold text-zinc-900 transition-colors group-hover:text-black">
             {name}
           </div>
-          <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-600">
+          <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-500">
             {isWeakText(description)
               ? "查看这款同类 AI 工具的定位与详情。"
               : description}
           </p>
-          <span className="mt-2 inline-block text-sm text-gray-700 underline underline-offset-4 transition-colors group-hover:text-gray-950">
-            查看详情
+          <span className="mt-2.5 inline-flex items-center text-[12px] font-medium text-zinc-400 transition-colors group-hover:text-zinc-900">
+            查看详情 <span className="ml-1 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-1">→</span>
           </span>
         </div>
       </div>
@@ -446,16 +450,17 @@ export default async function ToolPage({
         }}
       />
 
-      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
-        <div className="space-y-6">
-          <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-5 py-6 shadow-[0_16px_48px_rgba(15,23,42,0.06)] sm:px-7 sm:py-8">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(168,85,247,0.08),transparent_28%)]" />
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+        <div className="space-y-8">
+          {/* 优化后的头部 (Hero Section) */}
+          <section className="relative overflow-hidden rounded-[32px] border border-black/[0.04] bg-white px-6 py-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] sm:px-10 sm:py-10">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.06),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.04),transparent_40%)]" />
 
-            <div className="relative space-y-5">
-              <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative space-y-6">
+              <div className="flex flex-wrap items-center gap-3">
                 <Link
                   href="/"
-                  className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
+                  className="inline-flex items-center rounded-full border border-black/[0.06] bg-white px-4 py-2 text-[13px] font-medium text-zinc-600 transition hover:-translate-y-0.5 hover:border-black/[0.1] hover:text-zinc-900 shadow-sm"
                 >
                   ← 返回首页
                 </Link>
@@ -463,52 +468,46 @@ export default async function ToolPage({
                 {categoryHref ? (
                   <Link
                     href={categoryHref}
-                    className="inline-flex items-center rounded-full border border-black/10 bg-white/78 px-3.5 py-2 text-sm text-gray-600 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950"
+                    className="inline-flex items-center rounded-full border border-transparent px-3 py-2 text-[13px] font-medium text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900"
                   >
                     {categoryName}
                   </Link>
                 ) : null}
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),280px] lg:items-start">
-                <div className="min-w-0 space-y-4">
-                  <div className="space-y-2.5">
-                    <div className="inline-flex items-center rounded-full border border-white/60 bg-white/74 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">
-                      TOOL PROFILE
-                    </div>
-
-                    <h1 className="text-[34px] font-semibold tracking-tight text-gray-950 sm:text-[46px] sm:leading-[1.06]">
+              <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr),280px] lg:items-start pt-2">
+                <div className="min-w-0 space-y-5">
+                  <div className="space-y-3">
+                    <h1 className="text-[36px] font-bold tracking-tight text-zinc-900 sm:text-[48px] sm:leading-[1.08]">
                       {tool.name}
                     </h1>
 
-                    <p className="max-w-3xl text-[15px] leading-7 text-gray-600 sm:text-[17px]">
+                    <p className="max-w-3xl text-[16px] leading-relaxed text-zinc-500 sm:text-[18px]">
                       {normalizedDescription}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2.5">
                     <InfoBadge href={categoryHref}>主分类：{categoryName}</InfoBadge>
-
                     {pricingText ? <InfoBadge>价格：{pricingText}</InfoBadge> : null}
-
-                    {tagList.slice(0, 2).map((tag) => (
+                    {tagList.slice(0, 3).map((tag) => (
                       <InfoBadge key={tag}>{tag}</InfoBadge>
                     ))}
                   </div>
 
-                  <div className="flex flex-wrap gap-2.5 pt-0.5">
+                  <div className="flex flex-wrap gap-3 pt-2">
                     {tool.website ? (
                       <a
                         href={outHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.2)] active:scale-[0.98]"
+                        className="inline-flex items-center rounded-full bg-zinc-900 px-6 py-3 text-[14px] font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-black hover:shadow-[0_12px_24px_rgba(0,0,0,0.15)] active:scale-[0.98]"
                       >
-                        访问官网
+                        访问官网体验
                       </a>
                     ) : (
-                      <span className="inline-flex items-center rounded-full border border-black/8 bg-gray-50 px-5 py-2.5 text-sm text-gray-500">
-                        暂未提供官网链接
+                      <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-6 py-3 text-[14px] font-medium text-zinc-400">
+                        暂未提供官网
                       </span>
                     )}
 
@@ -516,58 +515,55 @@ export default async function ToolPage({
 
                     <Link
                       href={secondaryHref}
-                      className="inline-flex items-center rounded-full border border-black/10 bg-white/82 px-5 py-2.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-white hover:text-gray-950"
+                      className="inline-flex items-center rounded-full border border-zinc-200/80 bg-white px-6 py-3 text-[14px] font-medium text-zinc-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900"
                     >
                       {secondaryLabel}
                     </Link>
                   </div>
                 </div>
 
-                <div className="space-y-3.5">
-                  <div className="rounded-[24px] border border-white/60 bg-white/78 p-4 shadow-[0_8px_28px_rgba(15,23,42,0.05)]">
-                    <div className="flex items-center gap-3.5">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-black/8 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.05)]">
+                <div className="space-y-4">
+                  {/* 右侧大 Logo 面板，增加呼吸感 */}
+                  <div className="rounded-[28px] border border-black/[0.04] bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-[20px] border border-black/[0.04] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.02]">
                         <img
                           src={logoSrc}
                           alt={`${tool.name} logo`}
                           width={64}
                           height={64}
-                          className="h-10 w-10 rounded-2xl object-cover"
+                          className="h-12 w-12 rounded-[12px] object-cover"
                         />
                       </div>
 
                       <div className="min-w-0">
-                        <div className="truncate text-base font-semibold text-gray-950">
+                        <div className="truncate text-[18px] font-bold text-zinc-900">
                           {tool.name}
                         </div>
-                        <div className="mt-1 text-sm text-gray-500">
+                        <div className="mt-1 text-[13px] font-medium text-zinc-500">
                           {categoryName}
-                        </div>
-                        <div className="mt-2 text-xs text-gray-400">
-                          收录时间：{formatDate(tool.createdAt)}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <StatCard label="浏览" value={tool.views ?? 0} />
-                    <StatCard label="官网点击" value={tool.outClicks ?? 0} />
-                    <StatCard label="收录时间" value={formatDate(tool.createdAt)} />
-                    <StatCard label="更新时间" value={formatDate(tool.updatedAt)} />
+                    <StatCard label="总计浏览" value={tool.views ?? 0} />
+                    <StatCard label="前往官网" value={tool.outClicks ?? 0} />
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr),300px]">
-            <div className="space-y-6">
+          {/* 核心改动：给 aside 增加 sticky 悬浮效果 */}
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr),320px]">
+            <div className="space-y-8">
               <DetailCard
-                title="工具简介"
-                description="先快速了解这款工具的大致定位与使用方向。"
+                title="产品简介"
+                description="先快速了解这款工具的大致定位与核心能力。"
               >
-                <div className="space-y-5 text-[15px] leading-8 text-gray-700">
+                <div className="space-y-5 text-[15px] leading-loose text-zinc-700">
                   {finalParagraphs.map((paragraph, index) => (
                     <p key={`${tool.id}-paragraph-${index}`}>{paragraph}</p>
                   ))}
@@ -575,22 +571,22 @@ export default async function ToolPage({
               </DetailCard>
 
               <DetailCard
-                title="适合场景"
-                description="更适合哪些人优先进一步体验这款工具。"
+                title="适合人群与场景"
+                description="看看这款产品是否契合你的日常工作流。"
               >
                 <SoftList items={useCases} />
               </DetailCard>
 
               {tagList.length > 0 ? (
                 <DetailCard
-                  title="相关标签"
-                  description="这些标签可以帮助你更快判断它的能力方向。"
+                  title="功能标签"
+                  description="通过标签快速掌握产品的亮点。"
                 >
                   <div className="flex flex-wrap gap-2.5">
                     {tagList.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center rounded-full border border-black/8 bg-white px-3 py-1.5 text-sm text-gray-700"
+                        className="inline-flex items-center rounded-full border border-black/[0.05] bg-zinc-50 px-3.5 py-1.5 text-[13px] font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
                       >
                         {tag}
                       </span>
@@ -600,79 +596,77 @@ export default async function ToolPage({
               ) : null}
 
               <DetailCard
-                title="基础信息"
-                description="收录信息、更新时间与公开统计数据。"
+                title="公开信息档案"
+                description="收录信息、更新时间与数据库档案。"
               >
-                <div className="grid gap-3.5 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
-                    <div className="text-xs text-gray-500">分类</div>
-                    <div className="mt-1 font-medium text-gray-900">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-[20px] bg-zinc-50/80 px-4 py-4">
+                    <div className="text-[12px] font-medium text-zinc-500">分类</div>
+                    <div className="mt-1 text-[15px] font-semibold text-zinc-900">
                       {categoryName}
                     </div>
                   </div>
 
-                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
-                    <div className="text-xs text-gray-500">价格</div>
-                    <div className="mt-1 font-medium text-gray-900">
+                  <div className="rounded-[20px] bg-zinc-50/80 px-4 py-4">
+                    <div className="text-[12px] font-medium text-zinc-500">定价模式</div>
+                    <div className="mt-1 text-[15px] font-semibold text-zinc-900">
                       {pricingText || "未标注"}
                     </div>
                   </div>
 
-                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
-                    <div className="text-xs text-gray-500">收录时间</div>
-                    <div className="mt-1 font-medium text-gray-900">
-                      {formatDateTime(tool.createdAt)}
+                  <div className="rounded-[20px] bg-zinc-50/80 px-4 py-4">
+                    <div className="text-[12px] font-medium text-zinc-500">平台收录日期</div>
+                    <div className="mt-1 text-[15px] font-semibold text-zinc-900">
+                      {formatDate(tool.createdAt)}
                     </div>
                   </div>
 
-                  <div className="rounded-[18px] bg-gray-50/90 px-4 py-3.5">
-                    <div className="text-xs text-gray-500">最后更新</div>
-                    <div className="mt-1 font-medium text-gray-900">
-                      {formatDateTime(tool.updatedAt)}
+                  <div className="rounded-[20px] bg-zinc-50/80 px-4 py-4">
+                    <div className="text-[12px] font-medium text-zinc-500">最后更新信息</div>
+                    <div className="mt-1 text-[15px] font-semibold text-zinc-900">
+                      {formatDate(tool.updatedAt)}
                     </div>
                   </div>
                 </div>
               </DetailCard>
             </div>
 
-            <aside className="space-y-5">
+            {/* 🔥 这里是重点：sticky top-24 self-start 让面板悬浮跟随 */}
+            <aside className="space-y-6 sticky top-24 self-start">
               <DetailCard
-                title="访问引导"
-                description="已经判断得差不多时，可以直接继续下一步。"
+                title="准备出发"
+                description="直接点击前往体验这款产品的魅力。"
               >
-                <div className="space-y-3.5">
+                <div className="space-y-4">
                   {tool.website ? (
                     <a
                       href={outHref}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex w-full items-center justify-center rounded-[18px] bg-black px-5 py-3 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.2)] active:scale-[0.98]"
+                      className="flex w-full items-center justify-center rounded-[20px] bg-zinc-900 px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-black hover:shadow-[0_14px_30px_rgba(0,0,0,0.2)] active:scale-[0.98]"
                     >
-                      前往官网体验
+                      直达官网体验
                     </a>
                   ) : (
-                    <div className="rounded-[18px] border border-black/8 bg-gray-50 px-4 py-3 text-center text-sm text-gray-500">
+                    <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3.5 text-center text-sm font-medium text-zinc-400">
                       暂未提供官网链接
                     </div>
                   )}
 
                   <CopyLinkButton url={url} />
 
-                  <div className="rounded-[18px] border border-black/8 bg-gray-50/80 p-4 text-sm leading-7 text-gray-600">
-                    先结合本页的分类、标签与相关推荐判断方向，再决定是否继续深入试用。
+                  <div className="rounded-[20px] border border-blue-100/50 bg-blue-50/40 p-4 text-[13px] leading-6 text-blue-900/70">
+                    如果你觉得这款工具不适合，可以继续在下方浏览我们为你推荐的替代方案。
                   </div>
                 </div>
               </DetailCard>
 
               {relatedTools.length > 0 ? (
-                <section className="space-y-3.5">
+                <section className="space-y-4">
                   <div className="space-y-1">
-                    <h2 className="text-[20px] font-semibold tracking-tight text-gray-950">
-                      相关工具
+                    <h2 className="text-[18px] font-semibold tracking-tight text-zinc-900">
+                      替代方案推荐
                     </h2>
-                    <p className="text-sm leading-6 text-gray-500">
-                      同分类下继续浏览，通常更容易找到替代方案。
-                    </p>
                   </div>
 
                   <div className="space-y-3">

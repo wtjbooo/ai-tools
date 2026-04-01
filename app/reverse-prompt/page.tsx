@@ -263,6 +263,9 @@ export default function ReversePromptPage() {
   const [error, setError] = useState("");
   const [pickerKey, setPickerKey] = useState(0);
   const hasTriedRestore = useRef(false);
+  
+  // 新增：拖拽状态监听
+  const [isDragging, setIsDragging] = useState(false);
 
   const displayTotalBytes = useMemo(() => {
     if (files.length > 0) return files.reduce((sum, f) => sum + f.size, 0);
@@ -409,12 +412,9 @@ export default function ReversePromptPage() {
       )
     : "";
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const selectedFiles = Array.from(event.target.files || []);
-
-    if (selectedFiles.length === 0) {
-      return;
-    }
+  // 新增：提取出公共的文件处理逻辑（用于点击选择和拖拽上传）
+  function processSelectedFiles(selectedFiles: File[]) {
+    if (selectedFiles.length === 0) return;
 
     const nextError = validateFiles(selectedFiles);
 
@@ -435,6 +435,30 @@ export default function ReversePromptPage() {
     setTaskMeta(null);
     setError("");
     removeTaskIdFromUrl();
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    processSelectedFiles(Array.from(event.target.files || []));
+  }
+
+  // 新增：拖拽相关处理函数
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processSelectedFiles(Array.from(e.dataTransfer.files));
+    }
   }
 
   function resetForm() {
@@ -638,11 +662,32 @@ export default function ReversePromptPage() {
                 description="支持拖拽，建议选择光线充足、特征明显的图片。"
               />
 
-              <div className="rounded-[24px] border border-dashed border-black/12 bg-[linear-gradient(180deg,rgba(250,250,250,0.72),rgba(255,255,255,0.98))] p-5 sm:p-6 transition-all hover:bg-white">
-                <div className="space-y-4">
-                  <label className="flex min-h-[190px] cursor-pointer flex-col items-center justify-center rounded-[22px] border border-black/10 bg-white px-6 py-8 text-center transition hover:border-black/15 hover:shadow-sm">
-                    <div className="text-sm font-medium text-gray-900">
-                      点击或拖拽上传图片
+              {/* 优化后的上传区域：绑定了拖拽事件，并添加了高亮动态类名 */}
+              <div 
+                className={`rounded-[24px] border border-dashed transition-all duration-300 p-5 sm:p-6 ${
+                  isDragging 
+                    ? "border-blue-500 bg-blue-50/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]" 
+                    : "border-black/12 bg-[linear-gradient(180deg,rgba(250,250,250,0.72),rgba(255,255,255,0.98))] hover:bg-white"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <div className="space-y-4 pointer-events-none">
+                  <label className={`flex min-h-[190px] cursor-pointer flex-col items-center justify-center rounded-[22px] border bg-white px-6 py-8 text-center transition-all duration-300 pointer-events-auto ${
+                    isDragging ? "border-blue-200 shadow-sm scale-[1.01]" : "border-black/10 hover:border-black/15 hover:shadow-sm"
+                  }`}>
+                    {/* 添加了一个优雅的上传图标 */}
+                    <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
+                      isDragging ? "bg-blue-100 text-blue-600" : "bg-gray-50 text-gray-400"
+                    }`}>
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                    </div>
+
+                    <div className={`text-sm font-medium transition-colors ${isDragging ? "text-blue-600" : "text-gray-900"}`}>
+                      {isDragging ? "松手即可上传图片" : "点击或拖拽上传图片"}
                     </div>
                     <div className="mt-2 text-xs leading-6 text-gray-500">
                       支持 PNG / JPG / WEBP · 最多 4 张 · 总体积不超过 4MB
@@ -659,7 +704,7 @@ export default function ReversePromptPage() {
                   </label>
 
                   {previewItems.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 pointer-events-auto">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
@@ -711,7 +756,7 @@ export default function ReversePromptPage() {
                 </div>
               </div>
 
-              {/* 【新增】：极简 Apple 风格的高级教学框 */}
+              {/* 极简 Apple 风格的高级教学框 */}
               <div className="mt-4 rounded-[20px] bg-blue-50/40 px-5 py-4 border border-blue-100/50">
                 <div className="font-medium text-sm mb-2 flex items-center gap-1.5 text-blue-900/90">
                   <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
