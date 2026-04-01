@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers"; 
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -24,12 +25,15 @@ type OutputLanguage = (typeof OUTPUT_LANGUAGE_VALUES)[number];
 const OUTPUT_STYLE_VALUES = ["simple", "standard", "pro"] as const;
 type OutputStyle = (typeof OUTPUT_STYLE_VALUES)[number];
 
+// 新增了 midjourney 和 doubao
 const TARGET_PLATFORM_VALUES = [
   "generic",
+  "midjourney",
   "jimeng",
   "keling",
   "runway",
   "pika",
+  "doubao"
 ] as const;
 type TargetPlatform = (typeof TARGET_PLATFORM_VALUES)[number];
 
@@ -89,12 +93,14 @@ const RESULT_SCHEMA = {
       type: "object",
       properties: {
         generic: promptTextSchema,
+        midjourney: promptTextSchema, // 新增
         jimeng: promptTextSchema,
         keling: promptTextSchema,
         runway: promptTextSchema,
         pika: promptTextSchema,
+        doubao: promptTextSchema, // 新增
       },
-      required: ["generic", "jimeng", "keling", "runway", "pika"],
+      required: ["generic", "midjourney", "jimeng", "keling", "runway", "pika", "doubao"], // 更新这里
       additionalProperties: false,
     },
     disclaimer: { type: "string" },
@@ -248,6 +254,10 @@ function normalizeResult(input: any) {
         zh: "请重新生成通用版 Prompt。",
         en: "Please regenerate a generic platform prompt.",
       }),
+      midjourney: normalizePromptText(input?.platformVariants?.midjourney, { // 新增
+        zh: "请重新生成 Midjourney 版 Prompt。",
+        en: "Please regenerate a Midjourney prompt.",
+      }),
       jimeng: normalizePromptText(input?.platformVariants?.jimeng, {
         zh: "请重新生成即梦版 Prompt。",
         en: "Please regenerate a Jimeng prompt.",
@@ -263,6 +273,10 @@ function normalizeResult(input: any) {
       pika: normalizePromptText(input?.platformVariants?.pika, {
         zh: "请重新生成 Pika 版 Prompt。",
         en: "Please regenerate a Pika prompt.",
+      }),
+      doubao: normalizePromptText(input?.platformVariants?.doubao, { // 新增
+        zh: "请重新生成豆包版 Prompt。",
+        en: "Please regenerate a Doubao prompt.",
       }),
     },
     disclaimer:
@@ -311,7 +325,7 @@ function buildInstruction(
     "3. 输出适合 AI 图像/视频继续创作使用的 Prompt。",
     "4. 输出中英双语。",
     "5. prompts.simple 要更短更干净；prompts.standard 要平衡完整度；prompts.pro 要更细致但仍保持克制。",
-    "6. platformVariants 中，generic / runway / pika 用更自然的英文；jimeng / keling 用自然中文。",
+    "6. platformVariants 中，generic / runway / pika / midjourney 用更自然的英文，其中 Midjourney 版本务必在结尾加上适合该画面的参数（如 --ar 16:9 --v 6.0 等）；jimeng / keling / doubao 用自然生动的中文提示词，避免生硬翻译。",
     "7. negativePrompt 不要使用机械的大而全模板，要结合当前画面类型给出更贴切的风险项，使用逗号分隔，适合直接复制。",
     "8. 不要编造相机型号、镜头焦段、品牌、幕后信息或不可从画面确认的设定。",
     "9. 风格保持高级、克制、可复用，不要写成营销文案。",
@@ -413,13 +427,29 @@ export async function POST(request: Request) {
   let taskId = "";
 
   try {
-    if (!GEMINI_API_KEY) {
-      return jsonError("服务端未配置 GEMINI_API_KEY", 500);
+    // -------------------------------------
+    // 尝试获取当前登录用户 ID
+    let userId: string | null = null;
+    try {
+      const sessionToken = cookies().get("session_token")?.value;
+      if (sessionToken) {
+        const session = await prisma.session.findUnique({
+          where: { sessionToken },
+        });
+        if (session) {
+          userId = session.userId;
+        }
+      }
+    } catch (authError) {
+      console.error("Failed to fetch user session in reverse-prompt:", authError);
     }
+    // -------------------------------------
 
     const formData = await request.formData();
 
     const inputType = String(formData.get("inputType") || "images");
+    // 获取前端传过来的解析模型选择
+    const analyzerModel = String(formData.get("analyzerModel") || "gemini");
     const outputLanguage = normalizeOutputLanguage(
       String(formData.get("outputLanguage") || "zh"),
     );
@@ -429,6 +459,18 @@ export async function POST(request: Request) {
     const targetPlatform = normalizeTargetPlatform(
       String(formData.get("targetPlatform") || "generic"),
     );
+
+    // 【核心网关防御】：限制暂未配置 API Key 的大模型
+    if (analyzerModel === "gpt4o") {
+      return jsonError("站长尚未配置 OpenAI API Key，暂时无法使用 GPT-4o 解析，请先使用 Gemini 2.5 Flash。", 400);
+    }
+    if (analyzerModel === "deepseek") {
+       return jsonError("站长尚未配置 DeepSeek API Key，暂时无法使用 DeepSeek Vision 解析，请先使用 Gemini 2.5 Flash。", 400);
+    }
+
+    if (!GEMINI_API_KEY) {
+      return jsonError("服务端未配置 GEMINI_API_KEY", 500);
+    }
 
     const files = formData.getAll("files").filter(isFile);
 
@@ -472,6 +514,7 @@ export async function POST(request: Request) {
 
     const task = await prisma.reversePromptTask.create({
       data: {
+        userId: userId, 
         status: "processing",
         inputType,
         sourceCount: files.length,
@@ -479,7 +522,7 @@ export async function POST(request: Request) {
         outputLanguage,
         outputStyle,
         targetPlatform,
-        model: GEMINI_MODEL,
+        model: GEMINI_MODEL, // 当前即使传了其他 model，后台记录的仍然是实际干活的 gemini
         metaJson: safeJsonStringify(taskMeta, "{}"),
         startedAt: new Date(),
       },

@@ -303,7 +303,7 @@ export function AuthButton() {
                 }}
                 className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
               >
-                账号设置
+                账号设置 & 历史
               </button>
               <button
                 onClick={() => {
@@ -318,7 +318,6 @@ export function AuthButton() {
           </>
         )}
 
-        {/* 渲染个人设置弹窗 */}
         <ProfileModal open={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       </div>
     );
@@ -336,7 +335,7 @@ export function AuthButton() {
 }
 
 // ----------------------------------------------------------------------
-// LoginModal (集成了邮箱、微信跳转、QQ跳转)
+// LoginModal
 // ----------------------------------------------------------------------
 
 type ModalProps = {
@@ -386,7 +385,6 @@ function LoginModal({ open, onClose }: ModalProps) {
         </div>
 
         <div className="space-y-3">
-          {/* 1. 邮箱登录按钮 */}
           <button onClick={handleEmailLogin} className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 transition-colors group-hover:bg-white">
@@ -401,7 +399,6 @@ function LoginModal({ open, onClose }: ModalProps) {
             </div>
           </button>
 
-          {/* 2. 微信登录按钮（已激活跳转） */}
           <button
             onClick={() => {
               onClose();
@@ -423,7 +420,6 @@ function LoginModal({ open, onClose }: ModalProps) {
             </div>
           </button>
 
-          {/* 3. QQ 登录按钮（已激活跳转） */}
           <button
             onClick={() => {
               onClose();
@@ -452,18 +448,25 @@ function LoginModal({ open, onClose }: ModalProps) {
 }
 
 // ----------------------------------------------------------------------
-// ProfileModal (高级图片直传版)
+// ProfileModal (带历史记录的终极版)
 // ----------------------------------------------------------------------
 
 function ProfileModal({ open, onClose }: ModalProps) {
   const { user, syncSession } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  
+  // 新增：选项卡控制 (个人资料 vs 生成历史)
+  const [activeTab, setActiveTab] = useState<"profile" | "history">("profile");
+  
+  // 个人资料相关状态
   const [nickname, setNickname] = useState("");
   const [avatar, setAvatar] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  
-  // 用于触发隐藏的 input file
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 历史记录相关状态
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -473,8 +476,24 @@ function ProfileModal({ open, onClose }: ModalProps) {
     if (open && user) {
       setNickname(user.nickname || user.name || "");
       setAvatar(user.avatar || "");
+      // 每次打开默认回到第一个 Tab
+      setActiveTab("profile"); 
     }
   }, [open, user]);
+
+  // 当切换到“历史”Tab 时，请求我们刚刚写好的 API
+  useEffect(() => {
+    if (open && activeTab === "history") {
+      setIsLoadingHistory(true);
+      fetch("/api/user/history")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.tasks) setHistoryItems(data.tasks);
+        })
+        .catch((err) => console.error("加载历史失败", err))
+        .finally(() => setIsLoadingHistory(false));
+    }
+  }, [activeTab, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -485,7 +504,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
     };
   }, [open]);
 
-  // 核心压缩逻辑：读取本地图片，利用 Canvas 裁剪压缩，输出 Base64 文本
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -505,15 +523,9 @@ function ProfileModal({ open, onClose }: ModalProps) {
         let height = img.height;
 
         if (width > height) {
-          if (width > MAX_SIZE) {
-            height *= MAX_SIZE / width;
-            width = MAX_SIZE;
-          }
+          if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
         } else {
-          if (height > MAX_SIZE) {
-            width *= MAX_SIZE / height;
-            height = MAX_SIZE;
-          }
+          if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
         }
 
         canvas.width = width;
@@ -564,70 +576,131 @@ function ProfileModal({ open, onClose }: ModalProps) {
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-zinc-950/30 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
       
-      <div className="relative w-full max-w-[400px] overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] transition-all">
-        <button onClick={onClose} className="absolute right-6 top-6 text-zinc-400 transition-colors hover:text-zinc-900">
+      <div className="relative w-full max-w-[420px] overflow-hidden rounded-[28px] bg-white p-6 sm:p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] transition-all">
+        <button onClick={onClose} className="absolute right-5 top-5 sm:right-6 sm:top-6 text-zinc-400 transition-colors hover:text-zinc-900 z-10">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        <div className="text-center mt-2 mb-8">
-          <h2 className="text-[22px] font-semibold tracking-tight text-zinc-900">账号设置</h2>
-          <p className="mt-2 text-sm text-zinc-500">完善你的个人档案</p>
+        {/* 顶部 Tab 分段控制器 */}
+        <div className="flex bg-zinc-100/80 p-1.5 rounded-2xl mb-6 mt-2 relative">
+          <button 
+            onClick={() => setActiveTab("profile")} 
+            className={`flex-1 py-2 text-[13px] font-medium rounded-[12px] transition-all z-10 ${activeTab === "profile" ? "text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white" : "text-zinc-500 hover:text-zinc-700"}`}
+          >
+            个人资料
+          </button>
+          <button 
+            onClick={() => setActiveTab("history")} 
+            className={`flex-1 py-2 text-[13px] font-medium rounded-[12px] transition-all z-10 ${activeTab === "history" ? "text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white" : "text-zinc-500 hover:text-zinc-700"}`}
+          >
+            生成历史
+          </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="flex flex-col items-center justify-center">
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="relative h-[88px] w-[88px] cursor-pointer group rounded-full overflow-hidden shadow-sm border border-zinc-200 bg-zinc-100 flex items-center justify-center transition-all hover:ring-4 hover:ring-zinc-100"
-            >
-              {avatar ? (
-                <img src={avatar} alt="预览" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-zinc-400 text-3xl font-medium">
-                  {nickname ? nickname.charAt(0).toUpperCase() : "?"}
-                </span>
-              )}
-              
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+        {/* --- 面板 1：个人资料 --- */}
+        {activeTab === "profile" && (
+          <form onSubmit={handleSave} className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center justify-center pt-2">
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="relative h-[88px] w-[88px] cursor-pointer group rounded-full overflow-hidden shadow-sm border border-zinc-200 bg-zinc-100 flex items-center justify-center transition-all hover:ring-4 hover:ring-zinc-100"
+              >
+                {avatar ? (
+                  <img src={avatar} alt="预览" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-zinc-400 text-3xl font-medium">
+                    {nickname ? nickname.charAt(0).toUpperCase() : "?"}
+                  </span>
+                )}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
               </div>
+              <p className="mt-3 text-[11px] text-zinc-400 font-medium">点击修改头像</p>
+              
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleImageChange}
+              />
             </div>
-            <p className="mt-3 text-xs text-zinc-400 font-medium">点击修改头像</p>
-            
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*" 
-              onChange={handleImageChange}
-            />
-          </div>
 
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5 ml-1">昵称</label>
-            <input
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="怎么称呼你？"
-              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 transition-colors text-sm"
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-[13px] font-medium text-zinc-700 mb-1.5 ml-1">昵称</label>
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="怎么称呼你？"
+                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 transition-colors text-sm"
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full mt-2 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98]"
-          >
-            {isLoading ? "保存中..." : "保存修改"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full mt-2 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98]"
+            >
+              {isLoading ? "保存中..." : "保存修改"}
+            </button>
+          </form>
+        )}
+
+        {/* --- 面板 2：生成历史 --- */}
+        {activeTab === "history" && (
+          <div className="min-h-[260px] max-h-[340px] overflow-y-auto pr-1 -mr-2 scroll-smooth animate-in fade-in zoom-in-95 duration-200 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full">
+            {isLoadingHistory ? (
+              <div className="flex flex-col items-center justify-center h-[200px] text-zinc-400 text-[13px]">
+                <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-3" />
+                加载中...
+              </div>
+            ) : historyItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[200px] text-zinc-400 text-[13px]">
+                <svg className="w-10 h-10 mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                暂无生成历史
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {historyItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    // 点击后直接带着 ?task=taskId 跳转到反向提示词页进行“无损恢复”
+                    href={`/reverse-prompt?task=${item.id}`} 
+                    onClick={onClose}
+                    className="group block border border-zinc-100 bg-zinc-50/50 p-4 rounded-2xl hover:bg-white hover:border-zinc-200 hover:shadow-sm transition-all text-left"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 bg-zinc-200/50 text-zinc-500 text-[10px] font-medium rounded-md uppercase tracking-wide">
+                        {item.targetPlatform || "通用平台"}
+                      </span>
+                      <span className="text-zinc-400 text-[11px] font-mono">
+                        {new Date(item.createdAt).toLocaleDateString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[13px] text-zinc-700 font-medium group-hover:text-zinc-900 transition-colors">
+                        {item.status === "completed" ? "✅ 提示词已生成" : item.status === "pending" ? "⏳ 正在生成中..." : "❌ 生成失败"}
+                      </p>
+                      <svg className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>,
     document.body
