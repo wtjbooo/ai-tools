@@ -336,7 +336,7 @@ export function AuthButton() {
 }
 
 // ----------------------------------------------------------------------
-// LoginModal
+// LoginModal (集成了邮箱、微信跳转、QQ跳转)
 // ----------------------------------------------------------------------
 
 type ModalProps = {
@@ -386,6 +386,7 @@ function LoginModal({ open, onClose }: ModalProps) {
         </div>
 
         <div className="space-y-3">
+          {/* 1. 邮箱登录按钮 */}
           <button onClick={handleEmailLogin} className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 transition-colors group-hover:bg-white">
@@ -400,28 +401,48 @@ function LoginModal({ open, onClose }: ModalProps) {
             </div>
           </button>
 
-          <button disabled className="flex w-full cursor-not-allowed items-center justify-between rounded-2xl border border-zinc-100 bg-zinc-50 p-4 opacity-70">
+          {/* 2. 微信登录按钮（已激活跳转） */}
+          <button
+            onClick={() => {
+              onClose();
+              const currentPath = window.location.pathname + window.location.search;
+              window.location.href = `/api/auth/wechat/start?redirectTo=${encodeURIComponent(currentPath)}`;
+            }}
+            className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50"
+          >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100/80">
-                <svg className="h-5 w-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#07C160]/10 transition-colors group-hover:bg-[#07C160]/20">
+                <svg className="h-5 w-5 text-[#07C160]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8.5,13.5 C7.67,13.5 7,12.83 7,12 C7,11.17 7.67,10.5 8.5,10.5 C9.33,10.5 10,11.17 10,12 C10,12.83 9.33,13.5 8.5,13.5 Z M15.5,13.5 C14.67,13.5 14,12.83 14,12 C14,11.17 14.67,10.5 15.5,10.5 C16.33,10.5 17,11.17 17,12 C17,12.83 16.33,13.5 15.5,13.5 Z M12,3 C6.48,3 2,6.84 2,11.5 C2,14.16 3.42,16.51 5.61,17.93 L4.72,20.57 L7.72,19.09 C9.05,19.67 10.49,20 12,20 C17.52,20 22,16.16 22,11.5 C22,6.84 17.52,3 12,3 Z"/>
                 </svg>
               </div>
-              <div className="text-left"><div className="text-sm font-medium text-zinc-400">微信登录</div></div>
+              <div className="text-left">
+                <div className="text-sm font-medium text-zinc-900">微信登录</div>
+                <div className="text-xs text-zinc-500">扫码快速安全登录</div>
+              </div>
             </div>
-            <div className="rounded-md bg-zinc-200/50 px-2 py-1 text-[11px] font-medium text-zinc-500">即将开放</div>
           </button>
 
-          <button disabled className="flex w-full cursor-not-allowed items-center justify-between rounded-2xl border border-zinc-100 bg-zinc-50 p-4 opacity-70">
+          {/* 3. QQ 登录按钮（已激活跳转） */}
+          <button
+            onClick={() => {
+              onClose();
+              const currentPath = window.location.pathname + window.location.search;
+              window.location.href = `/api/auth/qq/start?redirectTo=${encodeURIComponent(currentPath)}`;
+            }}
+            className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50"
+          >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100/80">
-                <svg className="h-5 w-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#12B7F5]/10 transition-colors group-hover:bg-[#12B7F5]/20">
+                <svg className="h-5 w-5 text-[#12B7F5]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
                 </svg>
               </div>
-              <div className="text-left"><div className="text-sm font-medium text-zinc-400">QQ 登录</div></div>
+              <div className="text-left">
+                <div className="text-sm font-medium text-zinc-900">QQ 登录</div>
+                <div className="text-xs text-zinc-500">一键授权快捷登录</div>
+              </div>
             </div>
-            <div className="rounded-md bg-zinc-200/50 px-2 py-1 text-[11px] font-medium text-zinc-500">即将开放</div>
           </button>
         </div>
       </div>
@@ -469,7 +490,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 限制文件大小 (不能超过 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert("图片太大啦，请选择 5MB 以下的图片。");
       return;
@@ -479,13 +499,11 @@ function ProfileModal({ open, onClose }: ModalProps) {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        // 创建一个画布，固定将头像压缩至 200x200
         const canvas = document.createElement("canvas");
         const MAX_SIZE = 200;
         let width = img.width;
         let height = img.height;
 
-        // 等比例缩放计算
         if (width > height) {
           if (width > MAX_SIZE) {
             height *= MAX_SIZE / width;
@@ -502,16 +520,14 @@ function ProfileModal({ open, onClose }: ModalProps) {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         
-        // 绘制白色背景（防止透明 PNG 变成黑色）
         if (ctx) {
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
         }
 
-        // 输出为 webp 格式的 base64，极度压缩体积
         const dataUrl = canvas.toDataURL("image/webp", 0.8);
-        setAvatar(dataUrl); // 这里的 avatar 已经是一段文本了
+        setAvatar(dataUrl);
       };
       img.src = event.target?.result as string;
     };
@@ -523,7 +539,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
     setIsLoading(true);
 
     try {
-      // 因为 avatar 现在是一段被压缩的 Base64 文本，所以直接传给后端存进 String 字段里毫无压力
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -562,7 +577,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
-          {/* 头像上传区：去掉了那个丑陋的 input URL，改为优雅的悬浮上传 */}
           <div className="flex flex-col items-center justify-center">
             <div 
               onClick={() => fileInputRef.current?.click()}
@@ -576,7 +590,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
                 </span>
               )}
               
-              {/* 悬浮黑色半透明蒙版 + 相机图标 */}
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -586,7 +599,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
             </div>
             <p className="mt-3 text-xs text-zinc-400 font-medium">点击修改头像</p>
             
-            {/* 真正执行文件上传的 input (隐藏起来) */}
             <input 
               type="file" 
               ref={fileInputRef} 
