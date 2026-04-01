@@ -41,13 +41,26 @@ function EmailAuthContent() {
         body: JSON.stringify({ email }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "发送失败");
+      // 如果有响应但不是 200，尝试解析错误信息
+      if (!res.ok) {
+        let errorMsg = "发送失败，请稍后重试";
+        try {
+          const data = await res.json();
+          errorMsg = data.error || errorMsg;
+        } catch (parseErr) {}
+        throw new Error(errorMsg);
+      }
 
+      // 发送成功，跳转第二步
       setStep(2);
       setCountdown(60);
     } catch (err: any) {
-      setError(err.message);
+      // 捕获网络中断或 Failed to fetch
+      if (err.message === "Failed to fetch") {
+        setError("网络连接不稳定，请检查是否已收到邮件。");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -73,8 +86,7 @@ function EmailAuthContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "验证失败");
 
-      // 登录成功
-      // 使用 window.location 强制硬跳转，确保整个站点的状态（Header等）同步刷新
+      // 登录成功，强制刷新全站状态
       window.location.href = redirectTo;
     } catch (err: any) {
       setError(err.message);
@@ -110,6 +122,7 @@ function EmailAuthContent() {
               />
             </div>
             {error && <p className="text-xs text-red-500 text-center font-medium">{error}</p>}
+            
             <button
               type="submit"
               disabled={isLoading}
@@ -117,6 +130,17 @@ function EmailAuthContent() {
             >
               {isLoading ? "发送中..." : "继续"}
             </button>
+
+            {/* 核心体验优化：允许用户手动进入下一步 */}
+            <div className="text-center mt-3">
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="text-[13px] text-zinc-400 hover:text-zinc-700 transition-colors"
+              >
+                已收到验证码？直接输入
+              </button>
+            </div>
           </form>
         ) : (
           <form onSubmit={handleVerifyCode} className="space-y-4">
@@ -133,6 +157,7 @@ function EmailAuthContent() {
               />
             </div>
             {error && <p className="text-xs text-red-500 text-center font-medium">{error}</p>}
+            
             <button
               type="submit"
               disabled={isLoading || code.length !== 6}
@@ -140,7 +165,15 @@ function EmailAuthContent() {
             >
               {isLoading ? "验证中..." : "完成登录"}
             </button>
-            <div className="text-center mt-4">
+            
+            <div className="flex items-center justify-between mt-4">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="text-xs text-zinc-400 hover:text-zinc-900 transition-colors"
+              >
+                更换邮箱
+              </button>
               <button
                 type="button"
                 onClick={() => handleSendCode()}
