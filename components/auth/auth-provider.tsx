@@ -9,6 +9,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
   type PropsWithChildren,
 } from "react";
 import { createPortal } from "react-dom";
@@ -430,7 +431,7 @@ function LoginModal({ open, onClose }: ModalProps) {
 }
 
 // ----------------------------------------------------------------------
-// ProfileModal (新！高级账号设置页)
+// ProfileModal (高级图片直传版)
 // ----------------------------------------------------------------------
 
 function ProfileModal({ open, onClose }: ModalProps) {
@@ -439,12 +440,14 @@ function ProfileModal({ open, onClose }: ModalProps) {
   const [avatar, setAvatar] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // 用于触发隐藏的 input file
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 每次打开弹窗时，重置为当前的真实数据
   useEffect(() => {
     if (open && user) {
       setNickname(user.nickname || user.name || "");
@@ -461,13 +464,66 @@ function ProfileModal({ open, onClose }: ModalProps) {
     };
   }, [open]);
 
-  if (!mounted || !open || !user) return null;
+  // 核心压缩逻辑：读取本地图片，利用 Canvas 裁剪压缩，输出 Base64 文本
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 限制文件大小 (不能超过 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("图片太大啦，请选择 5MB 以下的图片。");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // 创建一个画布，固定将头像压缩至 200x200
+        const canvas = document.createElement("canvas");
+        const MAX_SIZE = 200;
+        let width = img.width;
+        let height = img.height;
+
+        // 等比例缩放计算
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        
+        // 绘制白色背景（防止透明 PNG 变成黑色）
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+
+        // 输出为 webp 格式的 base64，极度压缩体积
+        const dataUrl = canvas.toDataURL("image/webp", 0.8);
+        setAvatar(dataUrl); // 这里的 avatar 已经是一段文本了
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // 因为 avatar 现在是一段被压缩的 Base64 文本，所以直接传给后端存进 String 字段里毫无压力
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -475,7 +531,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
       });
 
       if (res.ok) {
-        // 保存成功后，立即刷新全局的用户数据状态
         await syncSession();
         onClose();
       } else {
@@ -487,6 +542,8 @@ function ProfileModal({ open, onClose }: ModalProps) {
       setIsLoading(false);
     }
   };
+
+  if (!mounted || !open || !user) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
@@ -504,16 +561,39 @@ function ProfileModal({ open, onClose }: ModalProps) {
           <p className="mt-2 text-sm text-zinc-500">完善你的个人档案</p>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-5">
-          {/* 头像预览区 */}
-          <div className="flex justify-center mb-6">
-            {avatar ? (
-              <img src={avatar} alt="预览" className="h-20 w-20 rounded-full object-cover border border-zinc-200 shadow-sm" />
-            ) : (
-              <div className="h-20 w-20 flex items-center justify-center rounded-full bg-zinc-100 border border-zinc-200 text-zinc-400 text-2xl font-medium">
-                {nickname ? nickname.charAt(0).toUpperCase() : "?"}
+        <form onSubmit={handleSave} className="space-y-6">
+          {/* 头像上传区：去掉了那个丑陋的 input URL，改为优雅的悬浮上传 */}
+          <div className="flex flex-col items-center justify-center">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="relative h-[88px] w-[88px] cursor-pointer group rounded-full overflow-hidden shadow-sm border border-zinc-200 bg-zinc-100 flex items-center justify-center transition-all hover:ring-4 hover:ring-zinc-100"
+            >
+              {avatar ? (
+                <img src={avatar} alt="预览" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-zinc-400 text-3xl font-medium">
+                  {nickname ? nickname.charAt(0).toUpperCase() : "?"}
+                </span>
+              )}
+              
+              {/* 悬浮黑色半透明蒙版 + 相机图标 */}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
               </div>
-            )}
+            </div>
+            <p className="mt-3 text-xs text-zinc-400 font-medium">点击修改头像</p>
+            
+            {/* 真正执行文件上传的 input (隐藏起来) */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleImageChange}
+            />
           </div>
 
           <div>
@@ -528,23 +608,10 @@ function ProfileModal({ open, onClose }: ModalProps) {
             />
           </div>
 
-          <div>
-            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5 ml-1">
-              头像链接 <span className="text-zinc-400 font-normal">(支持网络图片 URL)</span>
-            </label>
-            <input
-              type="url"
-              value={avatar}
-              onChange={(e) => setAvatar(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 transition-colors text-sm"
-            />
-          </div>
-
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-4 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98]"
+            className="w-full mt-2 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98]"
           >
             {isLoading ? "保存中..." : "保存修改"}
           </button>
