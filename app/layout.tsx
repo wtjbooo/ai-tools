@@ -84,34 +84,41 @@ function Header() {
   return (
     <header className="sticky top-0 z-40">
       <div className="border-b border-black/6 bg-white/78 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3.5 sm:px-6">
+        {/* 优化了手机端的间距 gap 和 padding */}
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6">
+          
+          {/* 1. 左侧 Logo 区域：限制收缩 (shrink-0) 保证头像不变形 */}
           <Link
             href="/"
-            className="inline-flex shrink-0 items-center gap-3 transition-opacity hover:opacity-90"
+            className="inline-flex shrink-0 items-center gap-2 sm:gap-3 transition-opacity hover:opacity-90"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-[14px] sm:rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
               <span className="text-sm font-semibold tracking-tight text-gray-950">
                 AI
               </span>
             </div>
-
+            {/* 手机端稍微减小字号，隐藏副标题，给导航留出空间 */}
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold tracking-tight text-gray-950 sm:text-[15px]">
                 AI 工具目录
               </div>
-              <div className="hidden text-xs text-gray-500 sm:block">
+              <div className="hidden text-xs text-gray-500 lg:block">
                 精选、克制、持续更新
               </div>
             </div>
           </Link>
 
-          <div className="min-w-0 flex-1 overflow-x-auto">
-            <div className="flex justify-end">
+          {/* 2. 中间导航区域：开启横向平滑滚动，并隐藏原生滚动条 */}
+          <div className="min-w-0 flex-1 mx-2 sm:mx-6">
+            <div className="flex w-full overflow-x-auto items-center sm:justify-end scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <NavLinks />
             </div>
           </div>
 
-          <AuthButton />
+          {/* 3. 右侧登录按钮：固定大小，不参与挤压 */}
+          <div className="shrink-0">
+            <AuthButton />
+          </div>
         </div>
       </div>
     </header>

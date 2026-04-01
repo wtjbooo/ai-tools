@@ -42,8 +42,9 @@ function getItemClassName(
   active: boolean,
   tone: NavItem["tone"] = "default",
 ) {
+  // 核心修改点 1：在这里加上了 shrink-0，防止按钮在手机端被挤扁
   const base =
-    "group inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10";
+    "group inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10";
 
   if (active) {
     return [
@@ -78,8 +79,13 @@ export default function NavLinks({ className = "" }: { className?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav className={className} aria-label="Primary">
-      <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+    <nav className={`w-full ${className}`} aria-label="Primary">
+      {/* 核心修改点 2：
+          - 移除 flex-wrap，改为 flex-nowrap 强制不换行
+          - 增加 overflow-x-auto 开启横向滚动
+          - 添加魔法类隐藏原生滚动条：[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
+      */}
+      <div className="flex flex-nowrap items-center gap-2 sm:gap-1.5 overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-1 pr-4 sm:pr-0">
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item);
 

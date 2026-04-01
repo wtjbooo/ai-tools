@@ -1,3 +1,4 @@
+// app/auth/email/page.tsx
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -23,8 +24,8 @@ function EmailAuthContent() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const handleSendCode = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendCode = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setError("");
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -56,8 +57,8 @@ function EmailAuthContent() {
     e.preventDefault();
     setError("");
 
-    if (!code || code.length < 4) {
-      setError("请输入完整的验证码");
+    if (!code || code.length < 6) {
+      setError("请输入 6 位验证码");
       return;
     }
 
@@ -72,9 +73,9 @@ function EmailAuthContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "验证失败");
 
-      // 登录成功，跳转回原页面或首页
-      router.push(redirectTo);
-      router.refresh(); // 强制刷新以更新服务端的 session 状态
+      // 登录成功
+      // 使用 window.location 强制硬跳转，确保整个站点的状态（Header等）同步刷新
+      window.location.href = redirectTo;
     } catch (err: any) {
       setError(err.message);
       setIsLoading(false); 
@@ -108,11 +109,11 @@ function EmailAuthContent() {
                 autoFocus
               />
             </div>
-            {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+            {error && <p className="text-xs text-red-500 text-center font-medium">{error}</p>}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 disabled:opacity-50 transition-all"
+              className="w-full py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98]"
             >
               {isLoading ? "发送中..." : "继续"}
             </button>
@@ -124,36 +125,36 @@ function EmailAuthContent() {
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="请输入 6 位验证码"
-                className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 transition-colors text-center tracking-widest text-lg font-medium"
+                placeholder="••••••"
+                className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 transition-colors text-center tracking-[0.5em] text-xl font-bold"
                 required
                 autoFocus
                 maxLength={6}
               />
             </div>
-            {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+            {error && <p className="text-xs text-red-500 text-center font-medium">{error}</p>}
             <button
               type="submit"
               disabled={isLoading || code.length !== 6}
-              className="w-full py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 disabled:opacity-50 transition-all"
+              className="w-full py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98]"
             >
               {isLoading ? "验证中..." : "完成登录"}
             </button>
             <div className="text-center mt-4">
               <button
                 type="button"
-                onClick={handleSendCode}
+                onClick={() => handleSendCode()}
                 disabled={countdown > 0 || isLoading}
-                className="text-xs text-zinc-500 hover:text-zinc-900 disabled:opacity-50 disabled:hover:text-zinc-500 transition-colors"
+                className="text-xs text-zinc-400 hover:text-zinc-900 disabled:opacity-50 transition-colors"
               >
-                {countdown > 0 ? `${countdown} 秒后可重新发送` : "重新发送验证码"}
+                {countdown > 0 ? `${countdown} 秒后可重发` : "重新发送验证码"}
               </button>
             </div>
           </form>
         )}
 
         <div className="mt-8 text-center">
-          <Link href="/" className="text-[13px] text-zinc-400 hover:text-zinc-900 transition-colors">
+          <Link href="/" className="text-[13px] text-zinc-400 hover:text-zinc-600 transition-colors">
             返回首页
           </Link>
         </div>
@@ -164,7 +165,7 @@ function EmailAuthContent() {
 
 export default function EmailAuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-5 h-5 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-6 h-6 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" /></div>}>
       <EmailAuthContent />
     </Suspense>
   );
