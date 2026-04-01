@@ -10,7 +10,6 @@ import {
   useMemo,
   useState,
   type PropsWithChildren,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -260,6 +259,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 export function AuthButton() {
   const { user, isAuthenticated, isReady, openLogin, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   if (!isReady) {
     return (
@@ -275,10 +275,14 @@ export function AuthButton() {
       <div className="relative">
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="group inline-flex h-10 shrink-0 items-center gap-2.5 rounded-full border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-900 shadow-sm transition-all hover:border-zinc-300 hover:bg-zinc-50 focus:outline-none"
+          className="group inline-flex h-10 shrink-0 items-center gap-2.5 rounded-full border border-zinc-200 bg-white px-3 sm:px-3.5 text-sm font-medium text-zinc-900 shadow-sm transition-all hover:border-zinc-300 hover:bg-zinc-50 focus:outline-none"
         >
-          <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-          <span className="max-w-[100px] truncate">{getDisplayName(user)}</span>
+          {user.avatar ? (
+            <img src={user.avatar} alt="Avatar" className="h-6 w-6 rounded-full object-cover border border-zinc-200" />
+          ) : (
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] ml-1" />
+          )}
+          <span className="max-w-[80px] sm:max-w-[100px] truncate">{getDisplayName(user)}</span>
           <svg className={`h-4 w-4 text-zinc-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
@@ -288,9 +292,18 @@ export function AuthButton() {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
             <div className="absolute right-0 top-full mt-2 w-48 z-50 overflow-hidden rounded-2xl border border-zinc-100 bg-white p-1.5 shadow-lg ring-1 ring-black/5">
-              <div className="px-3 py-2 text-xs text-zinc-500 border-b border-zinc-50 mb-1">
+              <div className="px-3 py-2 text-xs text-zinc-500 border-b border-zinc-50 mb-1 truncate">
                 {user.email || '已登录用户'}
               </div>
+              <button
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  setIsProfileOpen(true);
+                }}
+                className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+              >
+                账号设置
+              </button>
               <button
                 onClick={() => {
                   setIsDropdownOpen(false);
@@ -303,6 +316,9 @@ export function AuthButton() {
             </div>
           </>
         )}
+
+        {/* 渲染个人设置弹窗 */}
+        <ProfileModal open={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       </div>
     );
   }
@@ -319,15 +335,15 @@ export function AuthButton() {
 }
 
 // ----------------------------------------------------------------------
-// LoginModal (高级简约版)
+// LoginModal
 // ----------------------------------------------------------------------
 
-type LoginModalProps = {
+type ModalProps = {
   open: boolean;
   onClose: () => void;
 };
 
-function LoginModal({ open, onClose }: LoginModalProps) {
+function LoginModal({ open, onClose }: ModalProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -346,49 +362,30 @@ function LoginModal({ open, onClose }: LoginModalProps) {
 
   if (!mounted || !open) return null;
 
-const handleEmailLogin = () => {
-  onClose();
-  // 获取当前路径和参数，让登录完能跳回来
-  const currentPath = window.location.pathname + window.location.search;
-  window.location.href = `/auth/email?redirectTo=${encodeURIComponent(currentPath)}`;
-};
+  const handleEmailLogin = () => {
+    onClose();
+    const currentPath = window.location.pathname + window.location.search;
+    window.location.href = `/auth/email?redirectTo=${encodeURIComponent(currentPath)}`;
+  };
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
-      {/* 背景遮罩 */}
-      <div 
-        className="absolute inset-0 bg-zinc-950/30 backdrop-blur-[2px] transition-opacity"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-zinc-950/30 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
       
-      {/* 弹窗本体 */}
       <div className="relative w-full max-w-[360px] overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] transition-all">
-        {/* 关闭按钮 */}
-        <button
-          onClick={onClose}
-          className="absolute right-6 top-6 text-zinc-400 transition-colors hover:text-zinc-900"
-        >
+        <button onClick={onClose} className="absolute right-6 top-6 text-zinc-400 transition-colors hover:text-zinc-900">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        {/* 标题区 */}
         <div className="text-center mt-2 mb-8">
-          <h2 className="text-[22px] font-semibold tracking-tight text-zinc-900">
-            登录你的账号
-          </h2>
-          <p className="mt-2 text-sm text-zinc-500">
-            选择一种方式继续
-          </p>
+          <h2 className="text-[22px] font-semibold tracking-tight text-zinc-900">登录你的账号</h2>
+          <p className="mt-2 text-sm text-zinc-500">选择一种方式继续</p>
         </div>
 
-        {/* 登录选项 */}
         <div className="space-y-3">
-          <button
-            onClick={handleEmailLogin}
-            className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50"
-          >
+          <button onClick={handleEmailLogin} className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 transition-colors group-hover:bg-white">
                 <svg className="h-5 w-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -402,50 +399,156 @@ const handleEmailLogin = () => {
             </div>
           </button>
 
-          <button
-            disabled
-            className="flex w-full cursor-not-allowed items-center justify-between rounded-2xl border border-zinc-100 bg-zinc-50 p-4 opacity-70"
-          >
+          <button disabled className="flex w-full cursor-not-allowed items-center justify-between rounded-2xl border border-zinc-100 bg-zinc-50 p-4 opacity-70">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100/80">
                 <svg className="h-5 w-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8.5,13.5 C7.67,13.5 7,12.83 7,12 C7,11.17 7.67,10.5 8.5,10.5 C9.33,10.5 10,11.17 10,12 C10,12.83 9.33,13.5 8.5,13.5 Z M15.5,13.5 C14.67,13.5 14,12.83 14,12 C14,11.17 14.67,10.5 15.5,10.5 C16.33,10.5 17,11.17 17,12 C17,12.83 16.33,13.5 15.5,13.5 Z M12,3 C6.48,3 2,6.84 2,11.5 C2,14.16 3.42,16.51 5.61,17.93 L4.72,20.57 L7.72,19.09 C9.05,19.67 10.49,20 12,20 C17.52,20 22,16.16 22,11.5 C22,6.84 17.52,3 12,3 Z"/>
                 </svg>
               </div>
-              <div className="text-left">
-                <div className="text-sm font-medium text-zinc-400">微信登录</div>
-              </div>
+              <div className="text-left"><div className="text-sm font-medium text-zinc-400">微信登录</div></div>
             </div>
             <div className="rounded-md bg-zinc-200/50 px-2 py-1 text-[11px] font-medium text-zinc-500">即将开放</div>
           </button>
 
-          <button
-            disabled
-            className="flex w-full cursor-not-allowed items-center justify-between rounded-2xl border border-zinc-100 bg-zinc-50 p-4 opacity-70"
-          >
+          <button disabled className="flex w-full cursor-not-allowed items-center justify-between rounded-2xl border border-zinc-100 bg-zinc-50 p-4 opacity-70">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100/80">
                 <svg className="h-5 w-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
                 </svg>
               </div>
-              <div className="text-left">
-                <div className="text-sm font-medium text-zinc-400">QQ 登录</div>
-              </div>
+              <div className="text-left"><div className="text-sm font-medium text-zinc-400">QQ 登录</div></div>
             </div>
             <div className="rounded-md bg-zinc-200/50 px-2 py-1 text-[11px] font-medium text-zinc-500">即将开放</div>
           </button>
         </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
-        {/* 底部协议 */}
-        <div className="mt-8 text-center">
-          <p className="text-[12px] text-zinc-400">
-            继续即代表你同意我们的{" "}
-            <Link href="/terms" className="text-zinc-500 hover:text-zinc-900 transition-colors">服务条款</Link>
-            {" "}与{" "}
-            <Link href="/privacy" className="text-zinc-500 hover:text-zinc-900 transition-colors">隐私政策</Link>
-          </p>
+// ----------------------------------------------------------------------
+// ProfileModal (新！高级账号设置页)
+// ----------------------------------------------------------------------
+
+function ProfileModal({ open, onClose }: ModalProps) {
+  const { user, syncSession } = useAuth();
+  const [nickname, setNickname] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // 每次打开弹窗时，重置为当前的真实数据
+  useEffect(() => {
+    if (open && user) {
+      setNickname(user.nickname || user.name || "");
+      setAvatar(user.avatar || "");
+    }
+  }, [open, user]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  if (!mounted || !open || !user) return null;
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname, avatar }),
+      });
+
+      if (res.ok) {
+        // 保存成功后，立即刷新全局的用户数据状态
+        await syncSession();
+        onClose();
+      } else {
+        alert("保存失败，请稍后重试");
+      }
+    } catch (error) {
+      alert("网络错误");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-zinc-950/30 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
+      
+      <div className="relative w-full max-w-[400px] overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] transition-all">
+        <button onClick={onClose} className="absolute right-6 top-6 text-zinc-400 transition-colors hover:text-zinc-900">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <div className="text-center mt-2 mb-8">
+          <h2 className="text-[22px] font-semibold tracking-tight text-zinc-900">账号设置</h2>
+          <p className="mt-2 text-sm text-zinc-500">完善你的个人档案</p>
         </div>
+
+        <form onSubmit={handleSave} className="space-y-5">
+          {/* 头像预览区 */}
+          <div className="flex justify-center mb-6">
+            {avatar ? (
+              <img src={avatar} alt="预览" className="h-20 w-20 rounded-full object-cover border border-zinc-200 shadow-sm" />
+            ) : (
+              <div className="h-20 w-20 flex items-center justify-center rounded-full bg-zinc-100 border border-zinc-200 text-zinc-400 text-2xl font-medium">
+                {nickname ? nickname.charAt(0).toUpperCase() : "?"}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5 ml-1">昵称</label>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="怎么称呼你？"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 transition-colors text-sm"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[13px] font-medium text-zinc-700 mb-1.5 ml-1">
+              头像链接 <span className="text-zinc-400 font-normal">(支持网络图片 URL)</span>
+            </label>
+            <input
+              type="url"
+              value={avatar}
+              onChange={(e) => setAvatar(e.target.value)}
+              placeholder="https://..."
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 transition-colors text-sm"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-4 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98]"
+          >
+            {isLoading ? "保存中..." : "保存修改"}
+          </button>
+        </form>
       </div>
     </div>,
     document.body
