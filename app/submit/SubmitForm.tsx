@@ -79,12 +79,12 @@ function Field({
     <div className="space-y-2.5">
       <label
         htmlFor={htmlFor}
-        className="block text-sm font-medium text-gray-900"
+        className="block text-[14px] font-semibold tracking-wide text-zinc-900"
       >
         {label}
       </label>
       {children}
-      {hint ? <p className="text-xs leading-6 text-gray-500">{hint}</p> : null}
+      {hint ? <p className="text-[13px] leading-6 text-zinc-500">{hint}</p> : null}
     </div>
   );
 }
@@ -101,20 +101,20 @@ function Notice({
   const styles =
     type === "success"
       ? {
-          box: "border-green-200 bg-green-50/90 text-green-800",
-          icon: "bg-green-100 text-green-700",
+          box: "border-emerald-200/60 bg-emerald-50/80 text-emerald-900",
+          icon: "bg-emerald-100 text-emerald-700",
           title: "已完成",
           symbol: "✓",
         }
       : type === "info"
       ? {
-          box: "border-blue-200 bg-blue-50/90 text-blue-800",
+          box: "border-blue-200/60 bg-blue-50/80 text-blue-900",
           icon: "bg-blue-100 text-blue-700",
           title: "提示",
           symbol: "i",
         }
       : {
-          box: "border-red-200 bg-red-50/90 text-red-800",
+          box: "border-red-200/60 bg-red-50/80 text-red-900",
           icon: "bg-red-100 text-red-700",
           title: "请检查",
           symbol: "!",
@@ -123,14 +123,14 @@ function Notice({
   return (
     <div
       className={[
-        "rounded-[20px] border px-4 py-4 text-sm leading-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]",
+        "rounded-[24px] border px-5 py-4 text-sm leading-relaxed shadow-sm transition-all duration-300 animate-in fade-in slide-in-from-bottom-2",
         styles.box,
       ].join(" ")}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3.5">
         <div
           className={[
-            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
             styles.icon,
           ].join(" ")}
         >
@@ -138,8 +138,8 @@ function Notice({
         </div>
 
         <div className="min-w-0">
-          <div className="font-medium">{styles.title}</div>
-          <div>{message}</div>
+          <div className="font-semibold">{styles.title}</div>
+          <div className="mt-1 text-[13.5px] opacity-90">{message}</div>
         </div>
       </div>
     </div>
@@ -157,7 +157,7 @@ function SuggestionPill({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center rounded-full border border-black/8 bg-white px-3 py-1.5 text-xs text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/12 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+      className="inline-flex items-center rounded-full border border-black/[0.06] bg-white px-3.5 py-1.5 text-[12px] font-medium text-zinc-600 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:border-black/[0.1] hover:bg-zinc-50 hover:text-zinc-950 active:scale-[0.96]"
     >
       {children}
     </button>
@@ -166,14 +166,15 @@ function SuggestionPill({
 
 function IntroPill({ children }: { children: ReactNode }) {
   return (
-    <div className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3.5 py-2 text-sm text-gray-700">
+    <div className="inline-flex items-center rounded-full border border-black/[0.04] bg-white/60 backdrop-blur-md px-3.5 py-2 text-[13px] font-medium text-zinc-600 shadow-sm">
       {children}
     </div>
   );
 }
 
+// 核心重构：具有呼吸发光效果的 Apple 级输入框
 const inputClass =
-  "w-full rounded-[20px] border border-black/10 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-black/20 focus:bg-white focus:shadow-[0_10px_24px_rgba(15,23,42,0.06)]";
+  "w-full rounded-[18px] border border-black/[0.08] bg-zinc-50/50 px-4 py-3.5 text-[14px] font-medium text-zinc-900 outline-none transition-all duration-300 ease-out placeholder:text-zinc-400 placeholder:font-normal focus:border-zinc-900 focus:bg-white focus:ring-4 focus:ring-zinc-900/5 shadow-[0_2px_10px_rgba(0,0,0,0.01)] hover:border-black/[0.15]";
 
 export default function SubmitForm() {
   const [loading, setLoading] = useState(false);
@@ -336,234 +337,243 @@ export default function SubmitForm() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
-      <div className="space-y-6 sm:space-y-8">
-        <section className="relative overflow-hidden rounded-[32px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-6 py-8 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.08),transparent_26%)]" />
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-12">
+      <div className="space-y-6 sm:space-y-10">
+        <section className="relative overflow-hidden rounded-[36px] border border-black/[0.04] bg-white px-6 py-10 shadow-[0_8px_40px_rgba(0,0,0,0.03)] sm:px-12 sm:py-12">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.08),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.05),transparent_40%)]" />
 
-          <div className="relative max-w-3xl space-y-5">
-            <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative max-w-3xl space-y-6">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/"
-                className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
+                className="inline-flex items-center rounded-full border border-black/[0.06] bg-white px-4 py-2 text-[13px] font-medium text-zinc-600 shadow-sm transition hover:-translate-y-0.5 hover:border-black/[0.1] hover:text-zinc-900"
               >
                 ← 返回首页
               </Link>
 
-              <span className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">
+              <span className="inline-flex items-center rounded-full border border-transparent px-3 py-1 text-[11px] font-bold tracking-[0.2em] text-zinc-400">
                 SUBMIT AI TOOL
               </span>
             </div>
 
-            <div className="space-y-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">
+            <div className="space-y-4">
+              <h1 className="text-[32px] font-bold tracking-tight text-zinc-900 sm:text-[48px] sm:leading-[1.1]">
                 提交你的 AI 工具
               </h1>
 
-              <p className="max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
-                填写官网、简介与分类信息，我们会在审核后决定是否收录进目录。
+              <p className="max-w-2xl text-[15px] leading-relaxed text-zinc-500 sm:text-[16px]">
+                填写官网、简介与分类信息，我们将会在审核后将其收录进全网最具质感的 AI 导航目录中，获得海量曝光。
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2.5">
-              <IntroPill>支持自动获取网站信息</IntroPill>
-              <IntroPill>只填写一个主分类</IntroPill>
-              <IntroPill>通常 1～3 天审核</IntroPill>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <IntroPill>✨ 支持一键提取官网信息</IntroPill>
+              <IntroPill>🎯 推荐只填一个精准主分类</IntroPill>
+              <IntroPill>⏱️ 预计 1～3 个工作日完成审核</IntroPill>
             </div>
           </div>
         </section>
 
         <form
           onSubmit={onSubmit}
-          className="rounded-[28px] border border-black/8 bg-white/94 p-5 shadow-[0_10px_32px_rgba(15,23,42,0.05)] sm:p-6"
+          className="rounded-[32px] border border-black/[0.04] bg-white p-6 shadow-[0_12px_48px_rgba(0,0,0,0.04)] sm:p-10"
         >
-          <div className="grid gap-8 lg:grid-cols-[1.02fr_0.98fr]">
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <h2 className="text-[22px] font-semibold tracking-tight text-gray-950">
+          <div className="grid gap-10 lg:grid-cols-2">
+            {/* 左侧：基础信息 */}
+            <div className="space-y-8 rounded-[24px] bg-zinc-50/50 p-6 sm:p-8">
+              <div className="space-y-1.5">
+                <h2 className="text-[20px] font-bold tracking-tight text-zinc-900">
                   基础信息
                 </h2>
-                <p className="text-sm leading-6 text-gray-500">
-                  先填写官网、名称与一句话简介。
+                <p className="text-[14px] leading-6 text-zinc-500">
+                  先填写官网，我们能帮你自动补全大部分内容。
                 </p>
               </div>
 
-              <Field
-                label="官网链接"
-                htmlFor="website"
-                hint="建议优先填写官网链接，通常可以自动补全名称和简介。"
-              >
-                <div className="space-y-3">
+              <div className="space-y-6">
+                <Field
+                  label="官网链接"
+                  htmlFor="website"
+                  hint="建议优先填写，可大幅节省您的时间。"
+                >
+                  <div className="space-y-3">
+                    <input
+                      id="website"
+                      name="website"
+                      type="url"
+                      placeholder="https://example.com"
+                      className={inputClass}
+                      required
+                      value={websiteValue}
+                      onChange={(e) => setWebsiteValue(e.target.value)}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={handleExtractWebsiteInfo}
+                      disabled={extracting || loading}
+                      className="inline-flex w-full items-center justify-center rounded-[16px] border border-black/[0.06] bg-white px-4 py-3 text-[14px] font-medium text-zinc-700 shadow-sm transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:border-black/[0.12] hover:bg-zinc-50 hover:text-zinc-950 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {extracting ? "正在解析官网元数据..." : "自动获取网站信息"}
+                    </button>
+                  </div>
+                </Field>
+
+                <Field label="工具名称" htmlFor="name">
                   <input
-                    id="website"
-                    name="website"
-                    type="url"
-                    placeholder="https://example.com"
+                    id="name"
+                    name="name"
+                    placeholder="例如：ChatGPT"
                     className={inputClass}
                     required
-                    value={websiteValue}
-                    onChange={(e) => setWebsiteValue(e.target.value)}
+                    value={nameValue}
+                    onChange={(e) => setNameValue(e.target.value)}
                   />
+                </Field>
 
-                  <button
-                    type="button"
-                    onClick={handleExtractWebsiteInfo}
-                    disabled={extracting || loading}
-                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {extracting ? "自动获取中..." : "自动获取网站信息"}
-                  </button>
-                </div>
-              </Field>
-
-              <Field label="工具名称" htmlFor="name">
-                <input
-                  id="name"
-                  name="name"
-                  placeholder="例如：ChatGPT"
-                  className={inputClass}
-                  required
-                  value={nameValue}
-                  onChange={(e) => setNameValue(e.target.value)}
-                />
-              </Field>
-
-              <Field label="一句话简介" htmlFor="description">
-                <input
-                  id="description"
-                  name="description"
-                  placeholder="例如：OpenAI 推出的 AI 对话助手"
-                  className={inputClass}
-                  required
-                  value={descriptionValue}
-                  onChange={(e) => setDescriptionValue(e.target.value)}
-                />
-              </Field>
+                <Field label="一句话简介" htmlFor="description">
+                  <input
+                    id="description"
+                    name="description"
+                    placeholder="例如：OpenAI 推出的划时代 AI 对话助手"
+                    className={inputClass}
+                    required
+                    value={descriptionValue}
+                    onChange={(e) => setDescriptionValue(e.target.value)}
+                  />
+                </Field>
+              </div>
             </div>
 
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <h2 className="text-[22px] font-semibold tracking-tight text-gray-950">
+            {/* 右侧：分类与补充 */}
+            <div className="space-y-8 rounded-[24px] bg-zinc-50/50 p-6 sm:p-8">
+              <div className="space-y-1.5">
+                <h2 className="text-[20px] font-bold tracking-tight text-zinc-900">
                   分类与补充
                 </h2>
-                <p className="text-sm leading-6 text-gray-500">
-                  用更少但更准确的信息，帮助我们更快判断是否收录。
+                <p className="text-[14px] leading-6 text-zinc-500">
+                  精准的分类和标签，能让用户更快搜索到它。
                 </p>
               </div>
 
-              <Field
-                label="分类"
-                htmlFor="category"
-                hint="只填写一个主分类，例如：聊天助手、图像生成、视频生成、知识检索"
-              >
-                <input
-                  id="category"
-                  name="category"
-                  placeholder="例如：聊天助手"
-                  className={inputClass}
-                  required
-                  value={categoryValue}
-                  onChange={(e) => setCategoryValue(e.target.value)}
-                />
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {CATEGORY_SUGGESTIONS.map((item) => (
-                    <SuggestionPill
-                      key={item}
-                      onClick={() => applyCategorySuggestion(item)}
-                    >
-                      {item}
-                    </SuggestionPill>
-                  ))}
-                </div>
-              </Field>
+              <div className="space-y-6">
+                <Field
+                  label="主分类"
+                  htmlFor="category"
+                  hint="只填一个，帮助算法精准分发。"
+                >
+                  <input
+                    id="category"
+                    name="category"
+                    placeholder="例如：聊天助手"
+                    className={inputClass}
+                    required
+                    value={categoryValue}
+                    onChange={(e) => setCategoryValue(e.target.value)}
+                  />
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {CATEGORY_SUGGESTIONS.map((item) => (
+                      <SuggestionPill
+                        key={item}
+                        onClick={() => applyCategorySuggestion(item)}
+                      >
+                        {item}
+                      </SuggestionPill>
+                    ))}
+                  </div>
+                </Field>
 
-              <Field
-                label="标签"
-                htmlFor="tags"
-                hint="多个标签可用英文逗号或中文逗号分隔"
-              >
-                <input
-                  id="tags"
-                  name="tags"
-                  placeholder="例如：免费试用, 文生图, 办公效率"
-                  className={inputClass}
-                  value={tagsValue}
-                  onChange={(e) => setTagsValue(e.target.value)}
-                />
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {TAG_SUGGESTIONS.map((item) => (
-                    <SuggestionPill
-                      key={item}
-                      onClick={() => applyTagSuggestion(item)}
-                    >
-                      {item}
-                    </SuggestionPill>
-                  ))}
-                </div>
-              </Field>
+                <Field
+                  label="特性标签"
+                  htmlFor="tags"
+                  hint="多个标签用逗号分隔，越详细越好。"
+                >
+                  <input
+                    id="tags"
+                    name="tags"
+                    placeholder="例如：免费试用, 文生图, API"
+                    className={inputClass}
+                    value={tagsValue}
+                    onChange={(e) => setTagsValue(e.target.value)}
+                  />
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {TAG_SUGGESTIONS.map((item) => (
+                      <SuggestionPill
+                        key={item}
+                        onClick={() => applyTagSuggestion(item)}
+                      >
+                        {item}
+                      </SuggestionPill>
+                    ))}
+                  </div>
+                </Field>
 
-              <Field label="联系方式" htmlFor="contact">
-                <input
-                  id="contact"
-                  name="contact"
-                  placeholder="邮箱、微信或其他联系方式"
-                  className={inputClass}
-                />
-              </Field>
+                <Field label="联系方式 (选填)" htmlFor="contact">
+                  <input
+                    id="contact"
+                    name="contact"
+                    placeholder="邮箱或微信号，方便审核时沟通"
+                    className={inputClass}
+                  />
+                </Field>
 
-              <Field
-                label="补充说明"
-                htmlFor="reason"
-                hint="可补充适合人群、价格模式、核心功能或与同类工具的差异。"
-              >
-                <textarea
-                  id="reason"
-                  name="reason"
-                  rows={6}
-                  placeholder="例如：支持多模型切换、适合内容创作者、提供免费额度等"
-                  className={`${inputClass} resize-none`}
-                />
-              </Field>
+                <Field
+                  label="补充优势 (选填)"
+                  htmlFor="reason"
+                  hint="可以告诉我们这款产品与同类竞品最大的差异是什么。"
+                >
+                  <textarea
+                    id="reason"
+                    name="reason"
+                    rows={4}
+                    placeholder="例如：支持超长上下文记忆、首月赠送额度等..."
+                    className={`${inputClass} resize-none`}
+                  />
+                </Field>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 border-t border-black/8 pt-5 space-y-4">
+          <div className="mt-8 border-t border-black/[0.04] pt-8 space-y-6">
             {msg && !submitted ? (
               <Notice type={noticeType} message={msg} />
             ) : null}
 
             {submitted ? (
-              <div className="rounded-[22px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 sm:p-5">
-                <div className="space-y-1">
-                  <div className="text-sm font-medium text-gray-950">
-                    已进入审核队列
+              <div className="rounded-[28px] border border-black/[0.04] bg-[linear-gradient(180deg,rgba(250,250,250,0.8),rgba(244,244,245,0.4))] p-6 sm:p-8 animate-in zoom-in-95 duration-500">
+                <div className="space-y-2 text-center sm:text-left">
+                  <div className="text-[20px] font-bold text-zinc-900">
+                    🎉 成功提交审核
                   </div>
-                  <p className="text-sm leading-6 text-gray-600">{msg}</p>
+                  <p className="text-[15px] leading-relaxed text-zinc-600">{msg}</p>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-[18px] border border-black/8 bg-white px-4 py-3 text-sm leading-6 text-gray-700">
-                    检查官网是否可访问，信息是否完整。
+                <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-[20px] border border-black/[0.03] bg-white px-5 py-4 text-[14px] leading-6 text-zinc-600 shadow-sm">
+                    <strong className="text-zinc-900 block mb-1">1. 联通性测试</strong>
+                    检查官网是否可正常访问，响应是否迅速。
                   </div>
-                  <div className="rounded-[18px] border border-black/8 bg-white px-4 py-3 text-sm leading-6 text-gray-700">
-                    判断分类、标签与目录定位是否匹配。
+                  <div className="rounded-[20px] border border-black/[0.03] bg-white px-5 py-4 text-[14px] leading-6 text-zinc-600 shadow-sm">
+                    <strong className="text-zinc-900 block mb-1">2. 信息归档</strong>
+                    重新校验分类、标签，提取高清 Logo。
                   </div>
-                  <div className="rounded-[18px] border border-black/8 bg-white px-4 py-3 text-sm leading-6 text-gray-700">
-                    通过后会进入站内展示与分类收录。
+                  <div className="rounded-[20px] border border-black/[0.03] bg-white px-5 py-4 text-[14px] leading-6 text-zinc-600 shadow-sm">
+                    <strong className="text-zinc-900 block mb-1">3. 正式上线</strong>
+                    通过审核后，获得全站资源位推荐与分发。
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
                   <Link
                     href="/featured"
-                    className="inline-flex items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
+                    className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-8 py-3.5 text-[14px] font-semibold text-white transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-black hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
                   >
-                    去看精选推荐
+                    去浏览精选目录
                   </Link>
 
                   <Link
                     href="/"
-                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-5 py-3 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+                    className="inline-flex items-center justify-center rounded-full border border-black/[0.08] bg-white px-8 py-3.5 text-[14px] font-semibold text-zinc-700 shadow-sm transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:border-black/[0.15] hover:bg-zinc-50 hover:text-zinc-950 active:scale-[0.98]"
                   >
                     返回首页
                   </Link>
@@ -571,21 +581,26 @@ export default function SubmitForm() {
               </div>
             ) : null}
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <button
-                type="submit"
-                disabled={loading || extracting}
-                className="inline-flex items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loading ? "提交中..." : "提交收录"}
-              </button>
+            {!submitted && (
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
+                <button
+                  type="submit"
+                  disabled={loading || extracting}
+                  className="inline-flex items-center justify-center rounded-[18px] bg-zinc-900 px-8 py-4 text-[15px] font-semibold tracking-wide text-white transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-black hover:shadow-[0_14px_30px_rgba(0,0,0,0.15)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="h-4 w-4 animate-spin text-white/70" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                      正在提交...
+                    </span>
+                  ) : "确认无误，提交收录"}
+                </button>
 
-              {!msg ? (
-                <p className="text-sm leading-6 text-gray-500">
-                  提交前尽量确认官网可访问、简介清晰、分类准确。
+                <p className="text-[13px] font-medium text-zinc-400">
+                  提交即代表您同意本站的收录规则与隐私条款。
                 </p>
-              ) : null}
-            </div>
+              </div>
+            )}
           </div>
         </form>
       </div>
