@@ -335,7 +335,7 @@ export function AuthButton() {
 }
 
 // ----------------------------------------------------------------------
-// LoginModal
+// LoginModal (极简邮箱版)
 // ----------------------------------------------------------------------
 
 type ModalProps = {
@@ -372,7 +372,7 @@ function LoginModal({ open, onClose }: ModalProps) {
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-zinc-950/30 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
       
-      <div className="relative w-full max-w-[360px] overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] transition-all">
+      <div className="relative w-full max-w-[380px] overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] transition-all">
         <button onClick={onClose} className="absolute right-6 top-6 text-zinc-400 transition-colors hover:text-zinc-900">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -381,64 +381,27 @@ function LoginModal({ open, onClose }: ModalProps) {
 
         <div className="text-center mt-2 mb-8">
           <h2 className="text-[22px] font-semibold tracking-tight text-zinc-900">登录你的账号</h2>
-          <p className="mt-2 text-sm text-zinc-500">选择一种方式继续</p>
+          <p className="mt-2 text-sm text-zinc-500">为了您的数据安全，请验证身份</p>
         </div>
 
         <div className="space-y-3">
-          <button onClick={handleEmailLogin} className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 transition-colors group-hover:bg-white">
+          {/* 1. 仅保留邮箱登录按钮，采用 Apple 级悬浮动画 */}
+          <button onClick={handleEmailLogin} className="group flex w-full items-center justify-between rounded-[20px] border border-black/[0.08] bg-zinc-50/50 p-4 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:border-black/[0.15] hover:bg-white hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] active:scale-[0.98]">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-[16px] border border-black/[0.04] bg-white shadow-sm transition-transform duration-300 group-hover:scale-105">
                 <svg className="h-5 w-5 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
               <div className="text-left">
-                <div className="text-sm font-medium text-zinc-900">邮箱登录</div>
-                <div className="text-xs text-zinc-500">安全且便捷的验证方式</div>
+                <div className="text-[15px] font-semibold text-zinc-900">邮箱安全登录</div>
+                <div className="mt-0.5 text-[13px] text-zinc-500">使用验证码快速验证身份</div>
               </div>
             </div>
-          </button>
-
-          <button
-            onClick={() => {
-              onClose();
-              const currentPath = window.location.pathname + window.location.search;
-              window.location.href = `/api/auth/wechat/start?redirectTo=${encodeURIComponent(currentPath)}`;
-            }}
-            className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#07C160]/10 transition-colors group-hover:bg-[#07C160]/20">
-                <svg className="h-5 w-5 text-[#07C160]" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8.5,13.5 C7.67,13.5 7,12.83 7,12 C7,11.17 7.67,10.5 8.5,10.5 C9.33,10.5 10,11.17 10,12 C10,12.83 9.33,13.5 8.5,13.5 Z M15.5,13.5 C14.67,13.5 14,12.83 14,12 C14,11.17 14.67,10.5 15.5,10.5 C16.33,10.5 17,11.17 17,12 C17,12.83 16.33,13.5 15.5,13.5 Z M12,3 C6.48,3 2,6.84 2,11.5 C2,14.16 3.42,16.51 5.61,17.93 L4.72,20.57 L7.72,19.09 C9.05,19.67 10.49,20 12,20 C17.52,20 22,16.16 22,11.5 C22,6.84 17.52,3 12,3 Z"/>
-                </svg>
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-medium text-zinc-900">微信登录</div>
-                <div className="text-xs text-zinc-500">扫码快速安全登录</div>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => {
-              onClose();
-              const currentPath = window.location.pathname + window.location.search;
-              window.location.href = `/api/auth/qq/start?redirectTo=${encodeURIComponent(currentPath)}`;
-            }}
-            className="group flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 transition-all hover:border-zinc-900 hover:bg-zinc-50"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#12B7F5]/10 transition-colors group-hover:bg-[#12B7F5]/20">
-                <svg className="h-5 w-5 text-[#12B7F5]" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                </svg>
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-medium text-zinc-900">QQ 登录</div>
-                <div className="text-xs text-zinc-500">一键授权快捷登录</div>
-              </div>
-            </div>
+            
+            <svg className="h-5 w-5 text-zinc-300 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:translate-x-1 group-hover:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
       </div>
@@ -446,7 +409,6 @@ function LoginModal({ open, onClose }: ModalProps) {
     document.body
   );
 }
-
 // ----------------------------------------------------------------------
 // ProfileModal (带历史记录的终极版)
 // ----------------------------------------------------------------------

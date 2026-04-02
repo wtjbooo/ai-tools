@@ -174,59 +174,62 @@ export default async function CategoryPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
-      <div className="space-y-8">
-        <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-10 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-10 sm:py-12">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.08),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.06),transparent_26%)]" />
+      <div className="space-y-8 sm:space-y-12">
+        {/* Apple 风格的沉浸式头部 */}
+        <section className="relative overflow-hidden rounded-[36px] border border-black/[0.04] bg-white px-6 py-10 shadow-[0_8px_40px_rgba(0,0,0,0.03)] sm:px-12 sm:py-14">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.08),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.05),transparent_40%)]" />
 
-          <div className="relative max-w-4xl space-y-5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500 uppercase">
+          <div className="relative max-w-4xl space-y-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center rounded-full border border-black/[0.04] bg-zinc-50 px-3.5 py-1.5 text-[11px] font-bold tracking-[0.2em] text-zinc-500 uppercase shadow-sm">
                 Category
               </span>
 
-              <div className="text-sm text-gray-500">
-                <Link href="/" className="transition hover:text-gray-900">
+              <div className="text-[13px] font-medium text-zinc-500 flex items-center">
+                <Link href="/" className="transition-colors hover:text-zinc-900">
                   首页
                 </Link>
-                <span className="mx-2 text-gray-300">/</span>
-                <span>{category.name}</span>
+                <span className="mx-2 text-zinc-300">/</span>
+                <span className="text-zinc-800">{category.name}</span>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">
+            <div className="space-y-4">
+              <h1 className="text-[32px] font-bold tracking-tight text-zinc-900 sm:text-[48px] sm:leading-[1.1]">
                 {category.name}
               </h1>
 
-              <p className="max-w-3xl text-sm leading-7 text-gray-600 sm:text-[15px]">
+              <p className="max-w-3xl text-[15px] leading-relaxed text-zinc-500 sm:text-[16px]">
                 {lead}
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2.5">
-              <div className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3.5 py-2 text-sm text-gray-700">
+            <div className="flex flex-wrap gap-3">
+              <div className="inline-flex items-center rounded-full border border-black/[0.04] bg-white/60 backdrop-blur-md px-4 py-2 text-[13px] font-medium text-zinc-600 shadow-sm">
                 已收录 {category._count.tools} 款工具
               </div>
-              <div className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3.5 py-2 text-sm text-gray-700">
-                最近更新 {category.updatedAt.toLocaleDateString("zh-CN")}
+              <div className="inline-flex items-center rounded-full border border-black/[0.04] bg-white/60 backdrop-blur-md px-4 py-2 text-[13px] font-medium text-zinc-600 shadow-sm">
+                最后更新 {category.updatedAt.toLocaleDateString("zh-CN")}
               </div>
             </div>
 
-            <div className="rounded-[22px] border border-black/8 bg-white/78 px-4 py-4 text-sm leading-7 text-gray-600">
-              {hint}
+            {/* 精致的毛玻璃提示框 */}
+            <div className="mt-4 flex items-start gap-3 rounded-[24px] border border-blue-100/50 bg-blue-50/50 px-5 py-4 text-[14px] leading-relaxed text-blue-900/80 shadow-[0_2px_10px_rgba(59,130,246,0.02)]">
+               <svg className="mt-0.5 h-5 w-5 shrink-0 text-blue-500/80" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+               <div>{hint}</div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 pt-2">
               <Link
                 href="/"
-                className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
+                className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-6 py-3 text-[14px] font-semibold text-white transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:bg-black hover:shadow-[0_12px_28px_rgba(0,0,0,0.18)] active:scale-[0.98]"
               >
                 返回首页
               </Link>
 
               <Link
                 href="/featured"
-                className="inline-flex items-center rounded-full border border-black/8 bg-white px-5 py-2.5 text-sm text-gray-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-black/12 hover:bg-gray-50 hover:text-gray-950 active:scale-[0.98]"
+                className="inline-flex items-center justify-center rounded-full border border-black/[0.08] bg-white px-6 py-3 text-[14px] font-semibold text-zinc-700 shadow-sm transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:border-black/[0.15] hover:bg-zinc-50 hover:text-zinc-950 active:scale-[0.98]"
               >
                 浏览精选推荐
               </Link>
@@ -234,28 +237,32 @@ export default async function CategoryPage({ params }: PageProps) {
           </div>
         </section>
 
-        <section className="space-y-4">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1">
-              <h2 className="text-[26px] font-semibold tracking-tight text-gray-950 sm:text-[30px]">
+        <section className="space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between px-2">
+            <div className="space-y-1.5">
+              <h2 className="text-[24px] font-bold tracking-tight text-zinc-900 sm:text-[28px]">
                 收录工具
               </h2>
-              <p className="text-sm leading-6 text-gray-500">
+              <p className="text-[14px] leading-6 text-zinc-500">
                 优先展示更值得先看的产品，再继续按同类方向比较。
               </p>
             </div>
 
-            <div className="text-sm text-gray-500">
+            <div className="text-[13px] font-medium text-zinc-400">
               共 {tools.length} 条结果
             </div>
           </div>
 
           {tools.length === 0 ? (
-            <div className="rounded-[22px] border border-black/8 bg-white/92 p-6 text-sm leading-7 text-gray-500 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-              这个分类下暂时还没有可展示的工具。
+            <div className="flex min-h-[200px] flex-col items-center justify-center rounded-[32px] border border-black/[0.04] bg-white p-8 text-center shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-50 text-zinc-400">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+              </div>
+              <p className="text-[15px] font-medium text-zinc-600">这个分类下暂时还没有可展示的工具。</p>
+              <p className="mt-1 text-[13px] text-zinc-400">你可以去其他分类看看，或者提交你的工具。</p>
             </div>
           ) : (
-            <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {tools.map((tool) => (
                 <ToolCard key={tool.id} tool={tool} />
               ))}
