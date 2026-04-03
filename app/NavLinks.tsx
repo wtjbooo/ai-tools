@@ -20,8 +20,14 @@ const NAV_ITEMS: NavItem[] = [
     label: "反向提示词",
     href: "/reverse-prompt",
     match: "prefix",
-    badge: "新",
-    tone: "feature",
+    tone: "feature", // 去掉了"新"角标，让位给最新功能
+  },
+  {
+    label: "魔法扩写",
+    href: "/enhance-prompt",
+    match: "prefix",
+    badge: "新",    // 把代表最新迭代的角标给了它
+    tone: "feature", // 使用高级胶囊边框样式
   },
   { label: "提交工具", href: "/submit", match: "prefix" },
 ];
@@ -42,7 +48,6 @@ function getItemClassName(
   active: boolean,
   tone: NavItem["tone"] = "default",
 ) {
-  // 核心修改点 1：在这里加上了 shrink-0，防止按钮在手机端被挤扁
   const base =
     "group inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10";
 
@@ -80,11 +85,6 @@ export default function NavLinks({ className = "" }: { className?: string }) {
 
   return (
     <nav className={`w-full ${className}`} aria-label="Primary">
-      {/* 核心修改点 2：
-          - 移除 flex-wrap，改为 flex-nowrap 强制不换行
-          - 增加 overflow-x-auto 开启横向滚动
-          - 添加魔法类隐藏原生滚动条：[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
-      */}
       <div className="flex flex-nowrap items-center gap-2 sm:gap-1.5 overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-1 pr-4 sm:pr-0">
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item);
