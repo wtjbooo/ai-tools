@@ -1,10 +1,15 @@
+// app/api/user/history/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import prisma from "@/lib/prisma"; // 确保这里的 prisma 引入路径正确
+import prisma from "@/lib/prisma";
 
-export async function PATCH(req: Request) {
+/**
+ * 获取当前登录用户的生成历史记录
+ * 对应前端 GET /api/user/history
+ */
+export async function GET() {
   try {
-    // 1. 验证用户是否登录
+    // 1. 验证用户登录状态
     const sessionToken = cookies().get("session_token")?.value;
     if (!sessionToken) {
       return NextResponse.json({ error: "未登录" }, { status: 401 });
@@ -18,22 +23,24 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "登录已过期" }, { status: 401 });
     }
 
-    // 2. 解析请求数据
-    const body = await req.json();
-    const { nickname, avatar } = body;
-
-    // 3. 更新数据库 (Prisma 中对应的字段是 name 和 image)
-    const updatedUser = await prisma.user.update({
-      where: { id: session.userId },
-      data: {
-        name: nickname !== undefined ? nickname : undefined,
-        image: avatar !== undefined ? avatar : undefined,
+    // 2. 查询该用户的历史任务
+    // 按创建时间倒序排列，确保最新的在最前面
+    const history = await prisma.reversePromptTask.findMany({
+      where: {
+        userId: session.userId,
+      },
+      orderBy: {
+        createdAt: "desc",
       },
     });
 
-    return NextResponse.json({ success: true });
+    // 3. 返回查询结果
+    return NextResponse.json({
+      success: true,
+      data: history,
+    });
   } catch (error) {
-    console.error("[PROFILE_UPDATE_ERROR]", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    console.error("[USER_HISTORY_GET_ERROR]", error);
+    return NextResponse.json({ error: "获取历史记录失败" }, { status: 500 });
   }
 }

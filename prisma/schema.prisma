@@ -81,7 +81,6 @@ model Tool {
   reviewedAt           DateTime?
   publishedAt          DateTime?
   importedAt           DateTime?
-
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   isPublished          Boolean  @default(false)
@@ -131,6 +130,9 @@ model User {
   sessions      Session[]
 
   reversePromptTasks ReversePromptTask[]
+  
+  // 💡 新增：关联收藏夹
+  collections        Collection[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -147,7 +149,6 @@ model Account {
   expiresAt         DateTime?
   scope             String?
   idToken           String?
-
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -270,8 +271,8 @@ model ReversePromptTask {
   metaJson             String    @default("{}")
   rawResponseText      String    @default("")
   rawResultJson        String    @default("")
-  normalizedResultJson String    @default("")
-  resultJson           String    @default("")
+  normalizedResultJson String    @default("{}")
+  resultJson           String    @default("{}")
   errorMessage         String    @default("")
   startedAt            DateTime?
   finishedAt           DateTime?
@@ -283,5 +284,29 @@ model ReversePromptTask {
   @@index([status, createdAt])
   @@index([inputType, createdAt])
   @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// 💡 收藏模型：用于存放来自全网（小红书、抖音等）的素材
+model Collection {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  title       String   // 标题
+  description String?  @db.Text
+  coverUrl    String?  // 封面图预览
+  sourceUrl   String   // 素材原文链接
+  platform    String   @default("website") // 来源：xiaohongshu, douyin, website
+  
+  tags        String   @default("")
+  metaJson    String   @default("{}")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([platform])
   @@index([createdAt])
 }
