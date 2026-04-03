@@ -385,7 +385,6 @@ function LoginModal({ open, onClose }: ModalProps) {
         </div>
 
         <div className="space-y-3">
-          {/* 1. 仅保留邮箱登录按钮，采用 Apple 级悬浮动画 */}
           <button onClick={handleEmailLogin} className="group flex w-full items-center justify-between rounded-[20px] border border-black/[0.08] bg-zinc-50/50 p-4 transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-0.5 hover:border-black/[0.15] hover:bg-white hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] active:scale-[0.98]">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-[16px] border border-black/[0.04] bg-white shadow-sm transition-transform duration-300 group-hover:scale-105">
@@ -410,25 +409,29 @@ function LoginModal({ open, onClose }: ModalProps) {
   );
 }
 // ----------------------------------------------------------------------
-// ProfileModal (带历史记录的终极版)
+// ProfileModal (终极三合一版：资料 + 历史 + 收藏)
 // ----------------------------------------------------------------------
+
+type TabType = "profile" | "history" | "collections";
 
 function ProfileModal({ open, onClose }: ModalProps) {
   const { user, syncSession } = useAuth();
   const [mounted, setMounted] = useState(false);
   
-  // 新增：选项卡控制 (个人资料 vs 生成历史)
-  const [activeTab, setActiveTab] = useState<"profile" | "history">("profile");
+  // 修改：分段控制器支持 3 个 Tab
+  const [activeTab, setActiveTab] = useState<TabType>("profile");
   
-  // 个人资料相关状态
   const [nickname, setNickname] = useState("");
   const [avatar, setAvatar] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 历史记录相关状态
   const [historyItems, setHistoryItems] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // 新增：收藏相关状态
+  const [collectionItems, setCollectionItems] = useState<any[]>([]);
+  const [isLoadingCollection, setIsLoadingCollection] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -438,22 +441,35 @@ function ProfileModal({ open, onClose }: ModalProps) {
     if (open && user) {
       setNickname(user.nickname || user.name || "");
       setAvatar(user.avatar || "");
-      // 每次打开默认回到第一个 Tab
       setActiveTab("profile"); 
     }
   }, [open, user]);
 
-  // 当切换到“历史”Tab 时，请求我们刚刚写好的 API
+  // 监听 Tab 切换，按需加载数据
   useEffect(() => {
-    if (open && activeTab === "history") {
+    if (!open) return;
+
+    if (activeTab === "history") {
       setIsLoadingHistory(true);
       fetch("/api/user/history")
         .then((res) => res.json())
         .then((data) => {
-          if (data.tasks) setHistoryItems(data.tasks);
+          // 适配 data.tasks 或 data.data
+          setHistoryItems(data.tasks || data.data || []);
         })
         .catch((err) => console.error("加载历史失败", err))
         .finally(() => setIsLoadingHistory(false));
+    }
+
+    if (activeTab === "collections") {
+      setIsLoadingCollection(true);
+      fetch("/api/user/collection")
+        .then((res) => res.json())
+        .then((data) => {
+          setCollectionItems(data.data || []);
+        })
+        .catch((err) => console.error("加载收藏失败", err))
+        .finally(() => setIsLoadingCollection(false));
     }
   }, [activeTab, open]);
 
@@ -483,23 +499,16 @@ function ProfileModal({ open, onClose }: ModalProps) {
         const MAX_SIZE = 200;
         let width = img.width;
         let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-        } else {
-          if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-        }
-
+        if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } } 
+        else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
-        
         if (ctx) {
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, width, height);
           ctx.drawImage(img, 0, 0, width, height);
         }
-
         const dataUrl = canvas.toDataURL("image/webp", 0.8);
         setAvatar(dataUrl);
       };
@@ -511,25 +520,16 @@ function ProfileModal({ open, onClose }: ModalProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname, avatar }),
       });
-
-      if (res.ok) {
-        await syncSession();
-        onClose();
-      } else {
-        alert("保存失败，请稍后重试");
-      }
-    } catch (error) {
-      alert("网络错误");
-    } finally {
-      setIsLoading(false);
-    }
+      if (res.ok) { await syncSession(); onClose(); } 
+      else { alert("保存失败"); }
+    } catch (error) { alert("网络错误"); } 
+    finally { setIsLoading(false); }
   };
 
   if (!mounted || !open || !user) return null;
@@ -538,79 +538,44 @@ function ProfileModal({ open, onClose }: ModalProps) {
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-zinc-950/30 backdrop-blur-[2px] transition-opacity" onClick={onClose} />
       
-      <div className="relative w-full max-w-[420px] overflow-hidden rounded-[28px] bg-white p-6 sm:p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] transition-all">
+      <div className="relative w-full max-w-[440px] overflow-hidden rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] transition-all">
         <button onClick={onClose} className="absolute right-5 top-5 sm:right-6 sm:top-6 text-zinc-400 transition-colors hover:text-zinc-900 z-10">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        {/* 顶部 Tab 分段控制器 */}
-        <div className="flex bg-zinc-100/80 p-1.5 rounded-2xl mb-6 mt-2 relative">
-          <button 
-            onClick={() => setActiveTab("profile")} 
-            className={`flex-1 py-2 text-[13px] font-medium rounded-[12px] transition-all z-10 ${activeTab === "profile" ? "text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white" : "text-zinc-500 hover:text-zinc-700"}`}
-          >
-            个人资料
-          </button>
-          <button 
-            onClick={() => setActiveTab("history")} 
-            className={`flex-1 py-2 text-[13px] font-medium rounded-[12px] transition-all z-10 ${activeTab === "history" ? "text-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.04)] bg-white" : "text-zinc-500 hover:text-zinc-700"}`}
-          >
-            生成历史
-          </button>
+        {/* 顶部 Tab 分段控制器 (升级为 3 个) */}
+        <div className="flex bg-zinc-100/80 p-1 rounded-2xl mb-6 mt-2 relative">
+          {(["profile", "history", "collections"] as const).map((tab) => (
+            <button 
+              key={tab}
+              onClick={() => setActiveTab(tab)} 
+              className={`flex-1 py-2 text-[12px] font-semibold rounded-[12px] transition-all z-10 ${activeTab === tab ? "text-zinc-900 shadow-sm bg-white" : "text-zinc-500 hover:text-zinc-700"}`}
+            >
+              {tab === "profile" ? "资料" : tab === "history" ? "历史" : "收藏夹"}
+            </button>
+          ))}
         </div>
 
         {/* --- 面板 1：个人资料 --- */}
         {activeTab === "profile" && (
-          <form onSubmit={handleSave} className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+          <form onSubmit={handleSave} className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-col items-center justify-center pt-2">
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="relative h-[88px] w-[88px] cursor-pointer group rounded-full overflow-hidden shadow-sm border border-zinc-200 bg-zinc-100 flex items-center justify-center transition-all hover:ring-4 hover:ring-zinc-100"
-              >
-                {avatar ? (
-                  <img src={avatar} alt="预览" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-zinc-400 text-3xl font-medium">
-                    {nickname ? nickname.charAt(0).toUpperCase() : "?"}
-                  </span>
-                )}
+              <div onClick={() => fileInputRef.current?.click()} className="relative h-[88px] w-[88px] cursor-pointer group rounded-full overflow-hidden shadow-sm border border-zinc-200 bg-zinc-100 flex items-center justify-center transition-all hover:ring-4 hover:ring-zinc-100">
+                {avatar ? <img src={avatar} alt="预览" className="h-full w-full object-cover" /> : <span className="text-zinc-400 text-3xl font-medium">{nickname ? nickname.charAt(0).toUpperCase() : "?"}</span>}
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                   <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </div>
               </div>
               <p className="mt-3 text-[11px] text-zinc-400 font-medium">点击修改头像</p>
-              
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={handleImageChange}
-              />
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
             </div>
-
             <div>
               <label className="block text-[13px] font-medium text-zinc-700 mb-1.5 ml-1">昵称</label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="怎么称呼你？"
-                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900 transition-colors text-sm"
-                required
-              />
+              <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-1 focus:ring-zinc-900" required />
             </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full mt-2 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98]"
-            >
+            <button type="submit" disabled={isLoading} className="w-full py-3.5 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]">
               {isLoading ? "保存中..." : "保存修改"}
             </button>
           </form>
@@ -618,46 +583,39 @@ function ProfileModal({ open, onClose }: ModalProps) {
 
         {/* --- 面板 2：生成历史 --- */}
         {activeTab === "history" && (
-          <div className="min-h-[260px] max-h-[340px] overflow-y-auto pr-1 -mr-2 scroll-smooth animate-in fade-in zoom-in-95 duration-200 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full">
-            {isLoadingHistory ? (
-              <div className="flex flex-col items-center justify-center h-[200px] text-zinc-400 text-[13px]">
-                <div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-3" />
-                加载中...
-              </div>
-            ) : historyItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-[200px] text-zinc-400 text-[13px]">
-                <svg className="w-10 h-10 mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                暂无生成历史
-              </div>
-            ) : (
-              <div className="space-y-2.5">
+          <div className="min-h-[300px] max-h-[380px] overflow-y-auto pr-1 -mr-2 animate-in fade-in slide-in-from-bottom-2 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full">
+            {isLoadingHistory ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px]"><div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-3" />加载中...</div> : 
+             historyItems.length === 0 ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px] italic">暂无生成历史</div> : (
+              <div className="space-y-2.5 pb-4">
                 {historyItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    // 点击后直接带着 ?task=taskId 跳转到反向提示词页进行“无损恢复”
-                    href={`/reverse-prompt?task=${item.id}`} 
-                    onClick={onClose}
-                    className="group block border border-zinc-100 bg-zinc-50/50 p-4 rounded-2xl hover:bg-white hover:border-zinc-200 hover:shadow-sm transition-all text-left"
-                  >
+                  <Link key={item.id} href={`/reverse-prompt?task=${item.id}`} onClick={onClose} className="group block border border-zinc-100 bg-zinc-50/50 p-4 rounded-2xl hover:bg-white hover:border-zinc-200 hover:shadow-sm transition-all">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-0.5 bg-zinc-200/50 text-zinc-500 text-[10px] font-medium rounded-md uppercase tracking-wide">
-                        {item.targetPlatform || "通用平台"}
-                      </span>
-                      <span className="text-zinc-400 text-[11px] font-mono">
-                        {new Date(item.createdAt).toLocaleDateString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </span>
+                      <span className="px-2 py-0.5 bg-zinc-200/50 text-zinc-500 text-[10px] font-medium rounded-md uppercase tracking-wide">{item.targetPlatform || "通用"}</span>
+                      <span className="text-zinc-400 text-[11px]">{new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[13px] text-zinc-700 font-medium group-hover:text-zinc-900 transition-colors">
-                        {item.status === "completed" ? "✅ 提示词已生成" : item.status === "pending" ? "⏳ 正在生成中..." : "❌ 生成失败"}
-                      </p>
-                      <svg className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+                    <div className="flex items-center justify-between"><p className="text-[13px] text-zinc-700 font-medium">{item.status === "completed" ? "✅ 生成成功" : "⏳ 处理中"}</p><svg className="w-4 h-4 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" strokeWidth={2} /></svg></div>
                   </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- 面板 3：我的收藏 --- */}
+        {activeTab === "collections" && (
+          <div className="min-h-[300px] max-h-[380px] overflow-y-auto pr-1 -mr-2 animate-in fade-in slide-in-from-bottom-2 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full">
+            {isLoadingCollection ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px]"><div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-3" />加载中...</div> : 
+             collectionItems.length === 0 ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px] italic">收藏夹空空如也</div> : (
+              <div className="space-y-2.5 pb-4">
+                {collectionItems.map((item) => (
+                  <a key={item.id} href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="group block border border-zinc-100 bg-zinc-50/50 p-4 rounded-2xl hover:bg-white hover:border-zinc-200 hover:shadow-sm transition-all">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md uppercase tracking-wide">{item.platform}</span>
+                      <svg className="w-3.5 h-3.5 text-zinc-300 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                    </div>
+                    <h4 className="text-[14px] font-semibold text-zinc-800 line-clamp-1">{item.title}</h4>
+                    {item.description && <p className="text-[12px] text-zinc-500 line-clamp-2 mt-1 leading-relaxed">{item.description}</p>}
+                  </a>
                 ))}
               </div>
             )}
