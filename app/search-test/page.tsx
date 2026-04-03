@@ -2,19 +2,19 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Search, ExternalLink, Share2 } from "lucide-react";
+import { Sparkles, Search, ExternalLink, Heart } from "lucide-react";
 
 export default function SearchTestPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
   const handleSearch = async () => {
     if (!query) return;
     setLoading(true);
     
     try {
-      // 这里调用我们即将创建的 AI 搜索 API
       const res = await fetch("/api/ai/search-assets", {
         method: "POST",
         body: JSON.stringify({ query }),
@@ -25,6 +25,37 @@ export default function SearchTestPage() {
       console.error("搜索失败", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 处理收藏逻辑
+  const handleSave = async (item: any, index: number) => {
+    setSavingIndex(index);
+    try {
+      const res = await fetch("/api/user/collection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: item.title,
+          sourceUrl: item.url,
+          platform: item.platform,
+          description: item.reason,
+        }),
+      });
+      
+      if (res.ok) {
+        alert("✨ 收藏成功！请前往个人中心查看。");
+      } else {
+        const errorData = await res.json();
+        alert(errorData.error || "收藏失败，请确认是否已登录。");
+      }
+    } catch (error) {
+      console.error("收藏出错", error);
+      alert("网络错误，请稍后再试。");
+    } finally {
+      setSavingIndex(null);
     }
   };
 
@@ -60,21 +91,31 @@ export default function SearchTestPage() {
         {results.map((item, index) => (
           <div 
             key={index}
-            className="p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-xl hover:shadow-gray-200/50 transition-all group"
+            className="p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-xl hover:shadow-gray-200/50 transition-all group relative flex flex-col"
           >
             <div className="flex justify-between items-start mb-4">
               <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-600 uppercase tracking-wider">
                 {item.platform}
               </span>
-              <Sparkles className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" size={18} />
+              
+              {/* 收藏按钮 */}
+              <button 
+                onClick={() => handleSave(item, index)}
+                disabled={savingIndex === index}
+                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all disabled:opacity-50"
+                title="收藏该灵感"
+              >
+                <Heart size={18} className={savingIndex === index ? "fill-red-500 text-red-500 animate-pulse" : ""} />
+              </button>
             </div>
-            <h3 className="text-xl font-medium mb-2">{item.title}</h3>
-            <p className="text-gray-500 text-sm mb-6 leading-relaxed">{item.reason}</p>
+            
+            <h3 className="text-xl font-medium mb-2 pr-8">{item.title}</h3>
+            <p className="text-gray-500 text-sm mb-6 leading-relaxed flex-grow">{item.reason}</p>
             
             <a
               href={item.url}
               target="_blank"
-              className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+              className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 w-fit"
             >
               前往该平台寻找 <ExternalLink size={14} />
             </a>
