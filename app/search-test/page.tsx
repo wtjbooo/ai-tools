@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Heart, Camera, Wand2, Share2, ChevronRight, Sparkles } from "lucide-react";
+import { Search, Heart, Camera, Wand2, Share2, ChevronRight, Sparkles, Target } from "lucide-react";
 
 const PLATFORMS = ["抖音", "小红书", "快手", "B站", "微博", "知乎"];
 
@@ -20,15 +20,29 @@ const getPlatformConfig = (platform: string) => {
   }
 };
 
-// 极简 Apple 风的弥散渐变，用于背景
 const getGradient = (index: number) => {
   const gradients = [
     "from-zinc-100 to-zinc-50",
     "from-slate-100 to-gray-50",
     "from-neutral-100 to-zinc-50",
     "from-stone-100 to-gray-50",
+    "from-gray-100 to-slate-50",
   ];
   return gradients[index % gradients.length];
+};
+
+// 💡 新增：前端直接生成各大平台“原词搜索”的真实跳转链接
+const getPlatformSearchUrl = (platform: string, keyword: string) => {
+  const encoded = encodeURIComponent(keyword);
+  switch (platform) {
+    case "抖音": return `https://www.douyin.com/search/${encoded}`;
+    case "小红书": return `https://www.xiaohongshu.com/search_result?keyword=${encoded}`;
+    case "快手": return `https://www.kuaishou.com/search/video?searchKey=${encoded}`;
+    case "B站": return `https://search.bilibili.com/all?keyword=${encoded}`;
+    case "微博": return `https://s.weibo.com/weibo?q=${encoded}`;
+    case "知乎": return `https://www.zhihu.com/search?q=${encoded}`;
+    default: return `https://www.google.com/search?q=${encoded}`;
+  }
 };
 
 export default function SearchTestPage() {
@@ -69,7 +83,7 @@ export default function SearchTestPage() {
           description: item.reason,
         }),
       });
-      if (res.ok) alert("✨ 已收藏此搜索策略");
+      if (res.ok) alert("✨ 已成功收藏");
     } finally {
       setSavingIndex(null);
     }
@@ -122,32 +136,50 @@ export default function SearchTestPage() {
           groupedResults.map((group, groupIdx) => {
             const config = getPlatformConfig(group.platform);
             
+            // 💡 核心修改：在 AI 返回的结果最前面，强行插入一个“纯净原词”卡片
+            const combinedItems = [
+              {
+                isRaw: true,
+                title: "直接搜索原词，获取全量无过滤结果",
+                searchQuery: query,
+                reason: "不添加任何限制条件，探索该平台下关于此词条的所有基础内容。",
+                url: getPlatformSearchUrl(group.platform, query)
+              },
+              ...group.items
+            ];
+
             return (
               <div key={groupIdx} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between pb-3 border-b border-black/5">
                   <div className="flex items-center gap-3">
                     <h2 className="text-xl font-bold tracking-tight text-gray-900">{group.platform}</h2>
                     <span className="text-[11px] font-bold bg-black/[0.04] text-gray-600 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                      {group.items.length} 个搜索切入点
+                      {combinedItems.length} 个搜索选项
                     </span>
                   </div>
                 </div>
 
-                <div className={`grid gap-5 ${
-                  group.platform === "抖音" || group.platform === "快手" || group.platform === "小红书" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4" : 
-                  "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-                }`}>
-                  {group.items.map((item, index) => (
+                {/* 💡 将原本的 4 列升级为 5 列，完美容纳 1原词 + 4AI */}
+                <div className="grid gap-5 grid-cols-1 md:grid-cols-3 lg:grid-cols-5">
+                  {combinedItems.map((item, index) => (
                     <a 
                       key={index} 
                       href={item.url} 
                       target="_blank" 
                       className="group flex flex-col bg-white rounded-[24px] border border-black/[0.04] shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_14px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
                     >
-                      {/* 💡 替换图片为极简排版的高级感“搜索词”展示区 */}
                       <div className={`relative w-full flex flex-col justify-center items-center p-6 bg-gradient-to-br ${getGradient(index)} ${config.aspect} border-b border-black/[0.03]`}>
-                        <Sparkles className="absolute top-4 left-4 text-black/10" size={24} />
-                        <span className="text-[11px] font-bold tracking-[0.2em] text-gray-400 mb-2 uppercase">SUGGESTED QUERY</span>
+                        {/* 💡 区分原词和 AI 的背景图标与标签 */}
+                        {item.isRaw ? (
+                          <Target className="absolute top-4 left-4 text-black/10" size={24} />
+                        ) : (
+                          <Sparkles className="absolute top-4 left-4 text-black/10" size={24} />
+                        )}
+                        
+                        <span className={`text-[11px] font-bold tracking-[0.2em] mb-2 uppercase ${item.isRaw ? 'text-gray-600' : 'text-gray-400'}`}>
+                          {item.isRaw ? "🎯 原词直达" : "✨ AI 推荐搜索词"}
+                        </span>
+                        
                         <h3 className="text-[18px] sm:text-[20px] font-bold text-gray-900 text-center leading-snug group-hover:scale-105 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]">
                           "{item.searchQuery}"
                         </h3>
