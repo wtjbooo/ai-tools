@@ -31,7 +31,6 @@ const getGradient = (index: number) => {
   return gradients[index % gradients.length];
 };
 
-// 💡 新增：前端直接生成各大平台“原词搜索”的真实跳转链接
 const getPlatformSearchUrl = (platform: string, keyword: string) => {
   const encoded = encodeURIComponent(keyword);
   switch (platform) {
@@ -111,18 +110,41 @@ export default function SearchTestPage() {
           </div>
           
           <div className="flex bg-black/[0.03] p-1 rounded-[14px] shrink-0">
-            <button 
-              onClick={() => setMode("photography")}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all ${mode === "photography" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
-            >
-              <Camera size={14} /> 现场/实拍反馈
-            </button>
-            <button 
-              onClick={() => setMode("creative")}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all ${mode === "creative" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
-            >
-              <Wand2 size={14} /> 深度/原理解析
-            </button>
+            
+            {/* 💡 按钮 1：包裹 group 类，增加优雅的悬浮提示框 */}
+            <div className="relative group">
+              <button 
+                onClick={() => setMode("photography")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all ${mode === "photography" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <Camera size={14} /> 现场/实拍反馈
+              </button>
+              
+              {/* 高级感 Tooltip (默认隐藏，hover时上浮显示) */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-max max-w-[200px] px-3.5 py-2.5 bg-gray-900/95 backdrop-blur-md text-white text-[11px] font-medium leading-relaxed rounded-[12px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 shadow-xl pointer-events-none translate-y-1 group-hover:translate-y-0 text-center">
+                引导 AI 为你挖掘真实的买家秀、避坑指南与落地效果。
+                {/* 气泡小箭头 */}
+                <div className="absolute -top-[5px] left-1/2 -translate-x-1/2 border-x-[6px] border-x-transparent border-b-[6px] border-b-gray-900/95"></div>
+              </div>
+            </div>
+
+            {/* 💡 按钮 2：包裹 group 类，增加优雅的悬浮提示框 */}
+            <div className="relative group">
+              <button 
+                onClick={() => setMode("creative")}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all ${mode === "creative" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                <Wand2 size={14} /> 深度/原理解析
+              </button>
+              
+              {/* 高级感 Tooltip */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-max max-w-[200px] px-3.5 py-2.5 bg-gray-900/95 backdrop-blur-md text-white text-[11px] font-medium leading-relaxed rounded-[12px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 shadow-xl pointer-events-none translate-y-1 group-hover:translate-y-0 text-center">
+                引导 AI 为你挖掘硬核科普、技术教程与底层逻辑。
+                {/* 气泡小箭头 */}
+                <div className="absolute -top-[5px] left-1/2 -translate-x-1/2 border-x-[6px] border-x-transparent border-b-[6px] border-b-gray-900/95"></div>
+              </div>
+            </div>
+
           </div>
           
           <button onClick={handleSearch} disabled={loading} className="h-12 px-8 bg-gray-900 text-white rounded-[14px] text-[15px] font-semibold hover:bg-black hover:shadow-md disabled:opacity-50 transition-all active:scale-[0.98]">
@@ -136,7 +158,6 @@ export default function SearchTestPage() {
           groupedResults.map((group, groupIdx) => {
             const config = getPlatformConfig(group.platform);
             
-            // 💡 核心修改：在 AI 返回的结果最前面，强行插入一个“纯净原词”卡片
             const combinedItems = [
               {
                 isRaw: true,
@@ -159,7 +180,6 @@ export default function SearchTestPage() {
                   </div>
                 </div>
 
-                {/* 💡 将原本的 4 列升级为 5 列，完美容纳 1原词 + 4AI */}
                 <div className="grid gap-5 grid-cols-1 md:grid-cols-3 lg:grid-cols-5">
                   {combinedItems.map((item, index) => (
                     <a 
@@ -169,7 +189,6 @@ export default function SearchTestPage() {
                       className="group flex flex-col bg-white rounded-[24px] border border-black/[0.04] shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_14px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
                     >
                       <div className={`relative w-full flex flex-col justify-center items-center p-6 bg-gradient-to-br ${getGradient(index)} ${config.aspect} border-b border-black/[0.03]`}>
-                        {/* 💡 区分原词和 AI 的背景图标与标签 */}
                         {item.isRaw ? (
                           <Target className="absolute top-4 left-4 text-black/10" size={24} />
                         ) : (
