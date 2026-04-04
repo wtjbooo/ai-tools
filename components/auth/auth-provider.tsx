@@ -88,14 +88,12 @@ function getDisplayName(user: AuthUser | null) {
   );
 }
 
-// 💡 核心修复函数：处理数据库字段到前端状态的映射
 function normalizeUser(value: unknown): AuthUser | null {
   if (!value || typeof value !== "object") {
     return null;
   }
   const record = value as Record<string, unknown>;
   
-  // 关键：Prisma 数据库字段是 image，但前端组件在找 avatar
   const rawImage = (record.image || record.avatar) as string | null;
 
   return {
@@ -441,13 +439,17 @@ function ProfileModal({ open, onClose }: ModalProps) {
     setMounted(true);
   }, []);
 
+  // 💡 修复重点：去掉了对 user 变量的依赖！
+  // 这样一来，在你去系统相册选图片、切屏导致 user 刷新时，
+  // 就不再会触发这个重置逻辑，你的本地预览就不会被覆盖了。
   useEffect(() => {
-    if (open && user) {
-      setNickname(user.nickname || user.name || "");
-      setAvatar(user.avatar || "");
+    if (open) {
+      setNickname(user?.nickname || user?.name || "");
+      setAvatar(user?.avatar || "");
       setActiveTab("profile"); 
     }
-  }, [open, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -526,7 +528,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        // 💡 修复重点：将原本的 { nickname, avatar } 转换为数据库 Schema 实际需要的 { name, image }
         body: JSON.stringify({ name: nickname, image: avatar }),
       });
       
@@ -534,7 +535,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
         await syncSession(); 
         onClose(); 
       } else { 
-        // 增加更直观的错误提示，方便排查后端状态
         const errorMsg = await res.text();
         alert(`保存失败，请检查后端状态或网络。详情: ${errorMsg.slice(0, 50)}`); 
       }
