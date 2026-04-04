@@ -413,6 +413,7 @@ function LoginModal({ open, onClose }: ModalProps) {
     document.body
   );
 }
+
 // ----------------------------------------------------------------------
 // ProfileModal (终极三合一版：资料 + 历史 + 收藏)
 // ----------------------------------------------------------------------
@@ -423,7 +424,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
   const { user, syncSession } = useAuth();
   const [mounted, setMounted] = useState(false);
   
-  // 修改：分段控制器支持 3 个 Tab
   const [activeTab, setActiveTab] = useState<TabType>("profile");
   
   const [nickname, setNickname] = useState("");
@@ -434,7 +434,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
   const [historyItems, setHistoryItems] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  // 新增：收藏相关状态
   const [collectionItems, setCollectionItems] = useState<any[]>([]);
   const [isLoadingCollection, setIsLoadingCollection] = useState(false);
 
@@ -450,7 +449,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
     }
   }, [open, user]);
 
-  // 监听 Tab 切换，按需加载数据
   useEffect(() => {
     if (!open) return;
 
@@ -459,7 +457,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
       fetch("/api/user/history")
         .then((res) => res.json())
         .then((data) => {
-          // 适配 data.tasks 或 data.data
           setHistoryItems(data.tasks || data.data || []);
         })
         .catch((err) => console.error("加载历史失败", err))
@@ -529,12 +526,23 @@ function ProfileModal({ open, onClose }: ModalProps) {
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname, avatar }),
+        // 💡 修复重点：将原本的 { nickname, avatar } 转换为数据库 Schema 实际需要的 { name, image }
+        body: JSON.stringify({ name: nickname, image: avatar }),
       });
-      if (res.ok) { await syncSession(); onClose(); } 
-      else { alert("保存失败"); }
-    } catch (error) { alert("网络错误"); } 
-    finally { setIsLoading(false); }
+      
+      if (res.ok) { 
+        await syncSession(); 
+        onClose(); 
+      } else { 
+        // 增加更直观的错误提示，方便排查后端状态
+        const errorMsg = await res.text();
+        alert(`保存失败，请检查后端状态或网络。详情: ${errorMsg.slice(0, 50)}`); 
+      }
+    } catch (error) { 
+      alert("网络错误，请检查连接"); 
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   if (!mounted || !open || !user) return null;
@@ -550,7 +558,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
           </svg>
         </button>
 
-        {/* 顶部 Tab 分段控制器 (升级为 3 个) */}
         <div className="flex bg-zinc-100/80 p-1 rounded-2xl mb-6 mt-2 relative">
           {(["profile", "history", "collections"] as const).map((tab) => (
             <button 
@@ -563,7 +570,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
           ))}
         </div>
 
-        {/* --- 面板 1：个人资料 --- */}
         {activeTab === "profile" && (
           <form onSubmit={handleSave} className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-col items-center justify-center pt-2">
@@ -586,7 +592,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
           </form>
         )}
 
-        {/* --- 面板 2：生成历史 --- */}
         {activeTab === "history" && (
           <div className="min-h-[300px] max-h-[380px] overflow-y-auto pr-1 -mr-2 animate-in fade-in slide-in-from-bottom-2 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full">
             {isLoadingHistory ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px]"><div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-3" />加载中...</div> : 
@@ -606,7 +611,6 @@ function ProfileModal({ open, onClose }: ModalProps) {
           </div>
         )}
 
-        {/* --- 面板 3：我的收藏 --- */}
         {activeTab === "collections" && (
           <div className="min-h-[300px] max-h-[380px] overflow-y-auto pr-1 -mr-2 animate-in fade-in slide-in-from-bottom-2 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full">
             {isLoadingCollection ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px]"><div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-3" />加载中...</div> : 
