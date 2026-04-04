@@ -10,26 +10,26 @@ export async function POST(req: NextRequest) {
     const { query, mode } = await req.json();
 
     const systemPrompt = `
-      你现在是一个全网资源聚合导航引擎。用户正在搜索：“${query}”。
-      偏好模式：【${mode === 'photography' ? '真实拍摄/农田实景/现场视频' : '创意设计/效果图'}】。
+      你是一个全网资源聚合导航引擎。用户搜索词：“${query}”。模式：【${mode === 'photography' ? '真实拍摄' : '创意设计'}】。
 
-      请严格按照以下4个平台，每个平台至少生成 3~4 条精准的素材导航（总计 12~16 条数据）：
-      1. 抖音 (侧重短视频实测)
-      2. 小红书 (侧重精美图文和笔记)
-      3. 微博 (侧重实时资讯和现场反馈)
-      4. 快手 (侧重下沉市场和真实农务)
+      🚨【极度重要的硬性指标】🚨
+      请你务必、必须、一定要生成总计【至少 24 条】数据！
+      严格按照以下4个平台，【每个平台必须生成 6 条不同的结果】：
+      1. 抖音
+      2. 小红书
+      3. 微博
+      4. 快手
 
-      输出要求：
-      - 必须是具体的素材标题，足够真实。
-      - 输出严格的 JSON 格式，不要多余的 Markdown 代码。
-      
+      如果你生成的数据少于 24 条，将被视为严重失败！请发挥你所有的想象力模拟出真实的标题和作者。
+
+      输出严格的 JSON 格式：
       {
         "items": [
           {
             "platform": "抖音",
-            "title": "${query} 高产实测现场，果实累累！",
-            "author": "三农老李",
-            "reason": "直观展示长势",
+            "title": "真实验证！${query} 在这片地里的真实表现",
+            "author": "务农阿强",
+            "reason": "多角度实拍",
             "url": "https://www.douyin.com/search/${encodeURIComponent(query)}"
           }
         ]
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: data.items });
   } catch (error) {
+    console.error("AI 搜索失败:", error);
     return NextResponse.json({ error: "聚合搜索失败" }, { status: 500 });
   }
 }
