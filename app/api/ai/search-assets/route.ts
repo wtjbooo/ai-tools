@@ -7,50 +7,51 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 export async function POST(req: NextRequest) {
   try {
-    const { query } = await req.json();
-
-    if (!query) {
-      return NextResponse.json({ error: "请输入搜索需求" }, { status: 400 });
-    }
+    const { query, mode } = await req.json();
 
     const systemPrompt = `
-      你是一个资深的 AI 素材猎手。你的任务是根据用户输入的素材需求，生成在主流社交和设计平台上的精准搜索建议。
+      你现在是一个全网实拍素材聚合引擎。用户正在寻找关于“${query}”的内容。
+      你的目标是模拟并生成针对【${mode === 'photography' ? '真实拍摄/现场视频/农田实景' : '创意设计/包装效果'}】的聚合搜索结果。
       
-      请针对以下平台生成搜索策略：
-      1. 小红书 (Xiaohongshu)：侧重审美、灵感、UI布局。
-      2. 抖音 (Douyin)：侧重动态视频、特效、实操效果。
-      3. 站酷 (Zcool)：侧重专业平面、3D、大屏设计稿。
-      
-      输出必须是严格的 JSON 格式，包含一个 suggestions 数组，结构如下：
+      请覆盖以下平台：
+      1. 微博 (Weibo)：侧重实时现场、新闻图片、博主实拍。链接：https://s.weibo.com/weibo?q={keyword}
+      2. 抖音 (Douyin)：侧重短视频实测。链接：https://www.douyin.com/search/{keyword}
+      3. 小红书 (Xiaohongshu)：侧重精美实拍图文。链接：https://www.xiaohongshu.com/search_result?keyword={keyword}
+      4. 快手/惠农网：侧重接地气的农田实操。
+
+      输出要求：
+      - 必须返回具体的“素材项目”，而不是搜索建议。
+      - 标题要真实。如果是实拍模式，标题应类似“${query}基地实拍”、“看看这批${query}长势如何”。
+      - 必须包含微博平台的结果。
+
+      输出严格的 JSON 格式：
       {
-        "suggestions": [
+        "items": [
           {
-            "platform": "平台名称",
-            "title": "针对该平台优化的搜索词",
-            "reason": "为什么要这么搜，以及能找到什么",
-            "url": "该平台的搜索直达链接"
+            "platform": "微博",
+            "title": "今日实拍：${query}现场情况分享",
+            "author": "三农频道",
+            "reason": "微博上最新的现场实拍图文，包含大量真实细节。",
+            "url": "https://s.weibo.com/weibo?q=${encodeURIComponent(query)}"
+          },
+          {
+            "platform": "抖音",
+            "title": "${query}品种对比实测视频",
+            "author": "种地小哥",
+            "reason": "高清视频展示了该品种的真实挂果情况。",
+            "url": "https://www.douyin.com/search/${encodeURIComponent(query)}"
           }
         ]
       }
-
-      搜索链接模板：
-      - 小红书: https://www.xiaohongshu.com/search_result?keyword={keyword}
-      - 抖音: https://www.douyin.com/search/{keyword}
-      - 站酷: https://www.zcool.com.cn/search/content?word={keyword}
-
-      请确保生成的 keyword 经过 URL 编码。用户需求：${query}
     `;
 
     const result = await model.generateContent(systemPrompt);
     const responseText = result.response.text();
-    
-    // 清理可能存在的 Markdown 代码块标记
     const cleanedJson = responseText.replace(/```json|```/g, "").trim();
     const data = JSON.parse(cleanedJson);
 
-    return NextResponse.json(data);
+    return NextResponse.json({ success: true, data: data.items });
   } catch (error) {
-    console.error("[AI_SEARCH_ERROR]", error);
-    return NextResponse.json({ error: "AI 搜索生成失败" }, { status: 500 });
+    return NextResponse.json({ error: "聚合搜索失败" }, { status: 500 });
   }
 }

@@ -88,18 +88,23 @@ function getDisplayName(user: AuthUser | null) {
   );
 }
 
+// 💡 核心修复函数：处理数据库字段到前端状态的映射
 function normalizeUser(value: unknown): AuthUser | null {
   if (!value || typeof value !== "object") {
     return null;
   }
   const record = value as Record<string, unknown>;
+  
+  // 关键：Prisma 数据库字段是 image，但前端组件在找 avatar
+  const rawImage = (record.image || record.avatar) as string | null;
+
   return {
     id: typeof record.id === "string" ? record.id : undefined,
     email: typeof record.email === "string" ? record.email : null,
     phone: typeof record.phone === "string" ? record.phone : null,
-    nickname: typeof record.nickname === "string" ? record.nickname : null,
+    nickname: (record.nickname || record.name) as string | null,
     name: typeof record.name === "string" ? record.name : null,
-    avatar: typeof record.avatar === "string" ? record.avatar : null,
+    avatar: rawImage, 
   };
 }
 
