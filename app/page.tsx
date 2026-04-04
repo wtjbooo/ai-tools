@@ -1,9 +1,12 @@
+// app/page.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { prisma } from "@/lib/db";
 import SearchBar from "@/components/SearchBar";
 import ToolCard from "@/components/ToolCard";
+// 💡 引入了需要用到的精美图标
+import { Search, Image as ImageIcon, Wand2, ArrowRight } from "lucide-react";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -333,30 +336,69 @@ function HeroAction({
   );
 }
 
-function FeatureEntryStrip() {
+// 💡 核心改动：把之前的单条 Banner 升级成了 Apple 质感的 3 联排套件
+function AIWorkspaceSuite() {
+  const tools = [
+    {
+      title: "全网搜索灵感",
+      desc: "打破信息茧房，AI 生成各平台精准搜索词策略。",
+      href: "/search-test", 
+      icon: <Search className="h-[18px] w-[18px] text-gray-700 transition-colors group-hover:text-black" />,
+      badge: "NEW",
+    },
+    {
+      title: "反向提示词",
+      desc: "上传关键帧或参考图，逆向拆解可复用的 Prompt。",
+      href: "/reverse-prompt",
+      icon: <ImageIcon className="h-[18px] w-[18px] text-gray-700 transition-colors group-hover:text-black" />,
+    },
+    {
+      title: "魔法扩写",
+      desc: "输入简单的短句想法，一键扩充为结构化完美提示词。",
+      href: "/enhance-prompt",
+      icon: <Wand2 className="h-[18px] w-[18px] text-gray-700 transition-colors group-hover:text-black" />,
+    },
+  ];
+
   return (
-    <section className="mx-auto max-w-[780px]">
-      <div className="flex flex-col gap-3 rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(250,250,250,0.92))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-        <div className="min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <div className="inline-flex items-center rounded-full border border-black/8 bg-white px-2.5 py-1 text-[10px] font-medium tracking-[0.18em] text-gray-500">
-            NEW FEATURE
-          </div>
-
-          <h2 className="text-[16px] font-semibold tracking-tight text-gray-950">
-            AI 反向提示词
-          </h2>
-
-          <p className="text-sm leading-6 text-gray-600">
-            上传关键帧，自动生成可复用 Prompt。
-          </p>
-        </div>
-
-        <Link
-          href="/reverse-prompt"
-          className="inline-flex shrink-0 items-center justify-center rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50"
-        >
-          立即体验
-        </Link>
+    <section className="mx-auto w-full max-w-[1024px] pt-1 sm:pt-2">
+      <div className="mb-4 ml-1 sm:ml-2 flex items-center justify-between">
+        {/* 极致留白的英文字母排版 */}
+        <h2 className="text-[11px] font-bold tracking-[0.2em] text-gray-400 uppercase">
+          AI Workspace
+        </h2>
+      </div>
+      
+      {/* 响应式网格：手机端 1 列，电脑端完美的 3 列 */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {tools.map((tool, idx) => (
+          <Link
+            key={idx}
+            href={tool.href}
+            className="group relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(255,255,255,0.4))] p-5 shadow-[0_4px_24px_rgba(0,0,0,0.02)] backdrop-blur-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-black/10 hover:bg-white hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)]"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-black/5 bg-white shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110">
+                {tool.icon}
+              </div>
+              {tool.badge && (
+                <span className="inline-flex items-center rounded-full bg-blue-50/80 px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-blue-600 uppercase shadow-[0_2px_8px_rgba(37,99,235,0.08)]">
+                  {tool.badge}
+                </span>
+              )}
+            </div>
+            
+            <div className="mt-6 space-y-1.5">
+              <h3 className="text-[15px] font-semibold tracking-tight text-gray-900 flex items-center gap-1.5">
+                {tool.title}
+                <ArrowRight className="h-3.5 w-3.5 text-gray-300 opacity-0 -translate-x-2 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-gray-900" />
+              </h3>
+              <p className="text-[12px] leading-relaxed text-gray-500 line-clamp-2">
+                {tool.desc}
+              </p>
+            </div>
+          </Link>
+        ))}
       </div>
     </section>
   );
@@ -375,8 +417,8 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
-      <div className="space-y-7 sm:space-y-9">
-        <div className="space-y-4 sm:space-y-5">
+      <div className="space-y-7 sm:space-y-10">
+        <div className="space-y-4 sm:space-y-6">
           <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-5 py-7 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-9">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.08),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.06),transparent_26%)]" />
 
@@ -414,7 +456,8 @@ export default async function HomePage() {
             </div>
           </section>
 
-          <FeatureEntryStrip />
+          {/* 💡 替换：这里使用了全新的高级感套件 */}
+          <AIWorkspaceSuite />
         </div>
 
         <section className="space-y-3.5 sm:space-y-4">
