@@ -17,12 +17,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { nickname, avatar } = body;
+    
+    // 💡 核心修复：接收前端传来的 name 和 image 字段
+    const { name, image } = body;
 
     // 严谨的更新逻辑：只有当有真实值时才覆盖，防止被空字符串洗掉
     const updateData: any = {};
-    if (nickname) updateData.name = nickname;
-    if (avatar) updateData.image = avatar; 
+    if (name) updateData.name = name;
+    if (image) updateData.image = image; 
 
     const updatedUser = await prisma.user.update({
       where: { id: session.userId },
