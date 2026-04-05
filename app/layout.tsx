@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -90,17 +91,12 @@ function Header() {
             href="/"
             className="inline-flex shrink-0 items-center gap-2 sm:gap-3 transition-opacity hover:opacity-90"
           >
-            {/* 💡 核心升级：更换为真实的图片 Logo，增加溢出隐藏 */}
-            <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 overflow-hidden shrink-0 items-center justify-center rounded-[14px] sm:rounded-[18px] border border-black/8 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+            {/* 💡 核心升级：更换为纯代码 SVG 矢量 Logo，彻底解决报错 */}
+            <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 overflow-hidden shrink-0 items-center justify-center rounded-[14px] sm:rounded-[18px] border border-black/8 bg-gray-900 shadow-[0_8px_20px_rgba(15,23,42,0.1)]">
               <img 
-                src="/logo.png" 
+                src="/logo.svg" 
                 alt="Logo" 
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 hover:scale-105" 
-                onError={(e) => { 
-                  // 防错机制：如果没找到图片，平滑切换回默认文字
-                  e.currentTarget.style.display = 'none'; 
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden'); 
-                }} 
               />
               <span className="hidden text-sm font-semibold tracking-tight text-gray-950">
                 AI
@@ -154,16 +150,12 @@ function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr_0.9fr]">
         <div className="space-y-4">
           <div className="inline-flex items-center gap-3">
-             {/* 💡 底部 Footer 同步更换真实 Logo */}
-            <div className="relative flex h-10 w-10 overflow-hidden items-center justify-center rounded-[18px] border border-black/8 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+             {/* 💡 底部 Footer 同步更换真实 SVG Logo */}
+            <div className="relative flex h-10 w-10 overflow-hidden items-center justify-center rounded-[18px] border border-black/8 bg-gray-900 shadow-[0_8px_20px_rgba(15,23,42,0.1)]">
               <img 
-                src="/logo.png" 
+                src="/logo.svg" 
                 alt="Logo" 
                 className="absolute inset-0 h-full w-full object-cover" 
-                onError={(e) => { 
-                  e.currentTarget.style.display = 'none'; 
-                  e.currentTarget.nextElementSibling?.classList.remove('hidden'); 
-                }} 
               />
               <span className="hidden text-sm font-semibold tracking-tight text-gray-950">
                 AI

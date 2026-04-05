@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { prisma } from "@/lib/db";
 import SearchBar from "@/components/SearchBar";
 import ToolCard from "@/components/ToolCard";
-import { Wand2, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -335,18 +335,22 @@ function HeroAction({
   );
 }
 
-// 💡 核心改动：用极其高级、克制的单一横向卡片，替代原本庞大占位的三网格。
+// 💡 核心改动：用 SVG 矢量图替代了纯黑白的魔法棒
 function AIWorkspaceEntry() {
   return (
     <section className="mx-auto w-full max-w-[1024px] pt-1 sm:pt-2">
-      {/* 我们暂定将它链接到一个名为 /workspace 的新路由，你可以随时更改 */}
       <Link 
         href="/workspace" 
         className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between overflow-hidden rounded-[28px] border border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0.4))] p-5 sm:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-black/10 hover:bg-white hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)]"
       >
         <div className="flex items-center gap-4 sm:gap-5">
-          <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] border border-black/5 bg-white shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110">
-            <Wand2 className="h-5 w-5 sm:h-6 sm:w-6 text-gray-900" />
+           {/* 💡 这里接入了纯净版、极具质感的分类 SVG 图标 */}
+          <div className="relative flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[14px] sm:rounded-[16px] border border-black/5 bg-gray-900 shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110 overflow-hidden">
+            <img 
+              src="/workspace.svg" 
+              alt="AI 灵感套件" 
+              className="absolute inset-0 h-full w-full object-cover"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -423,7 +427,6 @@ export default async function HomePage() {
             </div>
           </section>
 
-          {/* 💡 这里用单一的入口横条替换了刚才占位置的三个大卡片 */}
           <AIWorkspaceEntry />
         </div>
 
