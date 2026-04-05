@@ -69,6 +69,7 @@ export default function SearchTestPage() {
   };
 
   const handleSave = async (e: React.MouseEvent, item: any, index: number) => {
+    e.stopPropagation();
     e.preventDefault(); 
     setSavingIndex(index);
     try {
@@ -86,6 +87,38 @@ export default function SearchTestPage() {
     } finally {
       setSavingIndex(null);
     }
+  };
+
+  // 💡 核心黑科技：智能判断终端并尝试唤醒各大平台原生 App
+  const handleCardClick = (e: React.MouseEvent, platform: string, keyword: string, fallbackUrl: string) => {
+    e.preventDefault();
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      let scheme = "";
+      const encoded = encodeURIComponent(keyword);
+      // 各大厂底层协议唤起码
+      switch (platform) {
+        case "抖音": scheme = `snssdk1128://search/?keyword=${encoded}`; break;
+        case "小红书": scheme = `xhsdiscover://search/result?keyword=${encoded}`; break;
+        case "快手": scheme = `kwai://search?keyword=${encoded}`; break;
+        case "B站": scheme = `bilibili://search?keyword=${encoded}`; break;
+        case "微博": scheme = `sinaweibo://searchall?q=${encoded}`; break;
+        case "知乎": scheme = `zhihu://search?q=${encoded}`; break;
+      }
+
+      if (scheme) {
+        // 尝试唤醒 App
+        window.location.href = scheme;
+        // 设定一个 600ms 的延迟，如果没安装 App 导致唤醒失败，则自动跳去网页版兜底
+        setTimeout(() => {
+          window.open(fallbackUrl, "_blank");
+        }, 600);
+        return;
+      }
+    }
+    // 电脑端或未匹配的平台，直接新窗口打开网页
+    window.open(fallbackUrl, "_blank");
   };
 
   const groupedResults = PLATFORMS.map(platform => ({
@@ -110,8 +143,6 @@ export default function SearchTestPage() {
           </div>
           
           <div className="flex bg-black/[0.03] p-1 rounded-[14px] shrink-0">
-            
-            {/* 💡 按钮 1：包裹 group 类，增加优雅的悬浮提示框 */}
             <div className="relative group">
               <button 
                 onClick={() => setMode("photography")}
@@ -119,16 +150,12 @@ export default function SearchTestPage() {
               >
                 <Camera size={14} /> 现场/实拍反馈
               </button>
-              
-              {/* 高级感 Tooltip (默认隐藏，hover时上浮显示) */}
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-max max-w-[200px] px-3.5 py-2.5 bg-gray-900/95 backdrop-blur-md text-white text-[11px] font-medium leading-relaxed rounded-[12px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 shadow-xl pointer-events-none translate-y-1 group-hover:translate-y-0 text-center">
                 引导 AI 为你挖掘真实的买家秀、避坑指南与落地效果。
-                {/* 气泡小箭头 */}
                 <div className="absolute -top-[5px] left-1/2 -translate-x-1/2 border-x-[6px] border-x-transparent border-b-[6px] border-b-gray-900/95"></div>
               </div>
             </div>
 
-            {/* 💡 按钮 2：包裹 group 类，增加优雅的悬浮提示框 */}
             <div className="relative group">
               <button 
                 onClick={() => setMode("creative")}
@@ -136,15 +163,11 @@ export default function SearchTestPage() {
               >
                 <Wand2 size={14} /> 深度/原理解析
               </button>
-              
-              {/* 高级感 Tooltip */}
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-max max-w-[200px] px-3.5 py-2.5 bg-gray-900/95 backdrop-blur-md text-white text-[11px] font-medium leading-relaxed rounded-[12px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 shadow-xl pointer-events-none translate-y-1 group-hover:translate-y-0 text-center">
                 引导 AI 为你挖掘硬核科普、技术教程与底层逻辑。
-                {/* 气泡小箭头 */}
                 <div className="absolute -top-[5px] left-1/2 -translate-x-1/2 border-x-[6px] border-x-transparent border-b-[6px] border-b-gray-900/95"></div>
               </div>
             </div>
-
           </div>
           
           <button onClick={handleSearch} disabled={loading} className="h-12 px-8 bg-gray-900 text-white rounded-[14px] text-[15px] font-semibold hover:bg-black hover:shadow-md disabled:opacity-50 transition-all active:scale-[0.98]">
@@ -163,7 +186,7 @@ export default function SearchTestPage() {
                 isRaw: true,
                 title: "直接搜索原词，获取全量无过滤结果",
                 searchQuery: query,
-                reason: "不添加任何限制条件，探索该平台下关于此词条的所有基础内容。",
+                reason: "探索该平台下关于此词条的所有基础内容",
                 url: getPlatformSearchUrl(group.platform, query)
               },
               ...group.items
@@ -180,13 +203,13 @@ export default function SearchTestPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-5 grid-cols-1 md:grid-cols-3 lg:grid-cols-5">
+                <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                   {combinedItems.map((item, index) => (
                     <a 
                       key={index} 
                       href={item.url} 
-                      target="_blank" 
-                      className="group flex flex-col bg-white rounded-[24px] border border-black/[0.04] shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_14px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                      onClick={(e) => handleCardClick(e, group.platform, item.searchQuery, item.url)}
+                      className="group flex flex-col bg-white rounded-[24px] border border-black/[0.04] shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_14px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
                     >
                       <div className={`relative w-full flex flex-col justify-center items-center p-6 bg-gradient-to-br ${getGradient(index)} ${config.aspect} border-b border-black/[0.03]`}>
                         {item.isRaw ? (
@@ -217,7 +240,7 @@ export default function SearchTestPage() {
                         
                         <div className="flex items-center justify-between mt-4 pt-4 border-t border-black/5">
                           <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1">
-                            <Search size={12} /> 一键直达
+                            <Search size={12} /> App 内唤醒
                           </span>
                           
                           <div className="flex items-center gap-1">
