@@ -40,10 +40,13 @@ export default function WorkspacePage() {
       <div className="mx-auto max-w-5xl">
         {/* 头部标题区 */}
         <div className="mb-14 text-center space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="inline-flex items-center gap-2 rounded-full border border-black/5 bg-white px-3 py-1 text-[12px] font-medium tracking-[0.1em] text-gray-500 shadow-sm uppercase">
+          
+          {/* 💡 核心修改：将英文改为带有高级感字间距的中文 */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-black/5 bg-white px-3.5 py-1.5 text-[12px] font-bold tracking-[0.15em] text-gray-600 shadow-sm">
             <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-            Official Tools
+            官方原生工具
           </div>
+          
           <h1 className="text-3xl font-bold tracking-tight text-gray-950 sm:text-5xl">
             AI 灵感套件
           </h1>

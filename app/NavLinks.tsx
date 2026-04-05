@@ -1,110 +1,55 @@
+// app/NavLinks.tsx
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type NavItem = {
-  label: string;
-  href: string;
-  match?: "exact" | "prefix";
-  badge?: string;
-  tone?: "default" | "feature";
-};
-
-const NAV_ITEMS: NavItem[] = [
-  { label: "首页", href: "/", match: "exact" },
-  { label: "精选推荐", href: "/featured", match: "prefix" },
-  { label: "最新收录", href: "/latest", match: "prefix" },
-  { label: "热门工具", href: "/popular", match: "prefix" },
-  {
-    label: "反向提示词",
-    href: "/reverse-prompt",
-    match: "prefix",
-    tone: "feature", // 去掉了"新"角标，让位给最新功能
-  },
-  {
-    label: "魔法扩写",
-    href: "/enhance-prompt",
-    match: "prefix",
-    badge: "新",    // 把代表最新迭代的角标给了它
-    tone: "feature", // 使用高级胶囊边框样式
-  },
-  { label: "提交工具", href: "/submit", match: "prefix" },
+// 💡 核心升级：精简导航，合并复杂的 AI 功能为单一的“灵感套件”
+const NAV_ITEMS = [
+  { label: "首页", href: "/" },
+  { label: "精选推荐", href: "/featured" },
+  { label: "最新收录", href: "/latest" },
+  { label: "热门工具", href: "/popular" },
+  { label: "AI 灵感套件", href: "/workspace", badge: "HOT" },
+  { label: "提交工具", href: "/submit" },
 ];
 
-function isActive(pathname: string, item: NavItem) {
-  if (item.match === "exact") {
-    return pathname === item.href;
-  }
-
-  if (item.href === "/") {
-    return pathname === "/";
-  }
-
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
-}
-
-function getItemClassName(
-  active: boolean,
-  tone: NavItem["tone"] = "default",
-) {
-  const base =
-    "group inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10";
-
-  if (active) {
-    return [
-      base,
-      "bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]",
-    ].join(" ");
-  }
-
-  if (tone === "feature") {
-    return [
-      base,
-      "border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(248,250,252,0.90))] text-gray-800 hover:-translate-y-0.5 hover:border-black/12 hover:bg-white hover:text-gray-950",
-    ].join(" ");
-  }
-
-  return [
-    base,
-    "text-gray-700 hover:-translate-y-0.5 hover:bg-white/82 hover:text-gray-950",
-  ].join(" ");
-}
-
-function getBadgeClassName(active: boolean) {
-  return [
-    "hidden items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium sm:inline-flex",
-    active
-      ? "bg-white/12 text-white"
-      : "border border-black/8 bg-white/90 text-gray-500",
-  ].join(" ");
-}
-
-export default function NavLinks({ className = "" }: { className?: string }) {
+export default function NavLinks() {
   const pathname = usePathname();
 
   return (
-    <nav className={`w-full ${className}`} aria-label="Primary">
-      <div className="flex flex-nowrap items-center gap-2 sm:gap-1.5 overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] py-1 pr-4 sm:pr-0">
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item);
+    <nav className="flex items-center gap-1 sm:gap-2">
+      {NAV_ITEMS.map((item) => {
+        // 智能判断当前页面路径，给对应按钮打上黑底高亮
+        const isActive =
+          pathname === item.href ||
+          (item.href !== "/" && pathname?.startsWith(item.href));
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={getItemClassName(active, item.tone)}
-            >
-              <span>{item.label}</span>
-
-              {item.badge ? (
-                <span className={getBadgeClassName(active)}>{item.badge}</span>
-              ) : null}
-            </Link>
-          );
-        })}
-      </div>
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] sm:text-[14px] font-medium transition-all duration-200 ${
+              isActive
+                ? "bg-black text-white shadow-md"
+                : "text-gray-600 hover:bg-black/5 hover:text-gray-900"
+            }`}
+          >
+            {item.label}
+            {item.badge && (
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wider ${
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "bg-blue-50 text-blue-600 border border-blue-100"
+                }`}
+              >
+                {item.badge}
+              </span>
+            )}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

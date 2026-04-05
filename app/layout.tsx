@@ -84,20 +84,28 @@ function Header() {
   return (
     <header className="sticky top-0 z-40">
       <div className="border-b border-black/6 bg-white/78 backdrop-blur-xl">
-        {/* 优化了手机端的间距 gap 和 padding */}
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6">
           
-          {/* 1. 左侧 Logo 区域：限制收缩 (shrink-0) 保证头像不变形 */}
           <Link
             href="/"
             className="inline-flex shrink-0 items-center gap-2 sm:gap-3 transition-opacity hover:opacity-90"
           >
-            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-[14px] sm:rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
-              <span className="text-sm font-semibold tracking-tight text-gray-950">
+            {/* 💡 核心升级：更换为真实的图片 Logo，增加溢出隐藏 */}
+            <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 overflow-hidden shrink-0 items-center justify-center rounded-[14px] sm:rounded-[18px] border border-black/8 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+              <img 
+                src="/logo.png" 
+                alt="Logo" 
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 hover:scale-105" 
+                onError={(e) => { 
+                  // 防错机制：如果没找到图片，平滑切换回默认文字
+                  e.currentTarget.style.display = 'none'; 
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden'); 
+                }} 
+              />
+              <span className="hidden text-sm font-semibold tracking-tight text-gray-950">
                 AI
               </span>
             </div>
-            {/* 手机端稍微减小字号，隐藏副标题，给导航留出空间 */}
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold tracking-tight text-gray-950 sm:text-[15px]">
                 AI 工具目录
@@ -108,14 +116,12 @@ function Header() {
             </div>
           </Link>
 
-          {/* 2. 中间导航区域：开启横向平滑滚动，并隐藏原生滚动条 */}
           <div className="min-w-0 flex-1 mx-2 sm:mx-6">
             <div className="flex w-full overflow-x-auto items-center sm:justify-end scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <NavLinks />
             </div>
           </div>
 
-          {/* 3. 右侧登录按钮：固定大小，不参与挤压 */}
           <div className="shrink-0">
             <AuthButton />
           </div>
@@ -148,8 +154,18 @@ function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr_0.9fr]">
         <div className="space-y-4">
           <div className="inline-flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
-              <span className="text-sm font-semibold tracking-tight text-gray-950">
+             {/* 💡 底部 Footer 同步更换真实 Logo */}
+            <div className="relative flex h-10 w-10 overflow-hidden items-center justify-center rounded-[18px] border border-black/8 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+              <img 
+                src="/logo.png" 
+                alt="Logo" 
+                className="absolute inset-0 h-full w-full object-cover" 
+                onError={(e) => { 
+                  e.currentTarget.style.display = 'none'; 
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden'); 
+                }} 
+              />
+              <span className="hidden text-sm font-semibold tracking-tight text-gray-950">
                 AI
               </span>
             </div>
@@ -172,7 +188,7 @@ function Footer() {
           <div className="flex flex-col gap-2">
             <FooterLink href="/">首页</FooterLink>
             <FooterLink href="/featured">精选推荐</FooterLink>
-            <FooterLink href="/reverse-prompt">反向提示词</FooterLink>
+            <FooterLink href="/workspace">灵感套件</FooterLink>
             <FooterLink href="/submit">提交工具</FooterLink>
           </div>
         </div>
