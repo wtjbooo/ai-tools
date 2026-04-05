@@ -5,8 +5,7 @@ import type { ReactNode } from "react";
 import { prisma } from "@/lib/db";
 import SearchBar from "@/components/SearchBar";
 import ToolCard from "@/components/ToolCard";
-// 💡 引入了需要用到的精美图标
-import { Search, Image as ImageIcon, Wand2, ArrowRight } from "lucide-react";
+import { Wand2, ArrowRight } from "lucide-react";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -336,70 +335,38 @@ function HeroAction({
   );
 }
 
-// 💡 核心改动：把之前的单条 Banner 升级成了 Apple 质感的 3 联排套件
-function AIWorkspaceSuite() {
-  const tools = [
-    {
-      title: "全网搜索灵感",
-      desc: "打破信息茧房，AI 生成各平台精准搜索词策略。",
-      href: "/search-test", 
-      icon: <Search className="h-[18px] w-[18px] text-gray-700 transition-colors group-hover:text-black" />,
-      badge: "NEW",
-    },
-    {
-      title: "反向提示词",
-      desc: "上传关键帧或参考图，逆向拆解可复用的 Prompt。",
-      href: "/reverse-prompt",
-      icon: <ImageIcon className="h-[18px] w-[18px] text-gray-700 transition-colors group-hover:text-black" />,
-    },
-    {
-      title: "魔法扩写",
-      desc: "输入简单的短句想法，一键扩充为结构化完美提示词。",
-      href: "/enhance-prompt",
-      icon: <Wand2 className="h-[18px] w-[18px] text-gray-700 transition-colors group-hover:text-black" />,
-    },
-  ];
-
+// 💡 核心改动：用极其高级、克制的单一横向卡片，替代原本庞大占位的三网格。
+function AIWorkspaceEntry() {
   return (
     <section className="mx-auto w-full max-w-[1024px] pt-1 sm:pt-2">
-      <div className="mb-4 ml-1 sm:ml-2 flex items-center justify-between">
-        {/* 极致留白的英文字母排版 */}
-        <h2 className="text-[11px] font-bold tracking-[0.2em] text-gray-400 uppercase">
-          AI Workspace
-        </h2>
-      </div>
-      
-      {/* 响应式网格：手机端 1 列，电脑端完美的 3 列 */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {tools.map((tool, idx) => (
-          <Link
-            key={idx}
-            href={tool.href}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(255,255,255,0.4))] p-5 shadow-[0_4px_24px_rgba(0,0,0,0.02)] backdrop-blur-xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-black/10 hover:bg-white hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)]"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-black/5 bg-white shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110">
-                {tool.icon}
-              </div>
-              {tool.badge && (
-                <span className="inline-flex items-center rounded-full bg-blue-50/80 px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-blue-600 uppercase shadow-[0_2px_8px_rgba(37,99,235,0.08)]">
-                  {tool.badge}
-                </span>
-              )}
+      {/* 我们暂定将它链接到一个名为 /workspace 的新路由，你可以随时更改 */}
+      <Link 
+        href="/workspace" 
+        className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between overflow-hidden rounded-[28px] border border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0.4))] p-5 sm:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-black/10 hover:bg-white hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)]"
+      >
+        <div className="flex items-center gap-4 sm:gap-5">
+          <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[16px] border border-black/5 bg-white shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110">
+            <Wand2 className="h-5 w-5 sm:h-6 sm:w-6 text-gray-900" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-[16px] sm:text-[18px] font-bold tracking-tight text-gray-900">
+                AI 灵感套件
+              </h2>
+              <span className="inline-flex items-center rounded-full bg-blue-50/80 px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-blue-600 uppercase shadow-[0_2px_8px_rgba(37,99,235,0.08)]">
+                集成工具箱
+              </span>
             </div>
-            
-            <div className="mt-6 space-y-1.5">
-              <h3 className="text-[15px] font-semibold tracking-tight text-gray-900 flex items-center gap-1.5">
-                {tool.title}
-                <ArrowRight className="h-3.5 w-3.5 text-gray-300 opacity-0 -translate-x-2 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-gray-900" />
-              </h3>
-              <p className="text-[12px] leading-relaxed text-gray-500 line-clamp-2">
-                {tool.desc}
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
+            <p className="text-[12px] sm:text-[13px] leading-relaxed text-gray-500 max-w-md line-clamp-2 sm:line-clamp-1">
+              包含全网搜索灵感、反向提示词与魔法扩写。一键开启你的专属 AI 效率工作台。
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-5 w-full sm:mt-0 sm:w-auto flex shrink-0 items-center justify-center rounded-full bg-gray-900 px-6 py-2.5 sm:py-3 text-[13px] sm:text-[14px] font-semibold text-white transition-all duration-300 group-hover:bg-black group-hover:shadow-md group-active:scale-95">
+          进入套件 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </div>
+      </Link>
     </section>
   );
 }
@@ -456,8 +423,8 @@ export default async function HomePage() {
             </div>
           </section>
 
-          {/* 💡 替换：这里使用了全新的高级感套件 */}
-          <AIWorkspaceSuite />
+          {/* 💡 这里用单一的入口横条替换了刚才占位置的三个大卡片 */}
+          <AIWorkspaceEntry />
         </div>
 
         <section className="space-y-3.5 sm:space-y-4">
