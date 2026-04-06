@@ -10,11 +10,29 @@ import {
   useState,
 } from "react";
 
-// 1. 扩展最新的顶级模型库
-type AnalyzerModel = "gpt-5.4" | "claude-sonnet-4-6" | "gemini-3.1-pro-preview" | "deepseek";
+// 1. 商业化模型分层 (免费与PRO)
+type AnalyzerModel = 
+  | "gemini-free" 
+  | "gemini-3.1-pro-preview" 
+  | "claude-sonnet-4-6" 
+  | "gpt-5.4";
+  
 type OutputLanguage = "zh" | "en" | "bilingual";
 type OutputStyle = "simple" | "standard" | "pro";
-type TargetPlatform = "generic" | "midjourney" | "jimeng" | "keling" | "runway" | "pika" | "doubao";
+
+// 2. 扩容的目标生成平台
+type TargetPlatform = 
+  | "generic" 
+  | "midjourney" 
+  | "stablediffusion"
+  | "leonardo"
+  | "sora"
+  | "runway" 
+  | "luma"
+  | "pika" 
+  | "jimeng" 
+  | "keling" 
+  | "doubao";
 
 type AnalysisBlock = {
   label: string;
@@ -35,13 +53,12 @@ type ReversePromptResult = {
   disclaimer: string;
 };
 
-// 2. 预览类型新增 video 区分
 type PreviewItem = {
   key: string;
   name: string;
   size: number;
   url: string;
-  type: "image" | "video";
+  type: "image" | "video"; // 区分视频
 };
 
 type TaskMeta = {
@@ -66,27 +83,30 @@ const STYLE_LABELS: Record<OutputStyle, string> = {
 };
 
 const PLATFORM_LABELS: Record<TargetPlatform, string> = {
-  generic: "通用版",
-  midjourney: "Midjourney",
-  jimeng: "即梦",
-  keling: "可灵",
-  runway: "Runway",
-  pika: "Pika",
-  doubao: "豆包",
+  generic: "通用大模型 (基础描述)",
+  midjourney: "Midjourney V6",
+  stablediffusion: "Stable Diffusion",
+  leonardo: "Leonardo.ai",
+  sora: "Sora (OpenAI 视频)",
+  runway: "Runway Gen-3 (视频)",
+  luma: "Luma Dream Machine (视频)",
+  pika: "Pika Labs (视频)",
+  jimeng: "即梦 (Jimeng)",
+  keling: "可灵 (Kling)",
+  doubao: "豆包 (Doubao)",
 };
 
-// 更新前台展示的模型名称，保持极简专业
 const MODEL_LABELS: Record<AnalyzerModel, string> = {
-  "gpt-5.4": "GPT-5.4 (高速且均衡)",
-  "claude-sonnet-4-6": "Claude 4.6 Sonnet (艺术解析极佳)",
-  "gemini-3.1-pro-preview": "Gemini 3.1 Pro (视频/长图首选)",
-  "deepseek": "DeepSeek Vision",
+  "gemini-free": "🟢 Gemini Flash (完全免费 / 基础推荐)",
+  "gemini-3.1-pro-preview": "💎 Gemini 3.1 Pro (长视频首选 / PRO)",
+  "claude-sonnet-4-6": "👑 Claude 4.6 Sonnet (艺术感知极佳 / PRO)",
+  "gpt-5.4": "⚡ GPT-5.4 (极速与高智均衡 / PRO)",
 };
 
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
 const PLATFORM_OPTIONS = Object.entries(PLATFORM_LABELS) as Array<[TargetPlatform, string]>;
 
-// 3. 扩充文件类型与体积上限 (支持短视频)
+// 3. 放开视频支持限制
 const ACCEPTED_FILE_TYPES = "image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime";
 const MAX_FILE_COUNT = 4;
 const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 提升至 50MB 适配视频
@@ -117,34 +137,30 @@ function validateFiles(
   const requireAtLeastOne = options?.requireAtLeastOne ?? true;
 
   if (requireAtLeastOne && selectedFiles.length === 0) {
-    return "请上传参考图或视频素材";
+    return "请先上传参考图或视频素材";
   }
 
   if (selectedFiles.length > MAX_FILE_COUNT) {
     return `当前最多支持 ${MAX_FILE_COUNT} 个文件`;
   }
 
-  const hasInvalidType = selectedFiles.some(
-    (file) => !file.type.startsWith("image/") && !file.type.startsWith("video/")
-  );
-  if (hasInvalidType) {
-    return "仅支持 JPG / PNG / WEBP 图片或 MP4 / MOV 短视频";
+  if (selectedFiles.some((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"))) {
+    return "当前仅支持 JPG/PNG/WEBP 图片 或 MP4/MOV 视频";
   }
 
   const videoCount = selectedFiles.filter(f => f.type.startsWith("video/")).length;
   if (videoCount > 1) {
-    return "为保证解析深度，每次最多仅支持解析 1 个视频";
+    return "每次解析最多支持上传 1 个短视频";
   }
 
   const totalBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
   if (totalBytes > MAX_TOTAL_BYTES) {
-    return "请将总文件体积控制在 50MB 内";
+    return "总文件体积请控制在 50MB 内";
   }
 
   return "";
 }
 
-// 4. 组件全面套用 Apple 极简毛玻璃风格
 function PanelTitle({
   title,
   description,
@@ -155,13 +171,13 @@ function PanelTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-      <div className="space-y-1.5">
-        <h2 className="text-[20px] font-medium tracking-tight text-gray-900 sm:text-[22px]">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-1">
+        <h2 className="text-[21px] font-semibold tracking-tight text-gray-950 sm:text-[24px]">
           {title}
         </h2>
         {description ? (
-          <p className="text-[13px] leading-relaxed text-gray-500">{description}</p>
+          <p className="text-sm leading-6 text-gray-500">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -178,7 +194,7 @@ function CopyButton({ text }: { text: string }) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      window.alert("复制失败，请手动复制");
+      window.alert("复制失败，请手动复制内容");
     }
   }
 
@@ -186,7 +202,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="inline-flex items-center rounded-full border border-black/5 bg-white/80 backdrop-blur-sm px-3.5 py-1.5 text-[12px] font-medium text-gray-700 shadow-sm transition hover:scale-105 hover:border-black/10 hover:bg-gray-50"
+      className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50"
     >
       {copied ? "已复制" : "复制"}
     </button>
@@ -207,10 +223,10 @@ function OptionButton({
       type="button"
       onClick={onClick}
       className={[
-        "rounded-full border px-4 py-2 text-[13px] transition-all duration-300",
+        "rounded-full border px-4 py-2 text-sm transition-all duration-300",
         active
-          ? "border-transparent bg-gray-900 text-white shadow-md"
-          : "border-black/5 bg-gray-50/50 text-gray-600 hover:bg-gray-100/80 hover:text-gray-900",
+          ? "border-black bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]"
+          : "border-black/10 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50",
       ].join(" ")}
     >
       {children}
@@ -218,7 +234,6 @@ function OptionButton({
   );
 }
 
-// 核心容器：极致的毛玻璃与弥散阴影
 function SoftCard({
   children,
   className = "",
@@ -229,7 +244,7 @@ function SoftCard({
   return (
     <section
       className={[
-        "rounded-[24px] border border-black/5 bg-white/70 backdrop-blur-xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sm:p-8",
+        "rounded-[28px] border border-black/8 bg-white/70 backdrop-blur-xl p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-6",
         className,
       ].join(" ")}
     >
@@ -271,8 +286,7 @@ function recordTaskHistory(task: {
 }
 
 export default function ReversePromptPage() {
-  // 默认模型设为高速且全能的 GPT-5.4
-  const [analyzerModel, setAnalyzerModel] = useState<AnalyzerModel>("gpt-5.4");
+  const [analyzerModel, setAnalyzerModel] = useState<AnalyzerModel>("gemini-free");
   const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>("zh");
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("standard");
   const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>("generic");
@@ -289,7 +303,8 @@ export default function ReversePromptPage() {
 
   const displayTotalBytes = useMemo(() => {
     if (files.length > 0) return files.reduce((sum, f) => sum + f.size, 0);
-    if (restoredFiles.length > 0) return restoredFiles.reduce((sum, f) => sum + f.size, 0);
+    if (restoredFiles.length > 0)
+      return restoredFiles.reduce((sum, f) => sum + f.size, 0);
     return 0;
   }, [files, restoredFiles]);
 
@@ -326,6 +341,7 @@ export default function ReversePromptPage() {
   useEffect(() => {
     if (hasTriedRestore.current) return;
     hasTriedRestore.current = true;
+
     const taskId = getTaskIdFromUrl();
     if (!taskId) return;
 
@@ -362,7 +378,7 @@ export default function ReversePromptPage() {
         }, 80);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "恢复失败");
+        setError(err instanceof Error ? err.message : "恢复结果失败");
       } finally {
         if (!cancelled) setIsRestoring(false);
       }
@@ -379,14 +395,20 @@ export default function ReversePromptPage() {
     if (selectedFiles.length === 0) return;
     const nextError = validateFiles(selectedFiles);
 
-    // 智能引擎切换：如果是视频，自动切换到 Gemini 3.1 Pro
+    // 如果包含视频，自动切换到 Gemini PRO 推荐
     const hasVideo = selectedFiles.some(f => f.type.startsWith('video/'));
-    if (hasVideo && analyzerModel !== 'gemini-3.1-pro-preview') {
+    if (hasVideo && analyzerModel === 'gemini-free') {
         setAnalyzerModel('gemini-3.1-pro-preview'); 
     }
 
     if (nextError) {
+      setFiles([]);
+      setRestoredFiles([]);
+      setResult(null);
+      setTaskMeta(null);
       setError(nextError);
+      setPickerKey((value) => value + 1);
+      removeTaskIdFromUrl();
       return;
     }
 
@@ -415,7 +437,7 @@ export default function ReversePromptPage() {
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files?.length > 0) {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processSelectedFiles(Array.from(e.dataTransfer.files));
     }
   }
@@ -428,7 +450,7 @@ export default function ReversePromptPage() {
     setError("");
     setIsLoading(false);
     setIsRestoring(false);
-    setPickerKey((v) => v + 1);
+    setPickerKey((value) => value + 1);
     removeTaskIdFromUrl();
   }
 
@@ -453,22 +475,37 @@ export default function ReversePromptPage() {
       formData.append("outputStyle", outputStyle);
       formData.append("targetPlatform", targetPlatform);
 
-      files.forEach(file => formData.append("files", file));
+      for (const file of files) {
+        formData.append("files", file);
+      }
 
-      // 即将对接的后端接口路径
       const response = await fetch("/api/reverse-prompt", {
         method: "POST",
         body: formData,
       });
 
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error || "分析失败，请检查网络设置");
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "分析失败，请稍后再试");
+      }
+
+      const nextTaskMeta: TaskMeta = {
+        taskId: payload?.meta?.taskId,
+        model: payload?.meta?.model,
+        fileCount: payload?.meta?.fileCount,
+        outputLanguage: payload?.meta?.outputLanguage,
+        outputStyle: payload?.meta?.outputStyle,
+        targetPlatform: payload?.meta?.targetPlatform,
+      };
 
       setResult(payload.result as ReversePromptResult);
-      if (payload?.meta?.taskId) {
-        setTaskIdToUrl(payload.meta.taskId);
+      setTaskMeta(nextTaskMeta);
+
+      if (nextTaskMeta.taskId) {
+        setTaskIdToUrl(nextTaskMeta.taskId);
         recordTaskHistory({
-          taskId: payload.meta.taskId,
+          taskId: nextTaskMeta.taskId,
           fileCount: files.length,
           firstFileName: files[0]?.name || "已归档素材",
           createdAt: Date.now(),
@@ -479,57 +516,57 @@ export default function ReversePromptPage() {
         document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "分析失败，请检查网络设置");
+      setError(err instanceof Error ? err.message : "分析失败，请稍后再试");
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 bg-gray-50/30 min-h-screen">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
       <div className="space-y-6 sm:space-y-8">
-        
-        {/* 全局去除了重色的背景渐变，改为原生呼吸感留白 */}
-        <section className="relative px-2 py-4 sm:px-4 sm:py-6">
+        <section className="relative overflow-hidden rounded-[32px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-6 py-8 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-10">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.08),transparent_26%)]" />
+
           <div className="relative max-w-3xl space-y-5">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
               <Link
                 href="/"
-                className="inline-flex items-center rounded-full bg-white px-4 py-2 text-[13px] font-medium text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:scale-105 hover:text-gray-900"
+                className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
               >
-                ← 返回
+                ← 返回首页
               </Link>
-              <span className="inline-flex items-center rounded-full bg-gray-100/80 px-3 py-1.5 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
-                AI Reverse Prompt
+
+              <span className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">
+                AI REVERSE PROMPT
               </span>
             </div>
 
             <div className="space-y-3">
-              <h1 className="text-3xl font-medium tracking-tight text-gray-900 sm:text-[42px] sm:leading-tight">
-                解构视觉，重塑灵感。
+              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">
+                从关键帧反推专业 Prompt
               </h1>
-              <p className="max-w-2xl text-[15px] leading-relaxed text-gray-500">
-                上传关键帧或短视频，多模态视觉模型将精准提取主体、运镜与风格，为你自动生成适用于各大 AI 平台的专业级 Prompt。
+              <p className="max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
+                上传图像或短视频，多模态视觉模型将精准提取主体、运镜与风格，并自动适配国内外主流平台的专业级 Prompt。
               </p>
             </div>
           </div>
         </section>
 
         <SoftCard>
-          <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
-            <div className="space-y-8">
-              <PanelTitle
-                title="引擎配置"
-                description="选择最适合当前任务的解析大脑与目标平台。"
-              />
+          <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr]">
+            <div className="space-y-6">
+              <PanelTitle title="参数配置" description="配置解析引擎与输出偏好。" />
 
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-gray-700">多模态解析模型</label>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2 lg:col-span-1 xl:col-span-2">
+                  <label className="text-sm font-medium text-gray-900">
+                    解析大模型 (Vision Model)
+                  </label>
                   <select
                     value={analyzerModel}
                     onChange={(e) => setAnalyzerModel(e.target.value as AnalyzerModel)}
-                    className="w-full appearance-none rounded-[16px] border border-black/5 bg-gray-50/50 px-4 py-3 text-[14px] text-gray-900 outline-none transition focus:bg-white focus:ring-2 focus:ring-black/10 focus:border-transparent"
+                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-black/20"
                   >
                     {Object.entries(MODEL_LABELS).map(([key, label]) => (
                       <option key={key} value={key}>{label}</option>
@@ -537,12 +574,12 @@ export default function ReversePromptPage() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-gray-700">目标生成平台</label>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-900">目标生成平台</label>
                   <select
                     value={targetPlatform}
                     onChange={(e) => setTargetPlatform(e.target.value as TargetPlatform)}
-                    className="w-full appearance-none rounded-[16px] border border-black/5 bg-gray-50/50 px-4 py-3 text-[14px] text-gray-900 outline-none transition focus:bg-white focus:ring-2 focus:ring-black/10 focus:border-transparent"
+                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-black/20"
                   >
                     {PLATFORM_OPTIONS.map(([key, label]) => (
                       <option key={key} value={key}>{label}</option>
@@ -550,12 +587,12 @@ export default function ReversePromptPage() {
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[13px] font-medium text-gray-700">输出语言</label>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-900">输出语言</label>
                   <select
                     value={outputLanguage}
                     onChange={(e) => setOutputLanguage(e.target.value as OutputLanguage)}
-                    className="w-full appearance-none rounded-[16px] border border-black/5 bg-gray-50/50 px-4 py-3 text-[14px] text-gray-900 outline-none transition focus:bg-white focus:ring-2 focus:ring-black/10 focus:border-transparent"
+                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-black/20"
                   >
                     <option value="zh">中文</option>
                     <option value="en">English</option>
@@ -564,50 +601,43 @@ export default function ReversePromptPage() {
                 </div>
               </div>
 
-              {analyzerModel === 'gemini-3.1-pro-preview' && (
-                <div className="rounded-[16px] bg-blue-50/30 px-4 py-3 text-[13px] leading-relaxed text-blue-800/80 border border-blue-100/50">
-                  <span className="mr-1.5">🎬</span> 
-                  已开启 Gemini 3.1 Pro，目前专攻视频长流解析，支持复杂物理运镜拆解。
-                </div>
-              )}
-              {analyzerModel === 'claude-sonnet-4-6' && (
-                <div className="rounded-[16px] bg-purple-50/30 px-4 py-3 text-[13px] leading-relaxed text-purple-800/80 border border-purple-100/50">
-                  <span className="mr-1.5">🎨</span> 
-                  已开启 Claude 4.6 Sonnet，极其擅长艺术风格捕捉与人文情绪表达。
+              {analyzerModel !== 'gemini-free' && (
+                <div className="rounded-[18px] border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-xs leading-6 text-amber-800">
+                  👑 你当前选择的是 PRO 级模型，将消耗高级算力。
                 </div>
               )}
             </div>
 
-            <div className="space-y-6">
-              <PanelTitle
-                title="视觉素材"
-                description="支持拖拽。最高 4 张图片或 1 段视频 (50MB内)。"
-              />
+            <div className="space-y-4">
+              <PanelTitle title="上传参考素材" description="支持拖拽，可上传最高 50MB 的图片或短视频。" />
 
               <div 
-                className={`relative overflow-hidden rounded-[24px] border transition-all duration-300 p-2 ${
+                className={`rounded-[24px] border border-dashed transition-all duration-300 p-5 sm:p-6 ${
                   isDragging 
-                    ? "border-black/20 bg-gray-50 scale-[1.01]" 
-                    : "border-black/5 bg-white hover:border-black/10"
+                    ? "border-blue-500 bg-blue-50/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]" 
+                    : "border-black/12 bg-[linear-gradient(180deg,rgba(250,250,250,0.72),rgba(255,255,255,0.98))] hover:bg-white"
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
-                <div className="space-y-4 pointer-events-none p-4 sm:p-6">
-                  <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center text-center pointer-events-auto">
-                    <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-full transition-colors ${
-                      isDragging ? "bg-black text-white" : "bg-gray-50 text-gray-400"
+                <div className="space-y-4 pointer-events-none">
+                  <label className={`flex min-h-[190px] cursor-pointer flex-col items-center justify-center rounded-[22px] border bg-white px-6 py-8 text-center transition-all duration-300 pointer-events-auto ${
+                    isDragging ? "border-blue-200 shadow-sm scale-[1.01]" : "border-black/10 hover:border-black/15 hover:shadow-sm"
+                  }`}>
+                    <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
+                      isDragging ? "bg-blue-100 text-blue-600" : "bg-gray-50 text-gray-400"
                     }`}>
                       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
                     </div>
-                    <div className="text-[15px] font-medium text-gray-900">
-                      {isDragging ? "松手即可解析" : "点击或拖拽上传素材"}
+
+                    <div className={`text-sm font-medium transition-colors ${isDragging ? "text-blue-600" : "text-gray-900"}`}>
+                      {isDragging ? "松手即可上传" : "点击或拖拽上传素材"}
                     </div>
-                    <div className="mt-2 text-[13px] text-gray-400">
-                      支持 JPG / PNG / MP4 / MOV · 最高 50MB
+                    <div className="mt-2 text-xs leading-6 text-gray-500">
+                      支持 PNG / JPG / MP4 / MOV · 最多 50MB
                     </div>
 
                     <input
@@ -621,30 +651,29 @@ export default function ReversePromptPage() {
                   </label>
 
                   {previewItems.length > 0 && (
-                    <div className="mt-4 border-t border-black/5 pt-4 pointer-events-auto">
+                    <div className="space-y-3 pointer-events-auto">
                       <div className="grid gap-3 sm:grid-cols-2">
                         {previewItems.map((item) => (
-                          <div key={item.key} className="group relative overflow-hidden rounded-[16px] bg-gray-50 border border-black/5 shadow-sm">
-                            <div className="flex aspect-video items-center justify-center overflow-hidden">
+                          <div key={item.key} className="relative overflow-hidden rounded-[18px] border border-black/8 bg-white group">
+                            <div className="flex aspect-[16/10] items-center justify-center bg-gray-50">
                               {item.url ? (
                                 item.type === "video" ? (
-                                  <video src={item.url} className="h-full w-full object-cover" muted loop playsInline autoPlay />
+                                  <video src={item.url} className="h-full w-full object-cover" muted loop autoPlay playsInline />
                                 ) : (
                                   <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
                                 )
                               ) : (
                                 <span className="text-[11px] tracking-widest text-gray-400">ARCHIVED</span>
                               )}
-                              {/* 高级质感视频标识 */}
                               {item.type === "video" && (
-                                <div className="absolute top-2.5 right-2.5 rounded-full bg-white/20 backdrop-blur-md px-2 py-1 text-[10px] font-medium tracking-wide text-white border border-white/20 shadow-sm">
+                                <div className="absolute top-2 right-2 rounded-full bg-black/40 backdrop-blur-md px-2 py-0.5 text-[10px] text-white">
                                   VIDEO
                                 </div>
                               )}
                             </div>
-                            <div className="px-3 py-2.5 bg-white">
-                              <div className="truncate text-[13px] font-medium text-gray-900">{item.name}</div>
-                              <div className="text-[11px] text-gray-500">{formatBytes(item.size)}</div>
+                            <div className="space-y-1 px-3 py-3">
+                              <div className="truncate text-sm font-medium text-gray-900">{item.name}</div>
+                              <div className="text-xs text-gray-500">{formatBytes(item.size)}</div>
                             </div>
                           </div>
                         ))}
@@ -654,27 +683,27 @@ export default function ReversePromptPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={handleAnalyze}
                   disabled={isLoading || isRestoring}
-                  className="inline-flex h-11 items-center justify-center rounded-full bg-gray-900 px-6 text-[14px] font-medium text-white shadow-md transition-transform hover:scale-105 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                  className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
-                  {isLoading ? "解析流计算中..." : isRestoring ? "读取中..." : "启动深度反推"}
+                  {isLoading ? "解析计算中..." : isRestoring ? "恢复中..." : "开始反推分析"}
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
                   disabled={isLoading || isRestoring}
-                  className="inline-flex h-11 items-center justify-center rounded-full bg-white border border-black/5 px-6 text-[14px] font-medium text-gray-600 shadow-sm transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:bg-gray-50 disabled:opacity-60"
                 >
                   清空
                 </button>
               </div>
 
               {error && (
-                <div className="rounded-[16px] bg-red-50/50 px-4 py-3 text-[13px] text-red-600 border border-red-100/50">
+                <div className="rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
                   {error}
                 </div>
               )}
@@ -683,14 +712,15 @@ export default function ReversePromptPage() {
         </SoftCard>
 
         {(isLoading || isRestoring) && (
-          <SoftCard className="animate-pulse">
-            <PanelTitle title={isRestoring ? "同步历史中..." : "视神经拆解进行中..."} />
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-[16px] border border-black/5 bg-gray-50/50 p-5 space-y-3">
-                  <div className="h-2 w-1/3 rounded-full bg-gray-200" />
-                  <div className="h-2 w-4/5 rounded-full bg-gray-200" />
-                  <div className="h-2 w-2/3 rounded-full bg-gray-200" />
+          <SoftCard>
+            <PanelTitle title={isRestoring ? "正在恢复结果" : "正在生成结果"} description="多模态视觉模型正在深度拆解中..." />
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="rounded-[18px] border border-black/8 bg-white/86 p-4">
+                  <div className="mt-3 space-y-2">
+                    <div className="h-2.5 w-4/5 animate-pulse rounded-full bg-gray-200" />
+                    <div className="h-2.5 w-3/5 animate-pulse rounded-full bg-gray-200" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -698,26 +728,26 @@ export default function ReversePromptPage() {
         )}
 
         {result && (
-          <div id="reverse-prompt-result" className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div id="reverse-prompt-result" className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <SoftCard>
-              <PanelTitle title="画面结构体" description="语义化提取的视觉维度。" />
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[...result.summary, ...result.cinematography].map((item, idx) => (
-                  <div key={idx} className="rounded-[16px] border border-black/5 bg-white p-4 shadow-sm transition hover:shadow-md hover:border-black/10">
-                    <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{item.label}</div>
-                    <div className="mt-1.5 text-[14px] leading-relaxed text-gray-800">{item.value}</div>
+              <PanelTitle title="深度结构化拆解" description="大模型提取出的高置信度画面特征与构图关系。" />
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {[...result.summary, ...result.cinematography].map((item) => (
+                  <div key={item.label} className="rounded-[18px] border border-black/8 bg-white/86 px-4 py-3.5">
+                    <div className="text-xs text-gray-500">{item.label}</div>
+                    <div className="mt-1 text-sm leading-7 text-gray-800">{item.value}</div>
                   </div>
                 ))}
               </div>
             </SoftCard>
 
-            <SoftCard className="border-black/10 shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
+            <SoftCard>
               <PanelTitle
-                title="平台专属原生 Prompt"
-                description={`已针对 ${PLATFORM_LABELS[targetPlatform]} 底层模型完成调优。`}
+                title="平台专属适配版 (强烈推荐)"
+                description={`已针对 [${PLATFORM_LABELS[targetPlatform]}] 进行底层规则调优。`}
                 action={<CopyButton text={primaryPlatformPrompt} />}
               />
-              <div className="mt-6 space-y-5">
+              <div className="mt-5 space-y-4">
                 <div className="flex flex-wrap gap-2.5">
                   {PLATFORM_OPTIONS.map(([key, label]) => (
                     <OptionButton key={key} active={targetPlatform === key} onClick={() => setTargetPlatform(key)}>
@@ -725,8 +755,8 @@ export default function ReversePromptPage() {
                     </OptionButton>
                   ))}
                 </div>
-                <div className="rounded-[20px] bg-gray-50 p-5 border border-black/5">
-                  <div className="whitespace-pre-line text-[14px] leading-relaxed text-gray-900 font-mono selection:bg-black/10">
+                <div className="rounded-[22px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 sm:p-5">
+                  <div className="whitespace-pre-line rounded-[18px] bg-gray-50/90 px-5 py-5 text-sm leading-7 text-gray-800 border border-black/5 font-mono">
                     {primaryPlatformPrompt}
                   </div>
                 </div>
@@ -735,40 +765,32 @@ export default function ReversePromptPage() {
 
             <div className="grid gap-6 sm:grid-cols-2">
               <SoftCard>
-                <PanelTitle
-                  title="标准描述库"
-                  description="适用于基础二创与调优。"
-                  action={<CopyButton text={primaryPrompt} />}
-                />
+                <PanelTitle title="标准提示词库" action={<CopyButton text={primaryPrompt} />} />
                 <div className="mt-4 flex flex-wrap gap-2 mb-4">
                   {STYLE_OPTIONS.map(([key, label]) => (
                     <button
                       key={key}
                       onClick={() => setOutputStyle(key)}
-                      className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition ${outputStyle === key ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-50 text-gray-500 border border-black/5 hover:bg-gray-100'}`}
+                      className={`px-3 py-1 rounded-full text-xs transition ${outputStyle === key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
-                <div className="whitespace-pre-line rounded-[18px] bg-gray-50 px-5 py-4 text-[13px] leading-relaxed text-gray-800 border border-black/5">
+                <div className="whitespace-pre-line rounded-[18px] bg-gray-50 px-4 py-4 text-[13px] leading-7 text-gray-800">
                   {primaryPrompt}
                 </div>
               </SoftCard>
 
               <SoftCard>
-                <PanelTitle
-                  title="推荐 Negative Prompt"
-                  description="规避对应风格的常见瑕疵。"
-                  action={<CopyButton text={primaryNegativePrompt} />}
-                />
-                <div className="mt-4 whitespace-pre-line rounded-[18px] bg-red-50/30 px-5 py-4 text-[13px] leading-relaxed text-red-900/80 border border-red-100/50">
+                <PanelTitle title="推荐负面词 (Negative Prompt)" action={<CopyButton text={primaryNegativePrompt} />} />
+                <div className="mt-4 whitespace-pre-line rounded-[18px] bg-red-50/50 px-4 py-4 text-[13px] leading-7 text-red-900/80">
                   {primaryNegativePrompt}
                 </div>
               </SoftCard>
             </div>
-
-            <div className="px-2 pt-2 text-center text-[12px] text-gray-400">
+            
+            <div className="border-t border-black/10 px-1 pt-4 text-center text-xs leading-6 text-gray-500">
               {result.disclaimer}
             </div>
           </div>
