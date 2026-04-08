@@ -4,14 +4,15 @@ import { useState, useEffect, useRef } from "react";
 
 const STYLE_PILLS = ["通用", "🎬 电影质感", "📸 拍立得复古", "🤖 赛博朋克", "🌸 吉卜力动画", "🏛️ 史诗奇幻"];
 
+// 🚀 对齐：全网顶尖 AI 商业模型矩阵 (带精美 Emoji 和详细说明)
 const MODELS = [
-  { id: "gemini-free", name: "Gemini 基础版", badge: "免费" },
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "PRO" },
-  { id: "claude-sonnet-4-6", name: "Claude Sonnet", badge: "PRO" },
-  { id: "gpt-5.4", name: "GPT-5.4", badge: "PRO" },
+  { id: "gemini-free", name: "🟢 Gemini Flash (完全免费 / 基础推荐)" },
+  { id: "gemini-3.1-pro-preview", name: "💎 Gemini 3.1 Pro (长视频首选 / PRO)" },
+  { id: "claude-sonnet-4-6", name: "👑 Claude 4.6 Sonnet (艺术感知极佳 / PRO)" },
+  { id: "gpt-5.4", name: "⚡ GPT-5.4 (极速与高智均衡 / PRO)" },
 ];
 
-// 🚀 新增：全网顶尖 AI 平台矩阵 (包含图生图、文生图、视频)
+// 🚀 对齐：全网顶尖 AI 平台矩阵 (规避 Windows 国旗渲染 Bug)
 const PLATFORMS = [
   { id: "通用", name: "🌐 通用 (智能匹配)" },
   { id: "Midjourney", name: "🎨 Midjourney (出图)" },
@@ -20,9 +21,9 @@ const PLATFORMS = [
   { id: "Runway", name: "🎥 Runway Gen-3 (视频)" },
   { id: "Luma", name: "🎥 Luma Dream Machine (视频)" },
   { id: "Pika", name: "🎥 Pika Labs (视频)" },
-  { id: "即梦", name: "🇨🇳 即梦 Dreamina (图/视频)" },
-  { id: "可灵", name: "🇨🇳 可灵 Kling (视频)" },
-  { id: "豆包", name: "🇨🇳 豆包 Doubao (出图)" },
+  { id: "即梦", name: "🌠 即梦 Dreamina (图/视频)" },
+  { id: "可灵", name: "🎞️ 可灵 Kling (视频)" },       
+  { id: "豆包", name: "🥟 豆包 Doubao (出图)" },       
 ];
 
 function TypewriterEffect({ text, speed = 15 }: { text: string; speed?: number }) {
@@ -126,7 +127,7 @@ export default function EnhancePromptPage() {
               >
                 {MODELS.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name} {m.badge === "PRO" ? "(PRO)" : ""}
+                    {m.name}
                   </option>
                 ))}
               </select>
