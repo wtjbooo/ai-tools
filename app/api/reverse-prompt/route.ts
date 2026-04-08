@@ -342,7 +342,7 @@ export async function POST(request: Request) {
       );
       
       rawResponse = await response.text();
-      const payload = safeJsonParse(rawResponse, null);
+      const payload = safeJsonParse<any>(rawResponse, null); // 👈 这里加上 <any>
       if (!response.ok || !payload) throw new Error(payload?.error?.message || "Gemini 请求失败");
       rawResultText = stripJsonFence(getTextFromGeminiPayload(payload));
 
@@ -374,7 +374,7 @@ export async function POST(request: Request) {
       });
 
       rawResponse = await response.text();
-      const payload = safeJsonParse(rawResponse, null);
+      const payload = safeJsonParse<any>(rawResponse, null); // 👈 这里加上 <any>
       if (!response.ok || !payload) throw new Error(payload?.error?.message || "N1N 平台请求失败");
       rawResultText = stripJsonFence(getTextFromOpenAIPayload(payload));
     }
