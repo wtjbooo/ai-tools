@@ -78,23 +78,22 @@ function CustomDropdown({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 bg-transparent text-sm font-medium text-zinc-800 hover:text-blue-600 transition-colors py-1 outline-none"
       >
-        {/* 如果有 logo，展示 logo；否则展示占位圆圈 */}
         {selectedOption.logo ? (
-          <img src={selectedOption.logo} alt={selectedOption.name} className="w-4 h-4 object-contain rounded-full bg-zinc-100" />
+          <img src={selectedOption.logo} alt={selectedOption.name} className="w-4 h-4 object-contain rounded-full bg-zinc-100 shrink-0" />
         ) : (
-          <div className="w-4 h-4 rounded-full bg-zinc-200 flex items-center justify-center text-[8px] text-zinc-500 font-bold border border-zinc-300">
+          <div className="w-4 h-4 rounded-full bg-zinc-200 flex items-center justify-center text-[8px] text-zinc-500 font-bold border border-zinc-300 shrink-0">
             {selectedOption.name.charAt(0)}
           </div>
         )}
         <span>{selectedOption.name}</span>
-        <svg className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className={`w-4 h-4 text-zinc-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
-      {/* 悬浮菜单框 */}
+      {/* 🌟 核心修复：将 w-56 改为 w-[280px]，让悬浮框足够宽容纳所有文字 */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-56 rounded-2xl bg-white/90 backdrop-blur-2xl shadow-[0_8px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute top-full left-0 mt-2 w-[280px] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_12px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="max-h-64 overflow-y-auto custom-scrollbar px-1">
             {options.map((opt) => (
               <button
@@ -105,15 +104,17 @@ function CustomDropdown({
                 }`}
               >
                 {opt.logo ? (
-                  <img src={opt.logo} alt={opt.name} className="w-5 h-5 object-contain rounded-full bg-white shadow-sm" />
+                  <img src={opt.logo} alt={opt.name} className="w-5 h-5 object-contain rounded-full bg-white shadow-sm shrink-0" />
                 ) : (
-                  <div className="w-5 h-5 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">
+                  <div className="w-5 h-5 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200 shrink-0">
                     {opt.name.charAt(0)}
                   </div>
                 )}
+                {/* 文字占满剩余空间，不再提前被截断 */}
                 <span className="truncate flex-1 text-left">{opt.name}</span>
+                {/* 🌟 核心修复：添加 shrink-0 保护右侧角标不被挤压 */}
                 {opt.badge && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500">{opt.badge}</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0">{opt.badge}</span>
                 )}
               </button>
             ))}
