@@ -58,7 +58,7 @@ type PreviewItem = {
   name: string;
   size: number;
   url: string;
-  type: "image" | "video"; // 区分视频
+  type: "image" | "video";
 };
 
 type TaskMeta = {
@@ -81,35 +81,42 @@ const STYLE_LABELS: Record<OutputStyle, string> = {
   standard: "标准版",
   pro: "专业版",
 };
-
-const PLATFORM_LABELS: Record<TargetPlatform, string> = {
-  generic: "通用大模型 (基础描述)",
-  midjourney: "Midjourney V6",
-  stablediffusion: "Stable Diffusion",
-  leonardo: "Leonardo.ai",
-  sora: "Sora (OpenAI 视频)",
-  runway: "Runway Gen-3 (视频)",
-  luma: "Luma Dream Machine (视频)",
-  pika: "Pika Labs (视频)",
-  jimeng: "即梦 (Jimeng)",
-  keling: "可灵 (Kling)",
-  doubao: "豆包 (Doubao)",
-};
-
-const MODEL_LABELS: Record<AnalyzerModel, string> = {
-  "gemini-free": "🟢 Gemini Flash (完全免费 / 基础推荐)",
-  "gemini-3.1-pro-preview": "💎 Gemini 3.1 Pro (长视频首选 / PRO)",
-  "claude-sonnet-4-6": "👑 Claude 4.6 Sonnet (艺术感知极佳 / PRO)",
-  "gpt-5.4": "⚡ GPT-5.4 (极速与高智均衡 / PRO)",
-};
-
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
-const PLATFORM_OPTIONS = Object.entries(PLATFORM_LABELS) as Array<[TargetPlatform, string]>;
+
+// 🚀 新增：全网顶尖 AI 商业模型矩阵 (带高级 Logo 与角标)
+const MODELS = [
+  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png" },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "长视频首选", logo: "/logos/gemini.png" },
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "艺术感知极佳", logo: "/logos/claude.png" },
+  { id: "gpt-5.4", name: "GPT-5.4", badge: "极速与高智均衡", logo: "/logos/OpenAI.png" },
+];
+
+// 🚀 新增：全网顶尖 AI 平台矩阵 (完美对齐扩写页面)
+const PLATFORMS = [
+  { id: "generic", name: "通用大模型 (基础描述)", logo: null },
+  { id: "midjourney", name: "Midjourney V6", logo: "/logos/Midjourney.png" },
+  { id: "stablediffusion", name: "Stable Diffusion", logo: "/logos/Stable Diffusion.png" },
+  { id: "leonardo", name: "Leonardo.ai", logo: null }, 
+  { id: "sora", name: "Sora (OpenAI 视频)", logo: "/logos/sora.png" },
+  { id: "runway", name: "Runway Gen-3 (视频)", logo: "/logos/runway.png" },
+  { id: "luma", name: "Luma Dream Machine (视频)", logo: "/logos/luma.png" },
+  { id: "pika", name: "Pika Labs (视频)", logo: "/logos/pika.png" },
+  { id: "jimeng", name: "即梦 (Jimeng)", logo: "/logos/jimeng.png" },
+  { id: "keling", name: "可灵 (Kling)", logo: "/logos/kling.png" },
+  { id: "doubao", name: "豆包 (Doubao)", logo: "/logos/doubao.png" },
+];
+
+// 🚀 语言选项统一规范
+const LANGUAGES = [
+  { id: "zh", name: "中文", logo: null },
+  { id: "en", name: "English", logo: null },
+  { id: "bilingual", name: "中英双语", logo: null },
+];
 
 // 3. 放开视频支持限制
 const ACCEPTED_FILE_TYPES = "image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime";
 const MAX_FILE_COUNT = 4;
-const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 提升至 50MB 适配视频
+const MAX_TOTAL_BYTES = 50 * 1024 * 1024; 
 
 function getPromptByLanguage(value: PromptText, language: OutputLanguage) {
   if (language === "zh") return value.zh;
@@ -130,55 +137,110 @@ function isVideoFile(file: File | RestoredFile) {
   return /\.(mp4|webm|mov)$/i.test(file.name);
 }
 
-function validateFiles(
-  selectedFiles: File[],
-  options?: { requireAtLeastOne?: boolean },
-) {
+function validateFiles(selectedFiles: File[], options?: { requireAtLeastOne?: boolean }) {
   const requireAtLeastOne = options?.requireAtLeastOne ?? true;
-
-  if (requireAtLeastOne && selectedFiles.length === 0) {
-    return "请先上传参考图或视频素材";
-  }
-
-  if (selectedFiles.length > MAX_FILE_COUNT) {
-    return `当前最多支持 ${MAX_FILE_COUNT} 个文件`;
-  }
-
+  if (requireAtLeastOne && selectedFiles.length === 0) return "请先上传参考图或视频素材";
+  if (selectedFiles.length > MAX_FILE_COUNT) return `当前最多支持 ${MAX_FILE_COUNT} 个文件`;
   if (selectedFiles.some((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"))) {
     return "当前仅支持 JPG/PNG/WEBP 图片 或 MP4/MOV 视频";
   }
-
   const videoCount = selectedFiles.filter(f => f.type.startsWith("video/")).length;
-  if (videoCount > 1) {
-    return "每次解析最多支持上传 1 个短视频";
-  }
-
+  if (videoCount > 1) return "每次解析最多支持上传 1 个短视频";
   const totalBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
-  if (totalBytes > MAX_TOTAL_BYTES) {
-    return "总文件体积请控制在 50MB 内";
-  }
-
+  if (totalBytes > MAX_TOTAL_BYTES) return "总文件体积请控制在 50MB 内";
   return "";
 }
 
-function PanelTitle({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description?: string;
-  action?: ReactNode;
+// 🎨 高级 UI 组件：表单定制版 CustomDropdown
+function CustomDropdown({ 
+  options, 
+  value, 
+  onChange 
+}: { 
+  options: any[], 
+  value: string, 
+  onChange: (val: any) => void 
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const selectedOption = options.find(o => o.id === value) || options[0];
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // 判断是否为基础语言选项，用于免除占位圆圈
+  const isBasicConfig = selectedOption.id === "zh" || selectedOption.id === "en" || selectedOption.id === "bilingual";
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition hover:border-black/15 focus:border-black/20 focus:ring-2 focus:ring-black/5"
+      >
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          {selectedOption.logo ? (
+            <img src={selectedOption.logo} alt="" className="w-[18px] h-[18px] object-contain rounded-full bg-zinc-100 shrink-0" />
+          ) : !isBasicConfig ? (
+            <div className="w-[18px] h-[18px] rounded-full bg-zinc-100 flex items-center justify-center text-[9px] text-zinc-500 font-bold border border-zinc-200 shrink-0">
+              {selectedOption.name.charAt(0)}
+            </div>
+          ) : null}
+          <span className="truncate">{selectedOption.name}</span>
+        </div>
+        <svg className={`w-4 h-4 text-zinc-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1.5 w-full rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_12px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+          <div className="max-h-60 overflow-y-auto custom-scrollbar px-1.5">
+            {options.map((opt) => {
+              const isOptBasic = opt.id === "zh" || opt.id === "en" || opt.id === "bilingual";
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => { onChange(opt.id); setIsOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-2.5 py-2.5 text-sm rounded-xl transition-colors ${
+                    value === opt.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+                  }`}
+                >
+                  {opt.logo ? (
+                    <img src={opt.logo} alt="" className="w-5 h-5 object-contain rounded-full bg-white shadow-sm shrink-0" />
+                  ) : !isOptBasic ? (
+                    <div className="w-5 h-5 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200 shrink-0">
+                      {opt.name.charAt(0)}
+                    </div>
+                  ) : null}
+                  <span className="truncate flex-1 text-left">{opt.name}</span>
+                  {opt.badge && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0">{opt.badge}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelTitle({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="space-y-1">
         <h2 className="text-[21px] font-semibold tracking-tight text-gray-950 sm:text-[24px]">
           {title}
         </h2>
-        {description ? (
-          <p className="text-sm leading-6 text-gray-500">{description}</p>
-        ) : null}
+        {description ? <p className="text-sm leading-6 text-gray-500">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -187,7 +249,6 @@ function PanelTitle({
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(text);
@@ -197,7 +258,6 @@ function CopyButton({ text }: { text: string }) {
       window.alert("复制失败，请手动复制内容");
     }
   }
-
   return (
     <button
       type="button"
@@ -209,15 +269,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function OptionButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: ReactNode;
-  onClick: () => void;
-}) {
+function OptionButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -234,20 +286,9 @@ function OptionButton({
   );
 }
 
-function SoftCard({
-  children,
-  className = "",
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+function SoftCard({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <section
-      className={[
-        "rounded-[28px] border border-black/8 bg-white/70 backdrop-blur-xl p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-6",
-        className,
-      ].join(" ")}
-    >
+    <section className={["rounded-[28px] border border-black/8 bg-white/70 backdrop-blur-xl p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-6", className].join(" ")}>
       {children}
     </section>
   );
@@ -270,12 +311,7 @@ function getTaskIdFromUrl() {
   return new URL(window.location.href).searchParams.get("task") || "";
 }
 
-function recordTaskHistory(task: {
-  taskId: string;
-  fileCount: number;
-  firstFileName: string;
-  createdAt: number;
-}) {
+function recordTaskHistory(task: { taskId: string; fileCount: number; firstFileName: string; createdAt: number }) {
   if (typeof window === "undefined") return;
   try {
     const history = JSON.parse(localStorage.getItem("rp_history") || "[]");
@@ -303,8 +339,7 @@ export default function ReversePromptPage() {
 
   const displayTotalBytes = useMemo(() => {
     if (files.length > 0) return files.reduce((sum, f) => sum + f.size, 0);
-    if (restoredFiles.length > 0)
-      return restoredFiles.reduce((sum, f) => sum + f.size, 0);
+    if (restoredFiles.length > 0) return restoredFiles.reduce((sum, f) => sum + f.size, 0);
     return 0;
   }, [files, restoredFiles]);
 
@@ -395,7 +430,6 @@ export default function ReversePromptPage() {
     if (selectedFiles.length === 0) return;
     const nextError = validateFiles(selectedFiles);
 
-    // 如果包含视频，自动切换到 Gemini PRO 推荐
     const hasVideo = selectedFiles.some(f => f.type.startsWith('video/'));
     if (hasVideo && analyzerModel === 'gemini-free') {
         setAnalyzerModel('gemini-3.1-pro-preview'); 
@@ -559,45 +593,37 @@ export default function ReversePromptPage() {
               <PanelTitle title="参数配置" description="配置解析引擎与输出偏好。" />
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2 lg:col-span-1 xl:col-span-2">
+                
+                {/* 🚀 引擎下拉框改造：加入 z-index 确保下拉层级优先 */}
+                <div className="space-y-1.5 sm:col-span-2 lg:col-span-1 xl:col-span-2 relative z-30">
                   <label className="text-sm font-medium text-gray-900">
                     解析大模型 (Vision Model)
                   </label>
-                  <select
-                    value={analyzerModel}
-                    onChange={(e) => setAnalyzerModel(e.target.value as AnalyzerModel)}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-black/20"
-                  >
-                    {Object.entries(MODEL_LABELS).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
+                  <CustomDropdown 
+                    options={MODELS} 
+                    value={analyzerModel} 
+                    onChange={(val) => setAnalyzerModel(val as AnalyzerModel)} 
+                  />
                 </div>
 
-                <div className="space-y-1.5">
+                {/* 🚀 平台下拉框改造 */}
+                <div className="space-y-1.5 relative z-20">
                   <label className="text-sm font-medium text-gray-900">目标生成平台</label>
-                  <select
-                    value={targetPlatform}
-                    onChange={(e) => setTargetPlatform(e.target.value as TargetPlatform)}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-black/20"
-                  >
-                    {PLATFORM_OPTIONS.map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
+                  <CustomDropdown 
+                    options={PLATFORMS} 
+                    value={targetPlatform} 
+                    onChange={(val) => setTargetPlatform(val as TargetPlatform)} 
+                  />
                 </div>
 
-                <div className="space-y-1.5">
+                {/* 🚀 语言下拉框改造 */}
+                <div className="space-y-1.5 relative z-10">
                   <label className="text-sm font-medium text-gray-900">输出语言</label>
-                  <select
-                    value={outputLanguage}
-                    onChange={(e) => setOutputLanguage(e.target.value as OutputLanguage)}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition focus:border-black/20"
-                  >
-                    <option value="zh">中文</option>
-                    <option value="en">English</option>
-                    <option value="bilingual">中英双语</option>
-                  </select>
+                  <CustomDropdown 
+                    options={LANGUAGES} 
+                    value={outputLanguage} 
+                    onChange={(val) => setOutputLanguage(val as OutputLanguage)} 
+                  />
                 </div>
               </div>
 
@@ -744,14 +770,14 @@ export default function ReversePromptPage() {
             <SoftCard>
               <PanelTitle
                 title="平台专属适配版 (强烈推荐)"
-                description={`已针对 [${PLATFORM_LABELS[targetPlatform]}] 进行底层规则调优。`}
+                description={`已针对 [${PLATFORMS.find(p => p.id === targetPlatform)?.name}] 进行底层规则调优。`}
                 action={<CopyButton text={primaryPlatformPrompt} />}
               />
               <div className="mt-5 space-y-4">
                 <div className="flex flex-wrap gap-2.5">
-                  {PLATFORM_OPTIONS.map(([key, label]) => (
-                    <OptionButton key={key} active={targetPlatform === key} onClick={() => setTargetPlatform(key)}>
-                      {label}
+                  {PLATFORMS.map((p) => (
+                    <OptionButton key={p.id} active={targetPlatform === p.id} onClick={() => setTargetPlatform(p.id as TargetPlatform)}>
+                      {p.name.split(' ')[0]} {/* 截取平台名称前缀，如 "Sora" */}
                     </OptionButton>
                   ))}
                 </div>
