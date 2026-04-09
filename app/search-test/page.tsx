@@ -3,49 +3,56 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, Heart, Camera, Wand2, ChevronRight, Sparkles, Target } from "lucide-react";
 
-// 🚀 全网顶尖 AI 引擎矩阵 (带性格描述的富文本版本)
+// 🚀 全站统一：顶尖 AI 引擎矩阵 (极致富文本版)
 const MODELS = [
   { 
     id: "gemini-free", 
     name: "Gemini Flash", 
     badge: "完全免费", 
     logo: "/logos/gemini.png",
-    desc: "思维敏捷的侦察兵：响应极速，适合基础日常问题与全网通用搜索。"
+    desc: "思维敏捷的侦察兵：响应极速，全网通用搜索与基础灵感扩写的最佳入门之选。"
   },
   { 
-    id: "moonshot-v1-8k", // 注意这里的 ID 要和你 N1N API 支持的 Kimi 模型名一致
+    id: "deepseek-chat", 
+    name: "DeepSeek V3/R1", 
+    badge: "国产真神", 
+    logo: "/logos/deepseek.png",
+    desc: "极致理性的思考者：当前表现最惊艳的国产大模型，逻辑推理与深度解析能力极强。"
+  },
+  { 
+    id: "moonshot-v1-8k", 
     name: "Kimi 智能助手", 
     badge: "懂国人", 
     logo: "/logos/kimi.png",
-    desc: "记忆超群的图书管理员：国产之光，懂中文语境，擅长知乎长文本深度挖掘。"
+    desc: "记忆超群的图书管理员：国产之光，极度懂中文语境，擅长长文本与国内平台深度挖掘。"
   },
   { 
-    id: "doubao-lite-32k", // 同理，豆包的模型 ID
+    id: "doubao-lite-32k", 
     name: "豆包 Doubao", 
     badge: "接地气", 
     logo: "/logos/doubao.png",
-    desc: "平易近人的百事通：极致拟人，适合微博吃瓜、生活常识与日常攻略。"
+    desc: "平易近人的百事通：极致拟人，适合微博吃瓜、生活常识与小红书日常攻略。"
   },
   { 
     id: "gemini-3.1-pro-preview", 
     name: "Gemini 3.1 Pro", 
-    badge: "实用极客", 
+    badge: "多模态霸主", 
     logo: "/logos/gemini.png",
-    desc: "行动力超强的极客：发散性强，偏向实用主义、B站硬核评测与真实场景。"
+    desc: "视觉与视频的王者：谷歌原生旗舰，反推视频关键帧和处理复杂多模态任务的首选。"
   },
   { 
     id: "claude-sonnet-4-6", 
     name: "Claude 4.6 Sonnet", 
     badge: "文案大师", 
     logo: "/logos/claude.png",
-    desc: "心思细腻的文科生：共情力极强，极度擅长小红书/抖音的痛点捕捉与网感爆款。"
+    desc: "心思细腻的文科生：共情力极强，擅长小红书/抖音的痛点捕捉、画面扩写与网感爆款。"
   },
   { 
     id: "gpt-5.4", 
     name: "GPT-5.4", 
     badge: "全能六边形", 
     logo: "/logos/OpenAI.png",
-    desc: "逻辑严密的理科生：结构化极强，直击要害，适合 Google/知乎 的底层原理解析。"
+    desc: "逻辑严密的理科生：结构化极强，直击要害，Midjourney 硬核提示词与 Google 级深搜必备。"
   },
 ];
 

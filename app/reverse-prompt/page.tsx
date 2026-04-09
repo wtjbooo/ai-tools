@@ -83,12 +83,57 @@ const STYLE_LABELS: Record<OutputStyle, string> = {
 };
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
 
-// 🚀 新增：全网顶尖 AI 商业模型矩阵 (带高级 Logo 与角标)
+// 🚀 全站统一：顶尖 AI 引擎矩阵 (极致富文本版)
 const MODELS = [
-  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png" },
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "长视频首选", logo: "/logos/gemini.png" },
-  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "艺术感知极佳", logo: "/logos/claude.png" },
-  { id: "gpt-5.4", name: "GPT-5.4", badge: "极速与高智均衡", logo: "/logos/OpenAI.png" },
+  { 
+    id: "gemini-free", 
+    name: "Gemini Flash", 
+    badge: "完全免费", 
+    logo: "/logos/gemini.png",
+    desc: "思维敏捷的侦察兵：响应极速，全网通用搜索与基础灵感扩写的最佳入门之选。"
+  },
+  { 
+    id: "deepseek-chat", 
+    name: "DeepSeek V3/R1", 
+    badge: "国产真神", 
+    logo: "/logos/deepseek.png",
+    desc: "极致理性的思考者：当前表现最惊艳的国产大模型，逻辑推理与深度解析能力极强。"
+  },
+  { 
+    id: "moonshot-v1-8k", 
+    name: "Kimi 智能助手", 
+    badge: "懂国人", 
+    logo: "/logos/kimi.png",
+    desc: "记忆超群的图书管理员：国产之光，极度懂中文语境，擅长长文本与国内平台深度挖掘。"
+  },
+  { 
+    id: "doubao-lite-32k", 
+    name: "豆包 Doubao", 
+    badge: "接地气", 
+    logo: "/logos/doubao.png",
+    desc: "平易近人的百事通：极致拟人，适合微博吃瓜、生活常识与小红书日常攻略。"
+  },
+  { 
+    id: "gemini-3.1-pro-preview", 
+    name: "Gemini 3.1 Pro", 
+    badge: "多模态霸主", 
+    logo: "/logos/gemini.png",
+    desc: "视觉与视频的王者：谷歌原生旗舰，反推视频关键帧和处理复杂多模态任务的首选。"
+  },
+  { 
+    id: "claude-sonnet-4-6", 
+    name: "Claude 4.6 Sonnet", 
+    badge: "文案大师", 
+    logo: "/logos/claude.png",
+    desc: "心思细腻的文科生：共情力极强，擅长小红书/抖音的痛点捕捉、画面扩写与网感爆款。"
+  },
+  { 
+    id: "gpt-5.4", 
+    name: "GPT-5.4", 
+    badge: "全能六边形", 
+    logo: "/logos/OpenAI.png",
+    desc: "逻辑严密的理科生：结构化极强，直击要害，Midjourney 硬核提示词与 Google 级深搜必备。"
+  },
 ];
 
 // 🚀 新增：全网顶尖 AI 平台矩阵 (完美对齐扩写页面)
@@ -151,16 +196,8 @@ function validateFiles(selectedFiles: File[], options?: { requireAtLeastOne?: bo
   return "";
 }
 
-// 🎨 高级 UI 组件：表单定制版 CustomDropdown
-function CustomDropdown({ 
-  options, 
-  value, 
-  onChange 
-}: { 
-  options: any[], 
-  value: string, 
-  onChange: (val: any) => void 
-}) {
+// 🪄 全站统一组件：高级富文本下拉框 (支持双行描述与自适应宽度)
+function CustomDropdown({ options, value, onChange }: { options: any[], value: string, onChange: (val: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selectedOption = options.find(o => o.id === value) || options[0];
@@ -173,59 +210,65 @@ function CustomDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 判断是否为基础语言选项，用于免除占位圆圈
-  const isBasicConfig = selectedOption.id === "zh" || selectedOption.id === "en" || selectedOption.id === "bilingual";
-
   return (
-    <div className="relative w-full" ref={dropdownRef}>
-      <button
+    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+      {/* 默认状态：收起时的极简按钮 */}
+      <button 
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition hover:border-black/15 focus:border-black/20 focus:ring-2 focus:ring-black/5"
+        onClick={() => setIsOpen(!isOpen)} 
+        className="flex w-full items-center justify-between gap-3 bg-white text-[13px] font-semibold text-zinc-700 hover:text-black transition-colors outline-none py-2 px-3.5 rounded-xl sm:rounded-full border border-black/10 hover:bg-black/[0.02] shadow-sm"
       >
-        <div className="flex items-center gap-2.5 overflow-hidden">
+        <div className="flex items-center gap-2 overflow-hidden">
           {selectedOption.logo ? (
-            <img src={selectedOption.logo} alt="" className="w-[18px] h-[18px] object-contain rounded-full bg-zinc-100 shrink-0" />
-          ) : !isBasicConfig ? (
-            <div className="w-[18px] h-[18px] rounded-full bg-zinc-100 flex items-center justify-center text-[9px] text-zinc-500 font-bold border border-zinc-200 shrink-0">
+            <img src={selectedOption.logo} alt="" className="w-4 h-4 object-contain shrink-0" />
+          ) : (
+            <div className="w-4 h-4 rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0">
               {selectedOption.name.charAt(0)}
             </div>
-          ) : null}
+          )}
           <span className="truncate">{selectedOption.name}</span>
         </div>
-        <svg className={`w-4 h-4 text-zinc-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
+      {/* 展开状态：富文本悬浮面板 (宽度放宽到 360px 以容纳描述文字) */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1.5 w-full rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_12px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-          <div className="max-h-60 overflow-y-auto custom-scrollbar px-1.5">
-            {options.map((opt) => {
-              const isOptBasic = opt.id === "zh" || opt.id === "en" || opt.id === "bilingual";
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => { onChange(opt.id); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-2.5 py-2.5 text-sm rounded-xl transition-colors ${
-                    value === opt.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
-                  }`}
-                >
+        <div className="absolute top-full left-0 mt-2 w-[360px] max-w-[90vw] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_16px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+          <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
+            {options.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => { onChange(opt.id); setIsOpen(false); }}
+                className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}
+              >
+                {/* 左侧 Logo */}
+                <div className="shrink-0 mt-0.5">
                   {opt.logo ? (
-                    <img src={opt.logo} alt="" className="w-5 h-5 object-contain rounded-full bg-white shadow-sm shrink-0" />
-                  ) : !isOptBasic ? (
-                    <div className="w-5 h-5 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200 shrink-0">
+                    <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />
+                  ) : (
+                     <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">
                       {opt.name.charAt(0)}
                     </div>
-                  ) : null}
-                  <span className="truncate flex-1 text-left">{opt.name}</span>
-                  {opt.badge && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0">{opt.badge}</span>
                   )}
-                </button>
-              );
-            })}
+                </div>
+                
+                {/* 右侧：名称 + 徽章 + 富文本描述 */}
+                <div className="flex flex-col gap-1 pr-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold ${value === opt.id ? 'text-blue-700' : 'text-zinc-900'}`}>{opt.name}</span>
+                    {opt.badge && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0 border border-zinc-200/60">{opt.badge}</span>}
+                  </div>
+                  {opt.desc && (
+                    <p className={`text-[11.5px] leading-relaxed line-clamp-2 ${value === opt.id ? 'text-blue-600/80' : 'text-zinc-500'}`}>
+                      {opt.desc}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
