@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
+// 🚀 1. 引入全局组件，删掉原本写死在文件里的冗余代码！
+import TypewriterEffect from "@/components/TypewriterEffect";
+import CustomDropdown from "@/components/CustomDropdown";
+// 🚀 2. 引入我们封装的高级请求 Hook
+import { useAiTool } from "@/hooks/useAiTool";
 
 const STYLE_PILLS = ["通用", "🎬 电影质感", "📸 拍立得复古", "🤖 赛博朋克", "🌸 吉卜力动画", "🏛️ 史诗奇幻"];
 
-// 🚀 全站统一：顶尖 AI 引擎矩阵 (魔法扩写专属文案)
 const MODELS = [
   { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "响应极速的先行者 —— 适合快速生成基础描述，满足日常简单的扩写需求。" },
   { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "国产逻辑真神 —— 逻辑推理极强，能确保扩写出的画面构图严谨、符合常理。" },
@@ -15,7 +19,6 @@ const MODELS = [
   { id: "gpt-5.4", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "全能的创意导演 —— 结构化能力顶级，是生成 MJ 或 SD 工业级硬核提示词的首选。" },
 ];
 
-// 🚀 对齐：全网顶尖 AI 平台矩阵
 const PLATFORMS = [
   { id: "通用", name: "通用 (智能匹配)", logo: null },
   { id: "Midjourney", name: "Midjourney (出图)", logo: "/logos/Midjourney.png" },
@@ -29,144 +32,30 @@ const PLATFORMS = [
   { id: "豆包", name: "豆包 Doubao (出图)", logo: "/logos/doubao.png" },
 ];
 
-// --- 工具组件：打字机 ---
-function TypewriterEffect({ text, speed = 15 }: { text: string; speed?: number }) {
-  const [displayedText, setDisplayedText] = useState("");
-  useEffect(() => {
-    let i = 0;
-    setDisplayedText("");
-    const timer = setInterval(() => {
-      if (i < text.length) {
-        setDisplayedText((prev) => prev + text.charAt(i));
-        i++;
-      } else {
-        clearInterval(timer);
-      }
-    }, speed);
-    return () => clearInterval(timer);
-  }, [text, speed]);
-  return <span>{displayedText}</span>;
-}
-
-// 🪄 全站统一组件：高级富文本下拉框
-function CustomDropdown({ options, value, onChange, placeholder }: { options: any[], value: string, onChange: (val: string) => void, placeholder?: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const selectedOption = options.find(o => o.id === value) || options[0];
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-      <button 
-        type="button"
-        onClick={() => setIsOpen(!isOpen)} 
-        className="flex w-full items-center justify-between gap-3 bg-transparent text-[13px] font-semibold text-zinc-700 hover:text-blue-600 transition-colors outline-none py-1.5"
-      >
-        <div className="flex items-center gap-2 overflow-hidden">
-          {selectedOption.logo ? (
-            <img src={selectedOption.logo} alt="" className="w-4 h-4 object-contain shrink-0 rounded-full bg-zinc-100" />
-          ) : (
-            <div className="w-4 h-4 rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0 font-bold border border-zinc-300">
-              {selectedOption.name.charAt(0)}
-            </div>
-          )}
-          <span className="truncate">{selectedOption.name}</span>
-        </div>
-        <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-[360px] max-w-[90vw] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_16px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-          <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
-            {options.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => { onChange(opt.id); setIsOpen(false); }}
-                className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}
-              >
-                <div className="shrink-0 mt-0.5">
-                  {opt.logo ? (
-                    <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />
-                  ) : (
-                     <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">
-                      {opt.name.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1 pr-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold ${value === opt.id ? 'text-blue-700' : 'text-zinc-900'}`}>{opt.name}</span>
-                    {opt.badge && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0 border border-zinc-200/60">{opt.badge}</span>}
-                  </div>
-                  {opt.desc && (
-                    <p className={`text-[11.5px] leading-relaxed line-clamp-2 ${value === opt.id ? 'text-blue-600/80' : 'text-zinc-500'}`}>
-                      {opt.desc}
-                    </p>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// --- 页面主体 ---
 export default function EnhancePromptPage() {
   const [input, setInput] = useState("");
   const [activeStyle, setActiveStyle] = useState("通用");
   const [activeModel, setActiveModel] = useState("gemini-free");
   const [activePlatform, setActivePlatform] = useState("通用"); 
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<{ promptZh?: string; promptEn?: string; negativeEn?: string } | null>(null);
-  const [error, setError] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [copied, setCopied] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleEnhance = async () => {
+  // 🚀 3. 一键接管状态！
+  const { loading: isLoading, results: result, error: apiError, execute } = useAiTool<{ promptZh?: string; promptEn?: string; negativeEn?: string }>();
+
+  const handleEnhance = () => {
     if (!input.trim()) {
-      setError("请输入您脑海中的初步画面~");
+      setValidationError("请输入您脑海中的初步画面~");
       inputRef.current?.focus();
       return;
     }
-
-    setError("");
-    setIsLoading(true);
-    setResult(null);
+    setValidationError("");
     setCopied("");
-
-    try {
-      const res = await fetch("/api/enhance-prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          text: input, style: activeStyle, targetModel: activeModel, targetPlatform: activePlatform 
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "魔法中断了，请稍后重试");
-      }
-      const data = await res.json();
-      setResult(data);
-    } catch (err: any) {
-      setError(err.message || "请求出错了");
-    } finally {
-      setIsLoading(false);
-    }
+    // 🚀 4. 发起请求变得极其优雅
+    execute("/api/enhance-prompt", { 
+      text: input, style: activeStyle, targetModel: activeModel, targetPlatform: activePlatform 
+    });
   };
 
   const handleCopy = (text: string, blockName: string) => {
@@ -190,14 +79,14 @@ export default function EnhancePromptPage() {
           <div className="px-5 pt-3 pb-2 flex flex-wrap items-center gap-6 border-b border-zinc-100/80 mb-2 relative z-20">
             <div className="flex items-center gap-3">
               <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">🧠 AI 引擎</span>
-              <CustomDropdown options={MODELS} value={activeModel} onChange={setActiveModel} placeholder="选择模型" />
+              <CustomDropdown options={MODELS} value={activeModel} onChange={setActiveModel} />
             </div>
 
             <div className="h-4 w-[1px] bg-zinc-200 hidden sm:block"></div>
 
             <div className="flex items-center gap-3">
               <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">🎯 目标平台</span>
-              <CustomDropdown options={PLATFORMS} value={activePlatform} onChange={setActivePlatform} placeholder="选择平台" />
+              <CustomDropdown options={PLATFORMS} value={activePlatform} onChange={setActivePlatform} />
             </div>
           </div>
 
@@ -238,7 +127,11 @@ export default function EnhancePromptPage() {
           </div>
         </div>
 
-        {error && <p className="mt-6 text-center text-sm font-medium text-red-500 animate-in fade-in zoom-in-95">{error}</p>}
+        {(validationError || apiError) && (
+          <p className="mt-6 text-center text-sm font-medium text-red-500 animate-in fade-in zoom-in-95">
+            {validationError || apiError}
+          </p>
+        )}
 
         {result && (
           <div className="mt-10 space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 relative z-0">

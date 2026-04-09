@@ -74,3 +74,34 @@ export function getSearchSystemPrompt(query: string, mode: string, targetModel: 
   // 3. 拼接并返回最终的 Prompt
   return `${persona}\n\n${baseConstraint}`;
 }
+
+export function getEnhanceSystemPrompt(text: string, style: string, platform: string, targetModel: string) {
+  const styleInstruction = style && style !== "通用" 
+    ? `\n【风格侧重】：用户指定了【${style}】风格，请在画面描述中强烈体现该风格的代表性特征。` : "";
+
+  const platformInstruction = platform !== "通用"
+    ? `\n【平台深度适配】：用户即将使用【${platform}】来生成内容。
+    - 如果是图像平台(如Midjourney/SD)：注重光影、构图、材质细节。
+    - 如果是视频平台(如Sora/Runway)：务必增加对【运镜方式】(如 Pan, Tracking shot)、【时间连贯性】的动态描述！
+    - 如果是国内平台：中文提示词部分要极其精准。` : "";
+
+  const baseConstraint = `
+🚨【核心任务】🚨
+用户提供了一个简短的想法：“${text}”。
+请根据以上要求，将其扩写为极其专业的 AI 绘画/视频生成提示词。${styleInstruction}${platformInstruction}
+
+【强制格式 (纯 JSON)】
+必须直接输出纯 JSON 数据，绝对不要使用 \`\`\`json 这样的 Markdown 格式包裹！
+{
+  "promptZh": "一段生动、优美、细节丰富的中文画面描述",
+  "promptEn": "A highly detailed English prompt suitable for Midjourney/Stable Diffusion, using comma-separated tags.",
+  "negativeEn": "low quality, worst quality, blurry, mutated, deformed, bad anatomy (根据画面补充)"
+}`;
+
+  let persona = "你是一名顶级的 AI 提示词工程师。";
+  if (targetModel === "deepseek-chat") persona = "你是一个极度严谨的画面构图师。在描写时，请明确界定画面的前景、中景、背景，以及物理光线。";
+  if (targetModel === "claude-sonnet-4-6") persona = "你是一位极具共情能力的视觉导演。请用充满情感张力和故事感的词语来扩写画面，让画面不仅好看，更有氛围感。";
+  if (targetModel === "gemini-3.1-pro-preview") persona = "你是一位好莱坞级的多模态摄影指导。请侧重描写摄影机型号、镜头焦段、光圈以及具体的运镜方式。";
+
+  return `${persona}\n\n${baseConstraint}`;
+}
