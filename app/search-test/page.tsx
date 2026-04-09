@@ -5,55 +5,13 @@ import { Search, Heart, Camera, Wand2, ChevronRight, Sparkles, Target } from "lu
 
 // 🚀 全站统一：顶尖 AI 引擎矩阵 (极致富文本版)
 const MODELS = [
-  { 
-    id: "gemini-free", 
-    name: "Gemini Flash", 
-    badge: "完全免费", 
-    logo: "/logos/gemini.png",
-    desc: "全网情报侦察兵 —— 极速响应，适合处理全网通用型、基础资料类的搜索规划。"
-  },
-  { 
-    id: "deepseek-chat", 
-    name: "DeepSeek V3/R1", 
-    badge: "国产真神", 
-    logo: "/logos/deepseek.png",
-    desc: "逻辑深挖理科生 —— 结构化思维极强，适合规划知乎或 Google 类的硬核原理解析词。"
-  },
-  { 
-    id: "moonshot-v1-8k", 
-    name: "Kimi 智能助手", 
-    badge: "懂国人", 
-    logo: "/logos/kimi.png",
-    desc: "懂国人的图书管理员 —— 擅长深度挖掘知乎、豆瓣等国内主流知识平台的长尾内容。"
-  },
-  { 
-    id: "doubao-lite-32k", 
-    name: "豆包 Doubao", 
-    badge: "接地气", 
-    logo: "/logos/doubao.png",
-    desc: "接地气的百事通 —— 非常懂普通用户的搜索习惯，适合挖掘微博、小红书的生活化词条。"
-  },
-  { 
-    id: "gemini-3.1-pro-preview", 
-    name: "Gemini 3.1 Pro", 
-    badge: "多模态霸主", 
-    logo: "/logos/gemini.png",
-    desc: "实用主义极客 —— 擅长生成针对 B 站视频、真实评测类的行动派搜索策略。"
-  },
-  { 
-    id: "claude-sonnet-4-6", 
-    name: "Claude 4.6 Sonnet", 
-    badge: "文案大师", 
-    logo: "/logos/claude.png",
-    desc: "捕捉痛点的文科生 —— 擅长理解搜索背后的“情绪”，生成极具点击欲望的爆款灵感词。"
-  },
-  { 
-    id: "gpt-5.4", 
-    name: "GPT-5.4", 
-    badge: "全能六边形", 
-    logo: "/logos/OpenAI.png",
-    desc: "全能搜索顾问 —— 逻辑严密，直击要害，适合处理跨平台、跨领域的复杂搜索矩阵规划。"
-  },
+  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
+  { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "深度解析专家：推理能力卓越，能从画面细节中还原创作逻辑。" },
+  { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "懂国人", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
+  { id: "doubao-lite-32k", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" },
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" },
+  { id: "gpt-5.4", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" },
 ];
 
 const PLATFORMS = ["抖音", "小红书", "快手", "B站", "微博", "知乎"];

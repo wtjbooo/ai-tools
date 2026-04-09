@@ -83,72 +83,15 @@ const STYLE_LABELS: Record<OutputStyle, string> = {
 };
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
 
-// 🚀 全站统一：顶尖 AI 引擎矩阵 (极致富文本版)
-const MODELS = [
-  { 
-    id: "gemini-free", 
-    name: "Gemini Flash", 
-    badge: "完全免费", 
-    logo: "/logos/gemini.png",
-    desc: "极速扫描仪 —— 快速识别图像主体，适合简单画面的批量反推任务。"
-  },
-  { 
-    id: "deepseek-chat", 
-    name: "DeepSeek V3/R1", 
-    badge: "国产真神", 
-    logo: "/logos/deepseek.png",
-    desc: "深度解析专家 —— 推理能力卓越，能从画面蛛丝马迹中还原创作逻辑。"
-  },
-  { 
-    id: "moonshot-v1-8k", 
-    name: "Kimi 智能助手", 
-    badge: "懂国人", 
-    logo: "/logos/kimi.png",
-    desc: "语境还原者 —— 擅长分析具有中国风或国内特定文化背景的图像素材。"
-  },
-  { 
-    id: "doubao-lite-32k", 
-    name: "豆包 Doubao", 
-    badge: "接地气", 
-    logo: "/logos/doubao.png",
-    desc: "日常捕捉者 —— 对生活场景、实拍图的理解非常亲民，反推语气更自然"
-  },
-  { 
-    id: "gemini-3.1-pro-preview", 
-    name: "Gemini 3.1 Pro", 
-    badge: "多模态霸主", 
-    logo: "/logos/gemini.png",
-    desc: "反推绝对首选 —— 谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。"
-  },
-  { 
-    id: "claude-sonnet-4-6", 
-    name: "Claude 4.6 Sonnet", 
-    badge: "文案大师", 
-    logo: "/logos/claude.png",
-    desc: "艺术风格解析师 —— 对色彩、光影和情绪识别度极高，适合艺术创作反推。"
-  },
-  { 
-    id: "gpt-5.4", 
-    name: "GPT-5.4", 
-    badge: "全能六边形", 
-    logo: "/logos/OpenAI.png",
-    desc: "工业级参数专家 —— 擅长将图像拆解为极其专业的 MJ/SD 风格标签与技术参数。"
-  },
-];
-
 // 🚀 新增：全网顶尖 AI 平台矩阵 (完美对齐扩写页面)
-const PLATFORMS = [
-  { id: "generic", name: "通用大模型 (基础描述)", logo: null },
-  { id: "midjourney", name: "Midjourney V6", logo: "/logos/Midjourney.png" },
-  { id: "stablediffusion", name: "Stable Diffusion", logo: "/logos/Stable Diffusion.png" },
-  { id: "leonardo", name: "Leonardo.ai", logo: null }, 
-  { id: "sora", name: "Sora (OpenAI 视频)", logo: "/logos/sora.png" },
-  { id: "runway", name: "Runway Gen-3 (视频)", logo: "/logos/runway.png" },
-  { id: "luma", name: "Luma Dream Machine (视频)", logo: "/logos/luma.png" },
-  { id: "pika", name: "Pika Labs (视频)", logo: "/logos/pika.png" },
-  { id: "jimeng", name: "即梦 (Jimeng)", logo: "/logos/jimeng.png" },
-  { id: "keling", name: "可灵 (Kling)", logo: "/logos/kling.png" },
-  { id: "doubao", name: "豆包 (Doubao)", logo: "/logos/doubao.png" },
+const MODELS = [
+  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
+  { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "深度解析专家：推理能力卓越，能从画面细节中还原创作逻辑。" },
+  { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "懂国人", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
+  { id: "doubao-lite-32k", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" },
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" },
+  { id: "gpt-5.4", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" },
 ];
 
 // 🚀 语言选项统一规范
