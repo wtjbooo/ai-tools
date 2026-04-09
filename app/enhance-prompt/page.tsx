@@ -57,6 +57,20 @@ const MODELS = [
   },
 ];
 
+// 🚀 对齐：全网顶尖 AI 平台矩阵
+const PLATFORMS = [
+  { id: "通用", name: "通用 (智能匹配)", logo: null },
+  { id: "Midjourney", name: "Midjourney (出图)", logo: "/logos/Midjourney.png" },
+  { id: "Stable Diffusion", name: "Stable Diffusion (出图)", logo: "/logos/Stable Diffusion.png" },
+  { id: "Sora", name: "OpenAI Sora (视频)", logo: "/logos/sora.png" },
+  { id: "Runway", name: "Runway Gen-3 (视频)", logo: "/logos/runway.png" },
+  { id: "Luma", name: "Luma Dream Machine", logo: "/logos/luma.png" },
+  { id: "Pika", name: "Pika Labs (视频)", logo: "/logos/pika.png" },
+  { id: "即梦", name: "即梦 Dreamina", logo: "/logos/jimeng.png" },
+  { id: "可灵", name: "可灵 Kling (视频)", logo: "/logos/kling.png" },
+  { id: "豆包", name: "豆包 Doubao (出图)", logo: "/logos/doubao.png" },
+];
+
 // --- 工具组件：打字机 ---
 function TypewriterEffect({ text, speed = 15 }: { text: string; speed?: number }) {
   const [displayedText, setDisplayedText] = useState("");
@@ -76,8 +90,8 @@ function TypewriterEffect({ text, speed = 15 }: { text: string; speed?: number }
   return <span>{displayedText}</span>;
 }
 
-// 🪄 全站统一组件：高级富文本下拉框 (支持双行描述与自适应宽度)
-function CustomDropdown({ options, value, onChange }: { options: any[], value: string, onChange: (val: string) => void }) {
+// 🪄 全站统一组件：高级富文本下拉框
+function CustomDropdown({ options, value, onChange, placeholder }: { options: any[], value: string, onChange: (val: string) => void, placeholder?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selectedOption = options.find(o => o.id === value) || options[0];
@@ -92,17 +106,16 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
 
   return (
     <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-      {/* 默认状态：收起时的极简按钮 */}
       <button 
         type="button"
         onClick={() => setIsOpen(!isOpen)} 
-        className="flex w-full items-center justify-between gap-3 bg-white text-[13px] font-semibold text-zinc-700 hover:text-black transition-colors outline-none py-2 px-3.5 rounded-xl sm:rounded-full border border-black/10 hover:bg-black/[0.02] shadow-sm"
+        className="flex w-full items-center justify-between gap-3 bg-transparent text-[13px] font-semibold text-zinc-700 hover:text-blue-600 transition-colors outline-none py-1.5"
       >
         <div className="flex items-center gap-2 overflow-hidden">
           {selectedOption.logo ? (
-            <img src={selectedOption.logo} alt="" className="w-4 h-4 object-contain shrink-0" />
+            <img src={selectedOption.logo} alt="" className="w-4 h-4 object-contain shrink-0 rounded-full bg-zinc-100" />
           ) : (
-            <div className="w-4 h-4 rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0">
+            <div className="w-4 h-4 rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0 font-bold border border-zinc-300">
               {selectedOption.name.charAt(0)}
             </div>
           )}
@@ -113,7 +126,6 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
         </svg>
       </button>
 
-      {/* 展开状态：富文本悬浮面板 (宽度放宽到 360px 以容纳描述文字) */}
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-[360px] max-w-[90vw] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_16px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
@@ -124,7 +136,6 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
                 onClick={() => { onChange(opt.id); setIsOpen(false); }}
                 className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}
               >
-                {/* 左侧 Logo */}
                 <div className="shrink-0 mt-0.5">
                   {opt.logo ? (
                     <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />
@@ -134,8 +145,6 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
                     </div>
                   )}
                 </div>
-                
-                {/* 右侧：名称 + 徽章 + 富文本描述 */}
                 <div className="flex flex-col gap-1 pr-1">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-semibold ${value === opt.id ? 'text-blue-700' : 'text-zinc-900'}`}>{opt.name}</span>
@@ -220,7 +229,6 @@ export default function EnhancePromptPage() {
 
         <div className="group rounded-[24px] border border-black/5 bg-white/80 p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all duration-300 focus-within:shadow-[0_8px_40px_rgb(0,0,0,0.08)] focus-within:border-black/10">
           
-          {/* 顶栏控制区：替换为高级自定义组件 */}
           <div className="px-5 pt-3 pb-2 flex flex-wrap items-center gap-6 border-b border-zinc-100/80 mb-2 relative z-20">
             <div className="flex items-center gap-3">
               <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">🧠 AI 引擎</span>
