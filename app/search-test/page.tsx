@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Search, Heart, Camera, Wand2, ChevronRight, Sparkles, Target } from "lucide-react";
+// 🚀 1. 引入我们刚刚抽离的全局组件
+import TypewriterEffect from "@/components/TypewriterEffect";
+import SkeletonLoader from "@/components/SkeletonLoader";
+import CustomDropdown from "@/components/CustomDropdown";
+// 🚀 2. 引入我们封装的高级请求 Hook
+import { useAiTool } from "@/hooks/useAiTool";
 
-// 🚀 全站统一：顶尖 AI 引擎矩阵 (全网搜索专属文案)
 const MODELS = [
   { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "全网情报侦察兵：极速响应，适合处理全网通用型、基础资料类的搜索规划。" },
   { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "逻辑深挖理科生：结构化思维极强，适合规划知乎或 Google 类的硬核解析词。" },
@@ -47,138 +52,19 @@ const getPlatformSearchUrl = (platform: string, keyword: string) => {
   }
 };
 
-// 🪄 工具组件：打字机特效
-function TypewriterEffect({ text, speed = 15 }: { text: string; speed?: number }) {
-  const [displayedText, setDisplayedText] = useState("");
-  useEffect(() => {
-    let i = 0;
-    setDisplayedText("");
-    const timer = setInterval(() => {
-      if (i < text.length) {
-        setDisplayedText((prev) => prev + text.charAt(i));
-        i++;
-      } else clearInterval(timer);
-    }, speed);
-    return () => clearInterval(timer);
-  }, [text, speed]);
-  return <span>{displayedText}</span>;
-}
-
-// 🪄 工具组件：高级富文本下拉框
-function CustomDropdown({ options, value, onChange }: { options: any[], value: string, onChange: (val: string) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const selectedOption = options.find(o => o.id === value) || options[0];
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setIsOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      {/* 默认状态：只显示名字和 Logo，保持顶部控制台的极简 */}
-      <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 bg-transparent text-[13px] font-semibold text-zinc-700 hover:text-black transition-colors outline-none py-1.5 px-3 rounded-full border border-black/10 hover:bg-black/5">
-        {selectedOption.logo ? (
-          <img src={selectedOption.logo} alt="" className="w-[14px] h-[14px] object-contain shrink-0" />
-        ) : (
-          <div className="w-[14px] h-[14px] rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0">
-            {selectedOption.name.charAt(0)}
-          </div>
-        )}
-        <span>{selectedOption.name}</span>
-        <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {/* 展开状态：超宽富文本列表 */}
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-[360px] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_16px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-          <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
-            {options.map((opt) => (
-              <button
-                key={opt.id}
-                onClick={() => { onChange(opt.id); setIsOpen(false); }}
-                className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}
-              >
-                {/* 左侧 Logo */}
-                <div className="shrink-0 mt-0.5">
-                  {opt.logo ? (
-                    <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />
-                  ) : (
-                     <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">
-                      {opt.name.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                
-                {/* 右侧文本区：名字 + 徽章 + 描述 */}
-                <div className="flex flex-col gap-1 pr-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold ${value === opt.id ? 'text-blue-700' : 'text-zinc-900'}`}>{opt.name}</span>
-                    {opt.badge && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0 border border-zinc-200/60">{opt.badge}</span>}
-                  </div>
-                  {opt.desc && (
-                    <p className={`text-[11.5px] leading-relaxed line-clamp-2 ${value === opt.id ? 'text-blue-600/80' : 'text-zinc-500'}`}>
-                      {opt.desc}
-                    </p>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// 🪄 工具组件：高级骨架屏
-function SkeletonLoader() {
-  return (
-    <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mt-8 animate-in fade-in duration-500">
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="flex flex-col bg-white rounded-[24px] border border-black/[0.04] shadow-sm overflow-hidden h-[280px]">
-          <div className="w-full h-[140px] bg-gray-100 animate-pulse"></div>
-          <div className="p-5 flex flex-col gap-3">
-            <div className="h-4 bg-gray-200 rounded-md w-3/4 animate-pulse"></div>
-            <div className="h-3 bg-gray-100 rounded-md w-full animate-pulse"></div>
-            <div className="h-3 bg-gray-100 rounded-md w-2/3 animate-pulse"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function SearchTestPage() {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"photography" | "creative">("photography");
   const [activeModel, setActiveModel] = useState("gemini-free");
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
-  const handleSearch = async () => {
-    if (!query) return;
-    setLoading(true);
-    setResults([]);
-    try {
-      const res = await fetch("/api/ai/search-assets", {
-        method: "POST",
-        body: JSON.stringify({ query, mode, targetModel: activeModel }),
-      });
-      const json = await res.json();
-      setResults(json.data || []);
-    } catch (error) {
-      console.error("搜索失败", error);
-    } finally {
-      setLoading(false);
-    }
+  // 🚀 3. 使用 Hook，一键接管所有 Loading、数据和 Error 状态！
+  const { loading, results, error, execute } = useAiTool<any[]>();
+
+  const handleSearch = () => {
+    if (!query.trim()) return;
+    // 🚀 4. 发起请求变得如此简单
+    execute("/api/ai/search-assets", { query, mode, targetModel: activeModel });
   };
 
   const handleSave = async (e: React.MouseEvent, item: any, index: number) => {
@@ -220,8 +106,10 @@ export default function SearchTestPage() {
     window.open(fallbackUrl, "_blank");
   };
 
+  // 安全地处理 results (因为初始状态是 null)
+  const safeResults = results || [];
   const groupedResults = PLATFORMS.map(platform => ({
-    platform, items: results.filter(r => r.platform === platform)
+    platform, items: safeResults.filter(r => r.platform === platform)
   })).filter(group => group.items.length > 0);
 
   return (
@@ -262,6 +150,8 @@ export default function SearchTestPage() {
               {loading ? <span className="animate-pulse">✨ 规划中...</span> : "全网搜"}
             </button>
           </div>
+          {/* 如果请求出错，优雅地显示错误 */}
+          {error && <div className="text-red-500 text-sm mt-1">⚠️ {error}</div>}
         </div>
       </div>
 
