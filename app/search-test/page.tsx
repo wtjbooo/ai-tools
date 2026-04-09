@@ -3,12 +3,50 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, Heart, Camera, Wand2, ChevronRight, Sparkles, Target } from "lucide-react";
 
-// 🚀 对齐全站：大模型矩阵
+// 🚀 全网顶尖 AI 引擎矩阵 (带性格描述的富文本版本)
 const MODELS = [
-  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png" },
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "长视频首选", logo: "/logos/gemini.png" },
-  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "艺术感知极佳", logo: "/logos/claude.png" },
-  { id: "gpt-5.4", name: "GPT-5.4", badge: "极速与高智均衡", logo: "/logos/OpenAI.png" },
+  { 
+    id: "gemini-free", 
+    name: "Gemini Flash", 
+    badge: "完全免费", 
+    logo: "/logos/gemini.png",
+    desc: "思维敏捷的侦察兵：响应极速，适合基础日常问题与全网通用搜索。"
+  },
+  { 
+    id: "moonshot-v1-8k", // 注意这里的 ID 要和你 N1N API 支持的 Kimi 模型名一致
+    name: "Kimi 智能助手", 
+    badge: "懂国人", 
+    logo: "/logos/kimi.png",
+    desc: "记忆超群的图书管理员：国产之光，懂中文语境，擅长知乎长文本深度挖掘。"
+  },
+  { 
+    id: "doubao-lite-32k", // 同理，豆包的模型 ID
+    name: "豆包 Doubao", 
+    badge: "接地气", 
+    logo: "/logos/doubao.png",
+    desc: "平易近人的百事通：极致拟人，适合微博吃瓜、生活常识与日常攻略。"
+  },
+  { 
+    id: "gemini-3.1-pro-preview", 
+    name: "Gemini 3.1 Pro", 
+    badge: "实用极客", 
+    logo: "/logos/gemini.png",
+    desc: "行动力超强的极客：发散性强，偏向实用主义、B站硬核评测与真实场景。"
+  },
+  { 
+    id: "claude-sonnet-4-6", 
+    name: "Claude 4.6 Sonnet", 
+    badge: "文案大师", 
+    logo: "/logos/claude.png",
+    desc: "心思细腻的文科生：共情力极强，极度擅长小红书/抖音的痛点捕捉与网感爆款。"
+  },
+  { 
+    id: "gpt-5.4", 
+    name: "GPT-5.4", 
+    badge: "全能六边形", 
+    logo: "/logos/OpenAI.png",
+    desc: "逻辑严密的理科生：结构化极强，直击要害，适合 Google/知乎 的底层原理解析。"
+  },
 ];
 
 const PLATFORMS = ["抖音", "小红书", "快手", "B站", "微博", "知乎"];
@@ -61,7 +99,7 @@ function TypewriterEffect({ text, speed = 15 }: { text: string; speed?: number }
   return <span>{displayedText}</span>;
 }
 
-// 🪄 工具组件：高级自定义下拉框
+// 🪄 工具组件：高级富文本下拉框
 function CustomDropdown({ options, value, onChange }: { options: any[], value: string, onChange: (val: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -77,6 +115,7 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
 
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* 默认状态：只显示名字和 Logo，保持顶部控制台的极简 */}
       <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 bg-transparent text-[13px] font-semibold text-zinc-700 hover:text-black transition-colors outline-none py-1.5 px-3 rounded-full border border-black/10 hover:bg-black/5">
         {selectedOption.logo ? (
           <img src={selectedOption.logo} alt="" className="w-[14px] h-[14px] object-contain shrink-0" />
@@ -91,18 +130,39 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
         </svg>
       </button>
 
+      {/* 展开状态：超宽富文本列表 */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-[280px] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_12px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-          <div className="max-h-64 overflow-y-auto custom-scrollbar px-1">
+        <div className="absolute top-full left-0 mt-2 w-[360px] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_16px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+          <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
             {options.map((opt) => (
               <button
                 key={opt.id}
                 onClick={() => { onChange(opt.id); setIsOpen(false); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-xl transition-colors ${value === opt.id ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'}`}
+                className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}
               >
-                {opt.logo && <img src={opt.logo} alt="" className="w-5 h-5 object-contain rounded-full bg-white shrink-0" />}
-                <span className="truncate flex-1 text-left">{opt.name}</span>
-                {opt.badge && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0">{opt.badge}</span>}
+                {/* 左侧 Logo */}
+                <div className="shrink-0 mt-0.5">
+                  {opt.logo ? (
+                    <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />
+                  ) : (
+                     <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">
+                      {opt.name.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                
+                {/* 右侧文本区：名字 + 徽章 + 描述 */}
+                <div className="flex flex-col gap-1 pr-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold ${value === opt.id ? 'text-blue-700' : 'text-zinc-900'}`}>{opt.name}</span>
+                    {opt.badge && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0 border border-zinc-200/60">{opt.badge}</span>}
+                  </div>
+                  {opt.desc && (
+                    <p className={`text-[11.5px] leading-relaxed line-clamp-2 ${value === opt.id ? 'text-blue-600/80' : 'text-zinc-500'}`}>
+                      {opt.desc}
+                    </p>
+                  )}
+                </div>
               </button>
             ))}
           </div>
