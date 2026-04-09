@@ -4,25 +4,26 @@ import { useState, useEffect, useRef } from "react";
 
 const STYLE_PILLS = ["通用", "🎬 电影质感", "📸 拍立得复古", "🤖 赛博朋克", "🌸 吉卜力动画", "🏛️ 史诗奇幻"];
 
+// 🚀 对齐：全网顶尖 AI 商业模型矩阵
 const MODELS = [
-  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png" },
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "长视频首选", logo: "/logos/gemini.png" },
-  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "艺术感知极佳", logo: "/logos/claude.png" },
-  { id: "gpt-5.4", name: "GPT-5.4", badge: "极速与高智均衡", logo: "/logos/openai.png" },
+  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png" }, // (待下载)
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "长视频首选", logo: "/logos/gemini.png" }, // (待下载)
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "艺术感知极佳", logo: "/logos/claude.png" }, // (待下载)
+  { id: "gpt-5.4", name: "GPT-5.4", badge: "极速与高智均衡", logo: "/logos/OpenAI.png" }, // 🌟 已经完美匹配你的文件夹
 ];
 
-// 🚀 平台矩阵更新：加入了 logo 路径字段 (指向你 public/logos/ 里的图片)
+// 🚀 对齐：全网顶尖 AI 平台矩阵
 const PLATFORMS = [
   { id: "通用", name: "通用 (智能匹配)", logo: null },
-  { id: "Midjourney", name: "Midjourney (出图)", logo: "/logos/midjourney.png" },
-  { id: "Stable Diffusion", name: "Stable Diffusion (出图)", logo: "/logos/sd.png" },
-  { id: "Sora", name: "OpenAI Sora (视频)", logo: "/logos/sora.png" },
-  { id: "Runway", name: "Runway Gen-3 (视频)", logo: "/logos/runway.png" },
-  { id: "Luma", name: "Luma Dream Machine", logo: "/logos/luma.png" },
-  { id: "Pika", name: "Pika Labs (视频)", logo: "/logos/pika.png" },
-  { id: "即梦", name: "即梦 Dreamina", logo: "/logos/jimeng.png" },
-  { id: "可灵", name: "可灵 Kling (视频)", logo: "/logos/kling.png" },
-  { id: "豆包", name: "豆包 Doubao (出图)", logo: "/logos/doubao.png" },
+  { id: "Midjourney", name: "Midjourney (出图)", logo: "/logos/Midjourney.png" }, // 🌟 匹配了大写 M
+  { id: "Stable Diffusion", name: "Stable Diffusion (出图)", logo: "/logos/Stable Diffusion.png" }, // 🌟 匹配了全称和空格
+  { id: "Sora", name: "OpenAI Sora (视频)", logo: "/logos/sora.png" }, // (待下载)
+  { id: "Runway", name: "Runway Gen-3 (视频)", logo: "/logos/runway.png" }, // 🌟 完美匹配
+  { id: "Luma", name: "Luma Dream Machine", logo: "/logos/luma.png" }, // 🌟 完美匹配
+  { id: "Pika", name: "Pika Labs (视频)", logo: "/logos/pika.png" }, // (待下载)
+  { id: "即梦", name: "即梦 Dreamina", logo: "/logos/jimeng.png" }, // 🌟 完美匹配
+  { id: "可灵", name: "可灵 Kling (视频)", logo: "/logos/kling.png" }, // 🌟 完美匹配
+  { id: "豆包", name: "豆包 Doubao (出图)", logo: "/logos/doubao.png" }, // 🌟 完美匹配
 ];
 
 // --- 工具组件：打字机 ---
