@@ -10,49 +10,49 @@ const MODELS = [
     name: "Gemini Flash", 
     badge: "完全免费", 
     logo: "/logos/gemini.png",
-    desc: "思维敏捷的侦察兵：响应极速，全网通用搜索与基础灵感扩写的最佳入门之选。"
+    desc: "全网情报侦察兵 —— 极速响应，适合处理全网通用型、基础资料类的搜索规划。"
   },
   { 
     id: "deepseek-chat", 
     name: "DeepSeek V3/R1", 
     badge: "国产真神", 
     logo: "/logos/deepseek.png",
-    desc: "极致理性的思考者：当前表现最惊艳的国产大模型，逻辑推理与深度解析能力极强。"
+    desc: "逻辑深挖理科生 —— 结构化思维极强，适合规划知乎或 Google 类的硬核原理解析词。"
   },
   { 
     id: "moonshot-v1-8k", 
     name: "Kimi 智能助手", 
     badge: "懂国人", 
     logo: "/logos/kimi.png",
-    desc: "记忆超群的图书管理员：国产之光，极度懂中文语境，擅长长文本与国内平台深度挖掘。"
+    desc: "懂国人的图书管理员 —— 擅长深度挖掘知乎、豆瓣等国内主流知识平台的长尾内容。"
   },
   { 
     id: "doubao-lite-32k", 
     name: "豆包 Doubao", 
     badge: "接地气", 
     logo: "/logos/doubao.png",
-    desc: "平易近人的百事通：极致拟人，适合微博吃瓜、生活常识与小红书日常攻略。"
+    desc: "接地气的百事通 —— 非常懂普通用户的搜索习惯，适合挖掘微博、小红书的生活化词条。"
   },
   { 
     id: "gemini-3.1-pro-preview", 
     name: "Gemini 3.1 Pro", 
     badge: "多模态霸主", 
     logo: "/logos/gemini.png",
-    desc: "视觉与视频的王者：谷歌原生旗舰，反推视频关键帧和处理复杂多模态任务的首选。"
+    desc: "实用主义极客 —— 擅长生成针对 B 站视频、真实评测类的行动派搜索策略。"
   },
   { 
     id: "claude-sonnet-4-6", 
     name: "Claude 4.6 Sonnet", 
     badge: "文案大师", 
     logo: "/logos/claude.png",
-    desc: "心思细腻的文科生：共情力极强，擅长小红书/抖音的痛点捕捉、画面扩写与网感爆款。"
+    desc: "捕捉痛点的文科生 —— 擅长理解搜索背后的“情绪”，生成极具点击欲望的爆款灵感词。"
   },
   { 
     id: "gpt-5.4", 
     name: "GPT-5.4", 
     badge: "全能六边形", 
     logo: "/logos/OpenAI.png",
-    desc: "逻辑严密的理科生：结构化极强，直击要害，Midjourney 硬核提示词与 Google 级深搜必备。"
+    desc: "全能搜索顾问 —— 逻辑严密，直击要害，适合处理跨平台、跨领域的复杂搜索矩阵规划。"
   },
 ];
 

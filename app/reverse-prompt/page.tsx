@@ -90,49 +90,49 @@ const MODELS = [
     name: "Gemini Flash", 
     badge: "完全免费", 
     logo: "/logos/gemini.png",
-    desc: "思维敏捷的侦察兵：响应极速，全网通用搜索与基础灵感扩写的最佳入门之选。"
+    desc: "极速扫描仪 —— 快速识别图像主体，适合简单画面的批量反推任务。"
   },
   { 
     id: "deepseek-chat", 
     name: "DeepSeek V3/R1", 
     badge: "国产真神", 
     logo: "/logos/deepseek.png",
-    desc: "极致理性的思考者：当前表现最惊艳的国产大模型，逻辑推理与深度解析能力极强。"
+    desc: "深度解析专家 —— 推理能力卓越，能从画面蛛丝马迹中还原创作逻辑。"
   },
   { 
     id: "moonshot-v1-8k", 
     name: "Kimi 智能助手", 
     badge: "懂国人", 
     logo: "/logos/kimi.png",
-    desc: "记忆超群的图书管理员：国产之光，极度懂中文语境，擅长长文本与国内平台深度挖掘。"
+    desc: "语境还原者 —— 擅长分析具有中国风或国内特定文化背景的图像素材。"
   },
   { 
     id: "doubao-lite-32k", 
     name: "豆包 Doubao", 
     badge: "接地气", 
     logo: "/logos/doubao.png",
-    desc: "平易近人的百事通：极致拟人，适合微博吃瓜、生活常识与小红书日常攻略。"
+    desc: "日常捕捉者 —— 对生活场景、实拍图的理解非常亲民，反推语气更自然"
   },
   { 
     id: "gemini-3.1-pro-preview", 
     name: "Gemini 3.1 Pro", 
     badge: "多模态霸主", 
     logo: "/logos/gemini.png",
-    desc: "视觉与视频的王者：谷歌原生旗舰，反推视频关键帧和处理复杂多模态任务的首选。"
+    desc: "反推绝对首选 —— 谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。"
   },
   { 
     id: "claude-sonnet-4-6", 
     name: "Claude 4.6 Sonnet", 
     badge: "文案大师", 
     logo: "/logos/claude.png",
-    desc: "心思细腻的文科生：共情力极强，擅长小红书/抖音的痛点捕捉、画面扩写与网感爆款。"
+    desc: "艺术风格解析师 —— 对色彩、光影和情绪识别度极高，适合艺术创作反推。"
   },
   { 
     id: "gpt-5.4", 
     name: "GPT-5.4", 
     badge: "全能六边形", 
     logo: "/logos/OpenAI.png",
-    desc: "逻辑严密的理科生：结构化极强，直击要害，Midjourney 硬核提示词与 Google 级深搜必备。"
+    desc: "工业级参数专家 —— 擅长将图像拆解为极其专业的 MJ/SD 风格标签与技术参数。"
   },
 ];
 
