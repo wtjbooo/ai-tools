@@ -10,9 +10,12 @@ import {
   useState,
 } from "react";
 
-// 1. 商业化模型分层 (免费与PRO)
+// 1. 商业化模型分层 (加入了新增的国内模型)
 type AnalyzerModel = 
   | "gemini-free" 
+  | "deepseek-chat"
+  | "moonshot-v1-8k"
+  | "doubao-lite-32k"
   | "gemini-3.1-pro-preview" 
   | "claude-sonnet-4-6" 
   | "gpt-5.4";
@@ -83,7 +86,7 @@ const STYLE_LABELS: Record<OutputStyle, string> = {
 };
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
 
-// 🚀 新增：全网顶尖 AI 平台矩阵 (完美对齐扩写页面)
+// 🚀 新增：全网顶尖 AI 引擎矩阵 (反推专属文案)
 const MODELS = [
   { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
   { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "深度解析专家：推理能力卓越，能从画面细节中还原创作逻辑。" },
@@ -92,6 +95,21 @@ const MODELS = [
   { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" },
   { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" },
   { id: "gpt-5.4", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" },
+];
+
+// 🚀 新增：生成平台矩阵 (补回刚才误删的代码)
+const PLATFORMS = [
+  { id: "generic", name: "通用大模型 (基础描述)", logo: null },
+  { id: "midjourney", name: "Midjourney V6", logo: "/logos/Midjourney.png" },
+  { id: "stablediffusion", name: "Stable Diffusion", logo: "/logos/Stable Diffusion.png" },
+  { id: "leonardo", name: "Leonardo.ai", logo: null }, 
+  { id: "sora", name: "Sora (OpenAI 视频)", logo: "/logos/sora.png" },
+  { id: "runway", name: "Runway Gen-3 (视频)", logo: "/logos/runway.png" },
+  { id: "luma", name: "Luma Dream Machine (视频)", logo: "/logos/luma.png" },
+  { id: "pika", name: "Pika Labs (视频)", logo: "/logos/pika.png" },
+  { id: "jimeng", name: "即梦 (Jimeng)", logo: "/logos/jimeng.png" },
+  { id: "keling", name: "可灵 (Kling)", logo: "/logos/kling.png" },
+  { id: "doubao", name: "豆包 (Doubao)", logo: "/logos/doubao.png" },
 ];
 
 // 🚀 语言选项统一规范
@@ -176,7 +194,7 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
         </svg>
       </button>
 
-      {/* 展开状态：富文本悬浮面板 (宽度放宽到 360px 以容纳描述文字) */}
+      {/* 展开状态：富文本悬浮面板 */}
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-[360px] max-w-[90vw] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_16px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
