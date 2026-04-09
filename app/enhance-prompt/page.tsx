@@ -5,10 +5,10 @@ import { useState, useEffect, useRef } from "react";
 const STYLE_PILLS = ["通用", "🎬 电影质感", "📸 拍立得复古", "🤖 赛博朋克", "🌸 吉卜力动画", "🏛️ 史诗奇幻"];
 
 const MODELS = [
-  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费" },
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "长视频首选" },
-  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "艺术感知极佳" },
-  { id: "gpt-5.4", name: "GPT-5.4", badge: "极速与高智均衡" },
+  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png" },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "长视频首选", logo: "/logos/gemini.png" },
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "艺术感知极佳", logo: "/logos/claude.png" },
+  { id: "gpt-5.4", name: "GPT-5.4", badge: "极速与高智均衡", logo: "/logos/openai.png" },
 ];
 
 // 🚀 平台矩阵更新：加入了 logo 路径字段 (指向你 public/logos/ 里的图片)
