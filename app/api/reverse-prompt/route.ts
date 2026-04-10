@@ -1,9 +1,12 @@
 import { NextRequest } from "next/server";
 
-export const runtime = 'edge'; 
+// 🚀 终极杀招：放弃经常死锁的 Edge，改用极度稳定的 Node 环境，并向 Vercel 申请 60 秒特权时长！
+export const maxDuration = 60; 
 
 const N1N_API_KEY = process.env.N1N_API_KEY;
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
+
+// ... 下面的代码完全保持不变 ...
 
 // 🇨🇳 专属的中文报错翻译拦截器
 function translateError(errorMsg: string): string {
@@ -40,15 +43,10 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: "服务端未配置高级模型 API Key" }), { status: 500 });
     }
 
+    // 🚀 核心魔法 2：光速 Base64 转换引擎
     const file = files[0];
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = new Uint8Array(arrayBuffer);
-    
-    let binary = '';
-    for (let i = 0; i < buffer.byteLength; i++) {
-      binary += String.fromCharCode(buffer[i]);
-    }
-    const base64Data = btoa(binary);
+    const base64Data = Buffer.from(arrayBuffer).toString('base64');
     const mimeType = file.type;
 
     const systemPrompt = `你是一个世界级的多模态视觉反推专家。请深度解析用户上传的画面。
@@ -85,6 +83,7 @@ export async function POST(req: NextRequest) {
         }
       ],
       temperature: 0.6,
+      max_tokens: 4000, // 🚀 关键修复：专治 Claude 模型不带此参数就卡死的潜规则！
       stream: true 
     };
 
@@ -99,7 +98,6 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const err = await response.json();
-      // 🚀 使用中文翻译器拦截 N1N 平台的报错
       const friendlyError = translateError(err.error?.message || "大模型请求失败");
       return new Response(JSON.stringify({ error: friendlyError }), { status: 500 });
     }
@@ -114,7 +112,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("解析失败:", error);
-    // 🚀 使用中文翻译器拦截代码层面的报错
     const friendlyError = translateError(error.message || "文件解析失败");
     return new Response(JSON.stringify({ error: friendlyError }), { status: 500 });
   }
