@@ -13,10 +13,10 @@ const MODELS = [
   { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "响应极速的先行者 —— 适合快速生成基础描述，满足日常简单的扩写需求。" },
   { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "国产逻辑真神 —— 逻辑推理极强，能确保扩写出的画面构图严谨、符合常理。" },
   { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "懂国人", logo: "/logos/kimi.png", desc: "最懂国人的阅读者 —— 懂中文语境，能根据国内流行审美提供富有“意境”的描写。" },
-  { id: "doubao-lite-32k", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "接地气的生活通 —— 语气自然拟人，扩写出的内容非常适合社交媒体的日常分享。" },
+  { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "接地气的生活通 —— 语气自然拟人，扩写出的内容非常适合社交媒体的日常分享。" },
   { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "多模态影像大师 —— 旗舰级视觉感知，能精准扩写出复杂的电影级运镜与光影细节。" },
   { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "天生的视觉艺术家 —— 共情力极强，最擅长增加富有“氛围感”的小红书/抖音爆款细节。" },
-  { id: "gpt-5.4", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "全能的创意导演 —— 结构化能力顶级，是生成 MJ 或 SD 工业级硬核提示词的首选。" },
+  { id: "gpt-5.4-mini", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "全能的创意导演 —— 结构化能力顶级，是生成 MJ 或 SD 工业级硬核提示词的首选。" },
 ];
 
 const PLATFORMS = [
