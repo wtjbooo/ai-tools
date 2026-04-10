@@ -7,6 +7,27 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const N1N_API_KEY = process.env.N1N_API_KEY;
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 
+// 🇨🇳 专属的中文报错翻译拦截器
+function translateError(errorMsg: string): string {
+  const msg = errorMsg.toLowerCase();
+  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) {
+    return "😴 官方服务器当前排队人数过多被挤爆了，请稍后重试，或切换使用其他高级模型。";
+  }
+  if (msg.includes("invalid token") || msg.includes("401")) {
+    return "🔑 API 密钥 (Token) 无效或填错啦！请检查服务端的环境变量配置。";
+  }
+  if (msg.includes("insufficient quota") || msg.includes("balance")) {
+    return "💰 该模型渠道的账号余额不足，请检查大模型平台的充值状态。";
+  }
+  if (msg.includes("not found") || msg.includes("does not exist")) {
+    return "🔍 找不到该模型，请检查模型名称 (ID) 是否填写正确。";
+  }
+  if (msg.includes("timeout") || msg.includes("fetch failed")) {
+    return "🌐 网络请求超时或失败，请检查服务器的网络连通性。";
+  }
+  return `⚠️ 搜索失败: ${errorMsg}`;
+}
+
 // 🪄 工具函数：安全地解析大模型返回的 JSON，去除多余的 Markdown 标记
 function safeParseJSON(text: string) {
   try {
@@ -91,7 +112,8 @@ export async function POST(req: NextRequest) {
     
   } catch (error: any) {
     console.error(`AI 搜索失败 [${req.method}]:`, error.message);
-    // 将错误信息返回给前端，方便调试
-    return NextResponse.json({ error: error.message || "聚合搜索失败" }, { status: 500 });
+    // 🚀 在这里拦截并翻译！
+    const friendlyError = translateError(error.message || "聚合搜索失败");
+    return NextResponse.json({ error: friendlyError }, { status: 500 });
   }
 }

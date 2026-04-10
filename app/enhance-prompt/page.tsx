@@ -10,13 +10,15 @@ import { useAiTool } from "@/hooks/useAiTool";
 const STYLE_PILLS = ["通用", "🎬 电影质感", "📸 拍立得复古", "🤖 赛博朋克", "🌸 吉卜力动画", "🏛️ 史诗奇幻"];
 
 const MODELS = [
-  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "响应极速的先行者 —— 适合快速生成基础描述，满足日常简单的扩写需求。" },
-  { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "国产逻辑真神 —— 逻辑推理极强，能确保扩写出的画面构图严谨、符合常理。" },
-  { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "懂国人", logo: "/logos/kimi.png", desc: "最懂国人的阅读者 —— 懂中文语境，能根据国内流行审美提供富有“意境”的描写。" },
-  { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "接地气的生活通 —— 语气自然拟人，扩写出的内容非常适合社交媒体的日常分享。" },
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "多模态影像大师 —— 旗舰级视觉感知，能精准扩写出复杂的电影级运镜与光影细节。" },
-  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "天生的视觉艺术家 —— 共情力极强，最擅长增加富有“氛围感”的小红书/抖音爆款细节。" },
-  { id: "gpt-5.4-mini", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "全能的创意导演 —— 结构化能力顶级，是生成 MJ 或 SD 工业级硬核提示词的首选。" },
+  // ⚠️ 提醒：谷歌免费版最近极其不稳定，测试时尽量别选它
+  { id: "gemini-free", name: "Gemini Flash", badge: "免费(易拥堵)", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
+  { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "深度解析专家：推理能力卓越，能从画面细节中还原创作逻辑。" },
+  { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "经常缺货", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
+  // 👇 下面这三个根据你的截图进行了精准修正：
+  { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" }, //
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" }, //
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" }, //
+  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" }, //
 ];
 
 const PLATFORMS = [

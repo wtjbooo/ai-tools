@@ -10,16 +10,15 @@ import {
   useState,
 } from "react";
 
-// 1. 商业化模型分层 (加入了新增的国内模型)
+// 1. 商业化模型分层
 type AnalyzerModel = 
   | "gemini-free" 
   | "deepseek-chat"
   | "moonshot-v1-8k"
-  | "doubao-lite-32k"
+  | "doubao-seed-2-0-lite"  // 👈 修正为准确的豆包模型名
   | "gemini-3.1-pro-preview" 
   | "claude-sonnet-4-6" 
-  | "gpt-5.4";
-  
+  | "gpt-5.4-mini";         // 👈 修正为准确的 GPT 模型名  
 type OutputLanguage = "zh" | "en" | "bilingual";
 type OutputStyle = "simple" | "standard" | "pro";
 
@@ -86,18 +85,18 @@ const STYLE_LABELS: Record<OutputStyle, string> = {
 };
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
 
-// 🚀 新增：全网顶尖 AI 引擎矩阵 (反推专属文案)
 const MODELS = [
-  { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
+  // ⚠️ 提醒：谷歌免费版最近极其不稳定，测试时尽量别选它
+  { id: "gemini-free", name: "Gemini Flash", badge: "免费(易拥堵)", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
   { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "深度解析专家：推理能力卓越，能从画面细节中还原创作逻辑。" },
-  { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "懂国人", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
-  { id: "doubao-lite-32k", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" },
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" },
-  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" },
-  { id: "gpt-5.4", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" },
+  { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "经常缺货", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
+  // 👇 下面这三个根据你的截图进行了精准修正：
+  { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" }, //
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" }, //
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" }, //
+  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" }, //
 ];
 
-// 🚀 新增：生成平台矩阵 (补回刚才误删的代码)
 const PLATFORMS = [
   { id: "generic", name: "通用大模型 (基础描述)", logo: null },
   { id: "midjourney", name: "Midjourney V6", logo: "/logos/Midjourney.png" },
@@ -112,19 +111,18 @@ const PLATFORMS = [
   { id: "doubao", name: "豆包 (Doubao)", logo: "/logos/doubao.png" },
 ];
 
-// 🚀 语言选项统一规范
 const LANGUAGES = [
   { id: "zh", name: "中文", logo: null },
   { id: "en", name: "English", logo: null },
   { id: "bilingual", name: "中英双语", logo: null },
 ];
 
-// 3. 放开视频支持限制
 const ACCEPTED_FILE_TYPES = "image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime";
 const MAX_FILE_COUNT = 4;
 const MAX_TOTAL_BYTES = 50 * 1024 * 1024; 
 
 function getPromptByLanguage(value: PromptText, language: OutputLanguage) {
+  if (!value) return "";
   if (language === "zh") return value.zh;
   if (language === "en") return value.en;
   return `${value.zh}\n\n${value.en}`;
@@ -157,7 +155,6 @@ function validateFiles(selectedFiles: File[], options?: { requireAtLeastOne?: bo
   return "";
 }
 
-// 🪄 全站统一组件：高级富文本下拉框 (支持双行描述与自适应宽度)
 function CustomDropdown({ options, value, onChange }: { options: any[], value: string, onChange: (val: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -173,7 +170,6 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
 
   return (
     <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-      {/* 默认状态：收起时的极简按钮 */}
       <button 
         type="button"
         onClick={() => setIsOpen(!isOpen)} 
@@ -194,7 +190,6 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
         </svg>
       </button>
 
-      {/* 展开状态：富文本悬浮面板 */}
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-[360px] max-w-[90vw] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_16px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
@@ -205,7 +200,6 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
                 onClick={() => { onChange(opt.id); setIsOpen(false); }}
                 className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}
               >
-                {/* 左侧 Logo */}
                 <div className="shrink-0 mt-0.5">
                   {opt.logo ? (
                     <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />
@@ -216,7 +210,6 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
                   )}
                 </div>
                 
-                {/* 右侧：名称 + 徽章 + 富文本描述 */}
                 <div className="flex flex-col gap-1 pr-1">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-semibold ${value === opt.id ? 'text-blue-700' : 'text-zinc-900'}`}>{opt.name}</span>
@@ -340,6 +333,9 @@ export default function ReversePromptPage() {
   const [pickerKey, setPickerKey] = useState(0);
   const hasTriedRestore = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // 🚀 新增：流式解析状态，用于实时展示 AI 吐出的数据
+  const [streamedRaw, setStreamedRaw] = useState("");
 
   const displayTotalBytes = useMemo(() => {
     if (files.length > 0) return files.reduce((sum, f) => sum + f.size, 0);
@@ -426,9 +422,9 @@ export default function ReversePromptPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const primaryPrompt = result ? getPromptByLanguage(result.prompts[outputStyle], outputLanguage) : "";
-  const primaryNegativePrompt = result ? getPromptByLanguage(result.negativePrompt, outputLanguage) : "";
-  const primaryPlatformPrompt = result ? getPromptByLanguage(result.platformVariants[targetPlatform], outputLanguage) : "";
+  const primaryPrompt = result?.prompts?.[outputStyle] ? getPromptByLanguage(result.prompts[outputStyle], outputLanguage) : "";
+  const primaryNegativePrompt = result?.negativePrompt ? getPromptByLanguage(result.negativePrompt, outputLanguage) : "";
+  const primaryPlatformPrompt = result?.platformVariants?.[targetPlatform] ? getPromptByLanguage(result.platformVariants[targetPlatform], outputLanguage) : "";
 
   function processSelectedFiles(selectedFiles: File[]) {
     if (selectedFiles.length === 0) return;
@@ -488,10 +484,12 @@ export default function ReversePromptPage() {
     setError("");
     setIsLoading(false);
     setIsRestoring(false);
+    setStreamedRaw("");
     setPickerKey((value) => value + 1);
     removeTaskIdFromUrl();
   }
 
+  // 🚀 全新重构的流式解析引擎
   async function handleAnalyze() {
     const validationError = validateFiles(files);
     if (validationError) {
@@ -504,6 +502,7 @@ export default function ReversePromptPage() {
       setError("");
       setResult(null);
       setTaskMeta(null);
+      setStreamedRaw(""); // 清空旧数据
 
       const formData = new FormData();
       const isVideo = files.some(f => f.type.startsWith('video/'));
@@ -522,37 +521,78 @@ export default function ReversePromptPage() {
         body: formData,
       });
 
-      const payload = await response.json();
-
       if (!response.ok) {
-        throw new Error(payload?.error || "分析失败，请稍后再试");
+        const errPayload = await response.json().catch(() => ({}));
+        throw new Error(errPayload.error || "分析失败，请检查模型名称和额度");
       }
 
+      // 🚀 流式读取魔法开始！
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let accumulatedJSON = "";
+
+      if (reader) {
+        window.setTimeout(() => {
+          document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n").filter((line) => line.trim() !== "");
+          
+          for (const line of lines) {
+            if (line.includes("[DONE]")) continue;
+            if (line.startsWith("data:")) {
+              try {
+                const data = JSON.parse(line.replace("data:", ""));
+                const token = data.choices?.[0]?.delta?.content || "";
+                accumulatedJSON += token;
+                setStreamedRaw(accumulatedJSON); // 实时打字机效果！
+              } catch (e) {
+                // 忽略解析片段时的错误
+              }
+            }
+          }
+        }
+      }
+
+      // 🚀 流传输完毕，解析完整的 JSON
+      let parsedResult;
+      try {
+        const cleanJSON = accumulatedJSON.replace(/```json/g, "").replace(/```/g, "").trim();
+        parsedResult = JSON.parse(cleanJSON);
+      } catch (e) {
+        throw new Error("模型返回的数据未遵守 JSON 格式，请重新尝试。");
+      }
+
+      // 组装历史记录元数据
+      const pseudoTaskId = `task_${Date.now()}`;
       const nextTaskMeta: TaskMeta = {
-        taskId: payload?.meta?.taskId,
-        model: payload?.meta?.model,
-        fileCount: payload?.meta?.fileCount,
-        outputLanguage: payload?.meta?.outputLanguage,
-        outputStyle: payload?.meta?.outputStyle,
-        targetPlatform: payload?.meta?.targetPlatform,
+        taskId: pseudoTaskId,
+        model: analyzerModel,
+        fileCount: files.length,
+        outputLanguage,
+        outputStyle,
+        targetPlatform,
       };
 
-      setResult(payload.result as ReversePromptResult);
+      setResult(parsedResult);
       setTaskMeta(nextTaskMeta);
-
-      if (nextTaskMeta.taskId) {
-        setTaskIdToUrl(nextTaskMeta.taskId);
-        recordTaskHistory({
-          taskId: nextTaskMeta.taskId,
-          fileCount: files.length,
-          firstFileName: files[0]?.name || "已归档素材",
-          createdAt: Date.now(),
-        });
-      }
+      setTaskIdToUrl(pseudoTaskId);
+      recordTaskHistory({
+        taskId: pseudoTaskId,
+        fileCount: files.length,
+        firstFileName: files[0]?.name || "已归档素材",
+        createdAt: Date.now(),
+      });
 
       window.setTimeout(() => {
         document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "分析失败，请稍后再试");
     } finally {
@@ -598,7 +638,6 @@ export default function ReversePromptPage() {
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 
-                {/* 🚀 引擎下拉框改造：加入 z-index 确保下拉层级优先 */}
                 <div className="space-y-1.5 sm:col-span-2 lg:col-span-1 xl:col-span-2 relative z-30">
                   <label className="text-sm font-medium text-gray-900">
                     解析大模型 (Vision Model)
@@ -610,7 +649,6 @@ export default function ReversePromptPage() {
                   />
                 </div>
 
-                {/* 🚀 平台下拉框改造 */}
                 <div className="space-y-1.5 relative z-20">
                   <label className="text-sm font-medium text-gray-900">目标生成平台</label>
                   <CustomDropdown 
@@ -620,7 +658,6 @@ export default function ReversePromptPage() {
                   />
                 </div>
 
-                {/* 🚀 语言下拉框改造 */}
                 <div className="space-y-1.5 relative z-10">
                   <label className="text-sm font-medium text-gray-900">输出语言</label>
                   <CustomDropdown 
@@ -741,29 +778,50 @@ export default function ReversePromptPage() {
           </div>
         </SoftCard>
 
-        {(isLoading || isRestoring) && (
-          <SoftCard>
-            <PanelTitle title={isRestoring ? "正在恢复结果" : "正在生成结果"} description="多模态视觉模型正在深度拆解中..." />
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="rounded-[18px] border border-black/8 bg-white/86 p-4">
-                  <div className="mt-3 space-y-2">
-                    <div className="h-2.5 w-4/5 animate-pulse rounded-full bg-gray-200" />
-                    <div className="h-2.5 w-3/5 animate-pulse rounded-full bg-gray-200" />
+        {/* 🚀 全新赛博朋克极客加载面板 */}
+        {(isLoading || isRestoring) && !result && (
+          <SoftCard className="scroll-mt-6" >
+            <div id="reverse-prompt-loading">
+              <PanelTitle title={isRestoring ? "正在恢复结果" : "AI 视觉引擎深度扫描中..."} description="正在拆解像素与光影关系，请不要离开页面" />
+              
+              {streamedRaw ? (
+                <div className="mt-5 max-h-[300px] overflow-y-auto rounded-[18px] bg-gray-900 px-5 py-4 font-mono text-[13px] text-green-400 shadow-inner custom-scrollbar">
+                  <div className="sticky top-0 mb-3 flex items-center gap-2 bg-gray-900/90 py-1 text-xs text-gray-400 backdrop-blur-sm">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                    </span>
+                    RECEIVING STREAM DATA...
+                  </div>
+                  <div className="whitespace-pre-wrap break-all opacity-90 leading-relaxed">
+                    {streamedRaw}
+                    <span className="ml-1 inline-block h-3 w-2 animate-pulse bg-green-400"></span>
                   </div>
                 </div>
-              ))}
+              ) : (
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  {[1, 2, 3].map((item) => (
+                    <div key={item} className="rounded-[18px] border border-black/8 bg-white/86 p-4">
+                      <div className="mt-3 space-y-2">
+                        <div className="h-2.5 w-4/5 animate-pulse rounded-full bg-gray-200" />
+                        <div className="h-2.5 w-3/5 animate-pulse rounded-full bg-gray-200" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </SoftCard>
         )}
 
+        {/* 解析完成后的精美结果面板 */}
         {result && (
           <div id="reverse-prompt-result" className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <SoftCard>
               <PanelTitle title="深度结构化拆解" description="大模型提取出的高置信度画面特征与构图关系。" />
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {[...result.summary, ...result.cinematography].map((item) => (
-                  <div key={item.label} className="rounded-[18px] border border-black/8 bg-white/86 px-4 py-3.5">
+                {[...(result.summary || []), ...(result.cinematography || [])].map((item, idx) => (
+                  <div key={idx} className="rounded-[18px] border border-black/8 bg-white/86 px-4 py-3.5">
                     <div className="text-xs text-gray-500">{item.label}</div>
                     <div className="mt-1 text-sm leading-7 text-gray-800">{item.value}</div>
                   </div>
@@ -781,7 +839,7 @@ export default function ReversePromptPage() {
                 <div className="flex flex-wrap gap-2.5">
                   {PLATFORMS.map((p) => (
                     <OptionButton key={p.id} active={targetPlatform === p.id} onClick={() => setTargetPlatform(p.id as TargetPlatform)}>
-                      {p.name.split(' ')[0]} {/* 截取平台名称前缀，如 "Sora" */}
+                      {p.name.split(' ')[0]}
                     </OptionButton>
                   ))}
                 </div>
@@ -800,7 +858,7 @@ export default function ReversePromptPage() {
                   {STYLE_OPTIONS.map(([key, label]) => (
                     <button
                       key={key}
-                      onClick={() => setOutputStyle(key)}
+                      onClick={() => setOutputStyle(key as OutputStyle)}
                       className={`px-3 py-1 rounded-full text-xs transition ${outputStyle === key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                     >
                       {label}
