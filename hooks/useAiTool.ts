@@ -25,7 +25,11 @@ export function useAiTool<T>() {
         throw new Error(json.error || "请求失败，请稍后重试");
       }
       
-      setResults(json.data);
+      // 🚀 核心修复：智能解包！
+      // 如果后端包了一层 data 属性，就用 json.data；如果后端直接返回了对象，就直接用 json。
+      const finalData = json.data !== undefined ? json.data : json;
+      setResults(finalData);
+      
     } catch (err: any) {
       console.error("AI 工具调用失败:", err);
       setError(err.message);

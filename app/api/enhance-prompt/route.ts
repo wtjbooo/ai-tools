@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getEnhanceSystemPrompt } from "@/app/config/prompts";
+// 🌟 抛弃臃肿的谷歌 SDK，引入我们自己的“定向爆破隧道”工具
+import { fetch as undiciFetch, ProxyAgent } from 'undici'; 
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const N1N_API_KEY = process.env.N1N_API_KEY;
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com/chat/completions";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 function safeParseJSON(text: string) {
   try { return JSON.parse(text); } 
@@ -19,25 +20,21 @@ function safeParseJSON(text: string) {
   }
 }
 
-// 🇨🇳 专属的中文报错翻译拦截器
 function translateError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase();
-  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) {
-    return "😴 官方服务器当前排队人数过多被挤爆了，请稍后重试，或切换使用其他高级模型。";
+  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded") || msg.includes("bad gateway")) {
+    return "😴 N1N 中转服务器当前节点拥堵，请更换其他模型或稍后重试。";
   }
   if (msg.includes("invalid token") || msg.includes("401")) {
-    return "🔑 API 密钥 (Token) 无效或填错啦！请检查服务端的环境变量配置。";
+    return "🔑 API 密钥无效！请检查服务端的环境变量配置。";
   }
   if (msg.includes("insufficient quota") || msg.includes("balance")) {
-    return "💰 该模型渠道的账号余额不足，请检查大模型平台的充值状态。";
+    return "💰 该模型渠道的账号余额不足。";
   }
-  if (msg.includes("not found") || msg.includes("does not exist")) {
-    return "🔍 找不到该模型，请检查模型名称 (ID) 是否填写正确。";
+  if (msg.includes("timeout") || msg.includes("fetch failed") || msg.includes("terminated")) {
+    return "🌐 网络请求被拦截，请检查代理是否通畅。";
   }
-  if (msg.includes("timeout") || msg.includes("fetch failed")) {
-    return "🌐 网络请求超时或失败，请检查服务器的网络连通性。";
-  }
-  return `⚠️ 扩写失败: ${errorMsg}`; // 兜底返回原错误
+  return `⚠️ 扩写失败: ${errorMsg}`; 
 }
 
 export async function POST(req: NextRequest) {
@@ -51,18 +48,37 @@ export async function POST(req: NextRequest) {
     const systemPrompt = getEnhanceSystemPrompt(text, style, targetPlatform, targetModel);
     let data;
 
-    // 🚦 三轨道智能网关
+    // 🚦 轨道一：Gemini (走专属地下隧道)
     if (targetModel === "gemini-free") {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-        generationConfig: { responseMimeType: "application/json" }, 
-      });
-      data = safeParseJSON(result.response.text());
+      if (!GEMINI_API_KEY) throw new Error("未配置 GEMINI_API_KEY");
       
-    } else if (targetModel === "deepseek-chat") {
-      if (!DEEPSEEK_API_KEY) throw new Error("服务端未配置 DEEPSEEK_API_KEY");
+      // ✨ 专门为 Google 挖的隧道，完美避开 Clash 漏判的问题
+      const proxyAgent = process.env.NODE_ENV === 'development' 
+        ? new ProxyAgent('http://127.0.0.1:7890') 
+        : undefined;
+
+      const response = await undiciFetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemPrompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+          }),
+          dispatcher: proxyAgent // 强制走代理
+        }
+      ) as any;
+
+      const responseText = await response.text();
+      if (!response.ok) throw new Error(`Gemini 请求失败: ${responseText.slice(0, 50)}`);
+      const payload = JSON.parse(responseText);
+      data = safeParseJSON(payload.candidates[0].content.parts[0].text);
       
+    } 
+    // 🚦 轨道二：DeepSeek (走原生直连)
+    else if (targetModel === "deepseek-chat") {
+      if (!DEEPSEEK_API_KEY) throw new Error("未配置 DEEPSEEK_API_KEY");
       const response = await fetch(DEEPSEEK_BASE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
@@ -70,44 +86,52 @@ export async function POST(req: NextRequest) {
           model: "deepseek-chat",
           messages: [{ role: "system", content: systemPrompt }],
           temperature: 0.8,
+          stream: false,
           response_format: { type: "json_object" }
         }),
       });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "DeepSeek 官方请求失败");
-      }
-      const payload = await response.json();
-      data = safeParseJSON(payload.choices[0].message.content);
-
-    } else {
-      if (!N1N_API_KEY) throw new Error("服务端未配置 N1N API Key");
+      const responseText = await response.text(); 
+      if (!response.ok) throw new Error(`DeepSeek 失败: ${responseText.slice(0, 50)}`);
+      data = safeParseJSON(JSON.parse(responseText).choices[0].message.content);
+    } 
+    // 🚦 轨道三：N1N 中转平台 (走原生，修复格式)
+    else {
+      if (!N1N_API_KEY) throw new Error("未配置 N1N API Key");
       
+      const requestPayload: any = {
+        model: targetModel,
+        // ✨ 关键修复：把 "system" 降级为 "user"，彻底解决 Claude 的 500 报错！
+        messages: [{ role: "user", content: systemPrompt }],
+        temperature: 0.8, 
+        stream: false, 
+      };
+
+      if (targetModel.includes("gpt")) {
+         requestPayload.response_format = { type: "json_object" };
+      }
+
       const response = await fetch(`${N1N_BASE_URL}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${N1N_API_KEY}` },
-        body: JSON.stringify({
-          model: targetModel,
-          messages: [{ role: "system", content: systemPrompt }],
-          temperature: 0.8, 
-          response_format: { type: "json_object" } 
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
+      const responseText = await response.text();
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || `请求 ${targetModel} 失败`);
+        try {
+          const errObj = JSON.parse(responseText);
+          throw new Error(errObj.error?.message || `请求失败 (${response.status})`);
+        } catch(e) {
+          throw new Error(`HTTP ${response.status} - ${responseText.slice(0, 50)}...`);
+        }
       }
-      const payload = await response.json();
-      data = safeParseJSON(payload.choices[0].message.content);
+      data = safeParseJSON(JSON.parse(responseText).choices[0].message.content);
     }
 
     return NextResponse.json(data);
     
   } catch (error: any) {
     console.error(`AI 扩写失败:`, error.message);
-    // 🇨🇳 在这里拦截并翻译错误！
     const friendlyError = translateError(error.message);
     return NextResponse.json({ error: friendlyError }, { status: 500 });
   }
