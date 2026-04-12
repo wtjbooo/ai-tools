@@ -1,5 +1,6 @@
 "use client";
 
+import GuideAndShowcase from '@/components/GuideAndShowcase';
 import Link from "next/link";
 import {
   type ChangeEvent,
@@ -851,6 +852,9 @@ export default function ReversePromptPage() {
             </div>
           </div>
         )}
+
+        <GuideAndShowcase />
+
       </div>
     </div>
   );
