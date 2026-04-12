@@ -42,8 +42,9 @@ export default function SiteHeader({
               href="/"
               className="group inline-flex min-w-0 items-center gap-3 transition-all duration-200 hover:opacity-95"
             >
+              {/* 💡 图标已设为 X，并稍微加粗增强品牌感 */}
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
-                <span className="text-sm font-semibold tracking-tight text-gray-950">
+                <span className="text-sm font-bold tracking-tight text-gray-950">
                   X
                 </span>
               </div>
@@ -52,8 +53,9 @@ export default function SiteHeader({
                 <div className="truncate text-[15px] font-semibold tracking-tight text-gray-950">
                   XAira
                 </div>
+                {/* 💡 副标题已改为中文 */}
                 <div className="truncate text-xs text-gray-500">
-                  Curated tools for modern workflows
+                  探索 AI 的无限可能
                 </div>
               </div>
             </Link>

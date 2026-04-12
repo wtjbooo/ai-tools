@@ -45,15 +45,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    siteName: "AI 工具目录",
-    title: "AI 工具目录",
+    siteName: "XAira",
+    title: "XAira - 发现真正值得使用的 AI 工具",
     description:
       "收录实用 AI 工具，支持分类浏览、搜索、精选推荐与投稿提交，帮助你更快找到适合自己的 AI 工具。",
     locale: "zh_CN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI 工具目录",
+    title: "XAira - 发现真正值得使用的 AI 工具",
     description:
       "收录实用 AI 工具，支持分类浏览、搜索、精选推荐与投稿提交，帮助你更快找到适合自己的 AI 工具。",
   },
