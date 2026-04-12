@@ -10,25 +10,25 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 const SITE_URL =
-  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://www.xaira.top";
 
 const siteHost = (() => {
   try {
     return new URL(SITE_URL).host;
   } catch {
-    return "y78bq.dpdns.org";
+    return "www.xaira.top";
   }
 })();
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "AI 工具目录",
-    template: "%s | AI 工具目录",
+    default: "XAira - 发现真正值得使用的 AI 工具",
+    template: "%s | XAira",
   },
   description:
     "收录实用 AI 工具，支持分类浏览、搜索、精选推荐与投稿提交，帮助你更快找到适合自己的 AI 工具。",
-  applicationName: "AI 工具目录",
+  applicationName: "XAira",
   keywords: [
     "AI工具",
     "AI工具导航",
