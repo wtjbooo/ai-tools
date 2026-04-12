@@ -406,8 +406,8 @@ export default async function HomePage() {
 
               <div className="mx-auto max-w-3xl space-y-3">
                 {/* 💡 这里的标题也已更新 */}
-                <h1 className="text-[34px] font-semibold tracking-tight text-gray-950 sm:text-[56px] sm:leading-[1.02]">
-                  XAira - 发现真正值得使用的 AI 工具
+                <h1 className="text-[30px] font-bold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.1]">
+                  XAira <span className="text-gray-400 font-light">|</span> 发现真正值得使用的 AI 工具
                 </h1>
                 <p className="mx-auto max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
                   覆盖聊天、写作、绘图、视频、搜索与效率场景，帮你更快找到真正适合自己的产品。

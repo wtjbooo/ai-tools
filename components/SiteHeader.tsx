@@ -44,7 +44,7 @@ export default function SiteHeader({
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
                 <span className="text-sm font-semibold tracking-tight text-gray-950">
-                  AI
+                  X
                 </span>
               </div>
 
