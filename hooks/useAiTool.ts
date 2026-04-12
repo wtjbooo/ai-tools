@@ -1,3 +1,4 @@
+// hooks/useAiTool.ts
 import { useState } from "react";
 
 export function useAiTool<T>() {
@@ -13,14 +14,11 @@ export function useAiTool<T>() {
     
     try {
       // 🚀 核心升级：智能侦测 payload 类型
-      // 判断传入的是 FormData (包含图片文件) 还是普通对象 (纯文本参数)
       const isFormData = payload instanceof FormData;
       
-      // 如果是 FormData，绝对不要手动设置 Content-Type，浏览器会自动加上并附带 boundary 参数
-      // 如果是普通对象，则设置 application/json
-      const headers = isFormData ? {} : { "Content-Type": "application/json" };
+      // ✨ 修复：加上了 HeadersInit 类型定义，完美安抚 TypeScript 编译器
+      const headers: HeadersInit = isFormData ? {} : { "Content-Type": "application/json" };
       
-      // FormData 直接传，普通对象转成字符串传
       const body = isFormData ? payload : JSON.stringify(payload);
 
       const res = await fetch(apiRoute, {
@@ -35,8 +33,7 @@ export function useAiTool<T>() {
         throw new Error(json.error || "请求失败，请稍后重试");
       }
       
-      // 🚀 核心修复：智能解包！
-      // 如果后端包了一层 data 属性，就用 json.data；如果后端直接返回了对象，就直接用 json。
+      // 🚀 核心修复：智能解包
       const finalData = json.data !== undefined ? json.data : json;
       setResults(finalData);
       
