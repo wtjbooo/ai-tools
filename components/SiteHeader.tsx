@@ -50,7 +50,7 @@ export default function SiteHeader({
 
               <div className="min-w-0">
                 <div className="truncate text-[15px] font-semibold tracking-tight text-gray-950">
-                  AI 工具目录
+                  XAira
                 </div>
                 <div className="truncate text-xs text-gray-500">
                   Curated tools for modern workflows

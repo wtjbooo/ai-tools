@@ -10,31 +10,33 @@ import { ArrowRight } from "lucide-react";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// 💡 这里的默认值已更新为你的正式域名
 const SITE_URL =
-  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://www.xaira.top";
 
 const CATEGORY_SECTIONS_LIMIT = 4;
 const CATEGORY_TOOLS_LIMIT = 6;
 
 export const metadata: Metadata = {
-  title: "AI工具导航 - 精选 AI 工具目录",
+  // 💡 这里的标题已更新为 XAira 品牌名
+  title: "XAira - 发现真正值得使用的 AI 工具",
   description:
     "发现值得使用的 AI 工具，覆盖聊天、写作、绘图、视频、搜索、效率等场景，快速找到适合你的 AI 产品。",
   alternates: {
     canonical: `${SITE_URL}/`,
   },
   openGraph: {
-    title: "AI工具导航 - 精选 AI 工具目录",
+    title: "XAira - 发现真正值得使用的 AI 工具",
     description:
       "发现值得使用的 AI 工具，覆盖聊天、写作、绘图、视频、搜索、效率等场景，快速找到适合你的 AI 产品。",
     url: `${SITE_URL}/`,
-    siteName: "AI 工具目录",
+    siteName: "XAira",
     locale: "zh_CN",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI工具导航 - 精选 AI 工具目录",
+    title: "XAira - 发现真正值得使用的 AI 工具",
     description:
       "发现值得使用的 AI 工具，覆盖聊天、写作、绘图、视频、搜索、效率等场景，快速找到适合你的 AI 产品。",
   },
@@ -335,7 +337,6 @@ function HeroAction({
   );
 }
 
-// 💡 核心改动：用 SVG 矢量图替代了纯黑白的魔法棒
 function AIWorkspaceEntry() {
   return (
     <section className="mx-auto w-full max-w-[1024px] pt-1 sm:pt-2">
@@ -344,18 +345,18 @@ function AIWorkspaceEntry() {
         className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between overflow-hidden rounded-[28px] border border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0.4))] p-5 sm:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-1 hover:border-black/10 hover:bg-white hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)]"
       >
         <div className="flex items-center gap-4 sm:gap-5">
-           {/* 💡 这里接入了纯净版、极具质感的分类 SVG 图标 */}
           <div className="relative flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[14px] sm:rounded-[16px] border border-black/5 bg-gray-900 shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-110 overflow-hidden">
             <img 
               src="/workspace.svg" 
-              alt="AI 灵感套件" 
+              alt="XAira 灵感套件" 
               className="absolute inset-0 h-full w-full object-cover"
             />
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
+              {/* 💡 这里更新为 XAira 灵感套件 */}
               <h2 className="text-[16px] sm:text-[18px] font-bold tracking-tight text-gray-900">
-                AI 灵感套件
+                XAira 灵感套件
               </h2>
               <span className="inline-flex items-center rounded-full bg-blue-50/80 px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-blue-600 uppercase shadow-[0_2px_8px_rgba(37,99,235,0.08)]">
                 集成工具箱
@@ -393,7 +394,7 @@ export default async function HomePage() {
           <section className="relative overflow-hidden rounded-[30px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-5 py-7 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-9">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.08),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.06),transparent_26%)]" />
 
-            <div className="relative mx-auto max-w-4xl space-y-5 text-center">
+            <div className="relative mx-auto max-max-w-4xl space-y-5 text-center">
               <div className="flex flex-wrap items-center justify-center gap-2.5">
                 <div className="inline-flex items-center rounded-full border border-black/8 bg-white/72 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500 backdrop-blur-md">
                   CURATED AI TOOLS
@@ -404,8 +405,9 @@ export default async function HomePage() {
               </div>
 
               <div className="mx-auto max-w-3xl space-y-3">
+                {/* 💡 这里的标题也已更新 */}
                 <h1 className="text-[34px] font-semibold tracking-tight text-gray-950 sm:text-[56px] sm:leading-[1.02]">
-                  发现真正值得使用的 AI 工具
+                  XAira - 发现真正值得使用的 AI 工具
                 </h1>
                 <p className="mx-auto max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
                   覆盖聊天、写作、绘图、视频、搜索与效率场景，帮你更快找到真正适合自己的产品。
