@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/db";
 
 const SITE_URL =
-  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://xaira.top";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [tools, categories] = await Promise.all([

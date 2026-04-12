@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 const SITE_URL =
-  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://xaira.top";
 
 export default function robots(): MetadataRoute.Robots {
   return {

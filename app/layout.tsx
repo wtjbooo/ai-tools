@@ -104,7 +104,7 @@ function Header() {
             </div>
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold tracking-tight text-gray-950 sm:text-[15px]">
-                AI 工具目录
+                XAira
               </div>
               <div className="hidden text-xs text-gray-500 lg:block">
                 精选、克制、持续更新
@@ -164,7 +164,7 @@ function Footer() {
 
             <div>
               <div className="text-[15px] font-semibold tracking-tight text-gray-950">
-                AI 工具目录
+                XAira
               </div>
               <div className="text-xs text-gray-500">精选、克制、持续更新</div>
             </div>
@@ -205,7 +205,7 @@ function Footer() {
           </div>
 
           <div className="flex flex-col gap-1 text-xs text-gray-500 lg:items-end">
-            <p>© 2026 AI 工具目录</p>
+            <p>© 2026 XAira</p>
             <p>让发现 AI 工具更简单，也更值得。</p>
           </div>
         </div>
