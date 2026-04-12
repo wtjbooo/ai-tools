@@ -13,7 +13,6 @@ import {
 // 1. 商业化模型分层
 type AnalyzerModel = 
   | "gemini-free" 
-  | "deepseek-chat"
   | "moonshot-v1-8k"
   | "doubao-seed-2-0-lite"  // 👈 修正为准确的豆包模型名
   | "gemini-3.1-pro-preview" 
@@ -88,8 +87,7 @@ const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string
 const MODELS = [
   // ⚠️ 提醒：谷歌免费版最近极其不稳定，测试时尽量别选它
   { id: "gemini-free", name: "Gemini Flash", badge: "免费(易拥堵)", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
-  { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "深度解析专家：推理能力卓越，能从画面细节中还原创作逻辑。" },
-  { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "经常缺货", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
+   { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "经常缺货", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
   // 👇 下面这三个根据你的截图进行了精准修正：
   { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" }, //
   { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" }, //
@@ -489,7 +487,7 @@ export default function ReversePromptPage() {
     removeTaskIdFromUrl();
   }
 
-  // 🚀 全新重构的流式解析引擎
+// 🚀 全新重构的非流式解析引擎
   async function handleAnalyze() {
     const validationError = validateFiles(files);
     if (validationError) {
@@ -498,11 +496,11 @@ export default function ReversePromptPage() {
     }
 
     try {
-      setIsLoading(true);
+      setIsLoading(true); // 开启加载状态，触发骨架屏动画
       setError("");
       setResult(null);
       setTaskMeta(null);
-      setStreamedRaw(""); // 清空旧数据
+      setStreamedRaw(""); // 因为改成了非流式，这里置空即可，UI 会自动回退显示骨架屏
 
       const formData = new FormData();
       const isVideo = files.some(f => f.type.startsWith('video/'));
@@ -516,56 +514,23 @@ export default function ReversePromptPage() {
         formData.append("files", file);
       }
 
+      // 自动滚动到加载区域，让用户看到骨架屏
+      window.setTimeout(() => {
+        document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+
+      // 发送请求，此处会等待大约 10~30 秒直到后端处理完毕
       const response = await fetch("/api/reverse-prompt", {
         method: "POST",
         body: formData,
       });
 
+      // 🚀 核心修改：直接一次性解析后端返回的完整 JSON
+      const finalData = await response.json();
+
+      // 处理 HTTP 错误状态
       if (!response.ok) {
-        const errPayload = await response.json().catch(() => ({}));
-        throw new Error(errPayload.error || "分析失败，请检查模型名称和额度");
-      }
-
-      // 🚀 流式读取魔法开始！
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let accumulatedJSON = "";
-
-      if (reader) {
-        window.setTimeout(() => {
-          document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
-        }, 100);
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n").filter((line) => line.trim() !== "");
-          
-          for (const line of lines) {
-            if (line.includes("[DONE]")) continue;
-            if (line.startsWith("data:")) {
-              try {
-                const data = JSON.parse(line.replace("data:", ""));
-                const token = data.choices?.[0]?.delta?.content || "";
-                accumulatedJSON += token;
-                setStreamedRaw(accumulatedJSON); // 实时打字机效果！
-              } catch (e) {
-                // 忽略解析片段时的错误
-              }
-            }
-          }
-        }
-      }
-
-      // 🚀 流传输完毕，解析完整的 JSON
-      let parsedResult;
-      try {
-        const cleanJSON = accumulatedJSON.replace(/```json/g, "").replace(/```/g, "").trim();
-        parsedResult = JSON.parse(cleanJSON);
-      } catch (e) {
-        throw new Error("模型返回的数据未遵守 JSON 格式，请重新尝试。");
+        throw new Error(finalData.error || "分析失败，请检查模型名称和额度");
       }
 
       // 组装历史记录元数据
@@ -579,7 +544,8 @@ export default function ReversePromptPage() {
         targetPlatform,
       };
 
-      setResult(parsedResult);
+      // 🚀 核心修改：由于后端 (route.ts) 已经进行了安全解析，我们直接把 finalData 喂给 React 状态！
+      setResult(finalData);
       setTaskMeta(nextTaskMeta);
       setTaskIdToUrl(pseudoTaskId);
       recordTaskHistory({
@@ -589,14 +555,16 @@ export default function ReversePromptPage() {
         createdAt: Date.now(),
       });
 
+      // 结果出来后，平滑滚动到结果展示区
       window.setTimeout(() => {
         document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
 
     } catch (err) {
+      // 捕获我们在 route.ts 里翻译好的中文报错提示
       setError(err instanceof Error ? err.message : "分析失败，请稍后再试");
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // 关闭加载状态
     }
   }
 

@@ -1,32 +1,39 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-// 🚀 终极杀招：放弃经常死锁的 Edge，改用极度稳定的 Node 环境，并向 Vercel 申请 60 秒特权时长！
-export const maxDuration = 60; 
+export const maxDuration = 60;
 
-const N1N_API_KEY = process.env.N1N_API_KEY;
+// 🛡️ 整合了官方直连与中转的三轨道密钥
+const KEYS = {
+  geminiOfficial: process.env.GEMINI_API_KEY,      // 轨道 A：你的谷歌官方 Key
+  geminiN1N: process.env.GEMINI_GROUP_KEY,         // 轨道 B1：N1N Gemini 组
+  openai: process.env.OPENAI_GROUP_KEY,            // 轨道 B2：N1N OpenAI 组
+  claude: process.env.CLAUDE_GROUP_KEY,            // 轨道 B3：N1N Claude 组
+};
+
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
+// 🚀 谷歌官方最新推出的 OpenAI 兼容接口地址！
+const GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
 
-// ... 下面的代码完全保持不变 ...
-
-// 🇨🇳 专属的中文报错翻译拦截器
 function translateError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase();
-  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) {
-    return "😴 官方服务器当前排队人数过多被挤爆了，请稍后重试，或切换使用其他高级模型。";
-  }
-  if (msg.includes("invalid token") || msg.includes("401")) {
-    return "🔑 API 密钥 (Token) 无效或填错啦！请检查服务端的环境变量配置。";
-  }
-  if (msg.includes("insufficient quota") || msg.includes("balance")) {
-    return "💰 该模型渠道的账号余额不足，请检查大模型平台的充值状态。";
-  }
-  if (msg.includes("not found") || msg.includes("does not exist")) {
-    return "🔍 找不到该模型，请检查模型名称 (ID) 是否填写正确。";
-  }
-  if (msg.includes("timeout") || msg.includes("fetch failed")) {
-    return "🌐 网络请求超时或失败，请检查服务器的网络连通性。";
-  }
+  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) return "😴 服务器当前排队人数过多被挤爆了，请稍后重试。";
+  if (msg.includes("401") || msg.includes("api_key_invalid")) return "🔑 API 密钥无效或配置错误。";
+  if (msg.includes("insufficient quota")) return "💰 账户余额或配额不足。";
+  if (msg.includes("not found")) return "🔍 模型名称不匹配，请检查配置。";
   return `⚠️ 解析失败: ${errorMsg}`;
+}
+
+function safeParseJSON(text: string) {
+  try { return JSON.parse(text); } 
+  catch (e) {
+    const ticks = String.fromCharCode(96, 96, 96);
+    const regex = new RegExp(ticks + "(?:json)?\\n([\\s\\S]*?)\\n" + ticks);
+    const match = text.match(regex);
+    if (match && match[1]) {
+      try { return JSON.parse(match[1]); } catch (err) { throw new Error("JSON 内部格式错误"); }
+    }
+    throw new Error("无法从模型输出提取有效 JSON");
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -34,85 +41,73 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const analyzerModel = formData.get("analyzerModel") as string;
     const files = formData.getAll("files") as File[];
-    
-    if (!files || files.length === 0) {
-      return new Response(JSON.stringify({ error: "未接收到文件" }), { status: 400 });
+
+    if (!files || files.length === 0) return NextResponse.json({ error: "未接收到文件" }, { status: 400 });
+
+    // 🚀 【核心逻辑】智能选择 API Key 和 Base URL
+    let selectedKey = KEYS.openai;
+    let baseUrl = N1N_BASE_URL;
+    let targetModel = analyzerModel;
+
+    if (analyzerModel === 'gemini-free') {
+      // 🌟 命中免费版：走谷歌官方直连通道！
+      selectedKey = KEYS.geminiOfficial;
+      baseUrl = GOOGLE_BASE_URL;
+      targetModel = 'gemini-1.5-flash'; 
+    } else if (analyzerModel.includes("gemini")) {
+      // 命中付费版：走 N1N 中转通道
+      selectedKey = KEYS.geminiN1N;
+    } else if (analyzerModel.includes("claude")) {
+      selectedKey = KEYS.claude;
     }
 
-    if (!N1N_API_KEY) {
-      return new Response(JSON.stringify({ error: "服务端未配置高级模型 API Key" }), { status: 500 });
+    if (!selectedKey) {
+      return NextResponse.json({ error: `服务端未配置该模型所属的 API Key` }, { status: 500 });
     }
 
-    // 🚀 核心魔法 2：光速 Base64 转换引擎
     const file = files[0];
     const arrayBuffer = await file.arrayBuffer();
     const base64Data = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = file.type;
 
-    const systemPrompt = `你是一个世界级的多模态视觉反推专家。请深度解析用户上传的画面。
-必须直接输出纯 JSON 数据，绝对不要使用 \`\`\`json 等 Markdown 包裹！必须严格遵循以下结构：
-{
-  "summary": [{"label": "画面主体", "value": "描述..."}, {"label": "环境氛围", "value": "描述..."}],
-  "cinematography": [{"label": "镜头语言", "value": "描述..."}, {"label": "光影色彩", "value": "描述..."}],
-  "prompts": {
-    "simple": {"zh": "中文极简词", "en": "English simple prompt"},
-    "standard": {"zh": "中文标准词", "en": "English standard prompt"},
-    "pro": {"zh": "中文专业词", "en": "English pro prompt"}
-  },
-  "negativePrompt": {"zh": "负面词", "en": "Negative tags"},
-  "platformVariants": {
-    "generic": {"zh": "...", "en": "..."},
-    "midjourney": {"zh": "...", "en": "..."},
-    "sora": {"zh": "...", "en": "..."}
-  },
-  "disclaimer": "AI 解析结果仅供参考"
-}`;
+    const systemPrompt = `你是一个多模态视觉反推专家。请直接输出纯 JSON 数据，严禁使用 Markdown 包裹！必须遵循结构：{ "summary": [...], "prompts": { "standard": {"zh": "...", "en": "..."} }, "negativePrompt": {"zh": "...", "en": "..."} }`;
 
     const payload = {
-      model: analyzerModel === 'gemini-free' ? 'gemini-3.1-pro-preview' : analyzerModel,
+      model: targetModel,
       messages: [
         {
           role: "user",
           content: [
             { type: "text", text: systemPrompt },
-            { 
-              type: "image_url", 
-              image_url: { url: `data:${mimeType};base64,${base64Data}` } 
-            }
+            { type: "image_url", image_url: { url: `data:${file.type};base64,${base64Data}` } }
           ]
         }
       ],
       temperature: 0.6,
-      max_tokens: 4000, // 🚀 关键修复：专治 Claude 模型不带此参数就卡死的潜规则！
-      stream: true 
+      stream: false 
     };
 
-    const response = await fetch(`${N1N_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${N1N_API_KEY}`
+        "Authorization": `Bearer ${selectedKey}`
       },
       body: JSON.stringify(payload),
     });
 
+    const responseText = await response.text();
     if (!response.ok) {
-      const err = await response.json();
-      const friendlyError = translateError(err.error?.message || "大模型请求失败");
-      return new Response(JSON.stringify({ error: friendlyError }), { status: 500 });
+      let errMsg = `HTTP ${response.status}`;
+      try { errMsg = JSON.parse(responseText).error?.message || errMsg; } catch (e) {} 
+      throw new Error(errMsg);
     }
 
-    return new Response(response.body, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-      },
-    });
+    const payloadData = JSON.parse(responseText);
+    const content = payloadData.choices[0].message.content;
+    return NextResponse.json(safeParseJSON(content));
 
   } catch (error: any) {
-    console.error("解析失败:", error);
-    const friendlyError = translateError(error.message || "文件解析失败");
-    return new Response(JSON.stringify({ error: friendlyError }), { status: 500 });
+    console.error("图片反推解析失败:", error);
+    return NextResponse.json({ error: translateError(error.message) }, { status: 500 });
   }
 }
