@@ -16,45 +16,43 @@ const s3Client = new S3Client({
 
 export async function POST(request: NextRequest) {
   try {
-    // ==========================================
-    // 🎯 最终修复：使用截图中真实的 Cookie 名称
-    // ==========================================
     const token = request.cookies.get("session_token")?.value;
 
-    // 如果没拿到 token，说明没登录
     if (!token) {
       return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
     }
 
-    // 去数据库核实 Token 是否有效，并获取用户信息
+    // ==========================================
+    // 🛡️ 核心优化：不仅查询 userId，还要查出 expires 过期时间
+    // ==========================================
     const session = await prisma.session.findUnique({
       where: { sessionToken: token },
-      select: { userId: true }
+      select: { 
+        userId: true,
+        expires: true // 👈 新增查询字段
+      }
     });
 
-    if (!session) {
+    // 增加对 expires 的判断 (当前时间大于过期时间，即为失效)
+    if (!session || session.expires < new Date()) {
       return NextResponse.json({ error: "登录已失效，请重新登录。" }, { status: 401 });
     }
     // ==========================================
 
-    // 接收前端传过来的文件名和文件类型
     const { filename, contentType } = await request.json();
 
     if (!filename || !contentType) {
       return NextResponse.json({ error: "缺少文件信息" }, { status: 400 });
     }
 
-    // 给文件加个时间戳前缀
     const uniqueFilename = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-    // 创建上传指令
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: uniqueFilename,
       ContentType: contentType,
     });
 
-    // 生成预签名链接
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
     return NextResponse.json({ 
