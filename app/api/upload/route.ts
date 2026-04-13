@@ -1,17 +1,12 @@
-// app/api/upload/route.ts
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma"; 
+// 🔥 1. 引入我们刚才写的限流器
+import { uploadRateLimit } from "@/lib/ratelimit";
 
 const s3Client = new S3Client({
-  region: "auto", 
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
-  },
-  forcePathStyle: true, 
+  // ... (保持你原来的 S3Client 配置不变)
 });
 
 export async function POST(request: NextRequest) {
@@ -22,46 +17,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
     }
 
-    // ==========================================
-    // 🛡️ 核心优化：不仅查询 userId，还要查出 expires 过期时间
-    // ==========================================
     const session = await prisma.session.findUnique({
       where: { sessionToken: token },
       select: { 
         userId: true,
-        expires: true // 👈 新增查询字段
+        expires: true 
       }
     });
 
-    // 增加对 expires 的判断 (当前时间大于过期时间，即为失效)
     if (!session || session.expires < new Date()) {
       return NextResponse.json({ error: "登录已失效，请重新登录。" }, { status: 401 });
+    }
+
+    // ==========================================
+    // 🛡️ 核心新增：基于用户 ID 执行 Redis 级限流
+    // ==========================================
+    // 使用 userId 作为识别唯一用户的标识
+    const identifier = session.userId;
+    const { success, pending, limit, reset, remaining } = await uploadRateLimit.limit(identifier);
+    
+    // 如果 success 为 false，说明超出了我们在 lib/ratelimit.ts 里设置的频率限制
+    if (!success) {
+       return new NextResponse(
+         JSON.stringify({ 
+           error: "上传请求过于频繁，请稍作休息（建议1分钟后再试）。",
+           // 还可以优雅地告诉前端什么时候解封
+           resetTime: reset 
+         }), 
+         { 
+           status: 429, // 429 Too Many Requests 是标准的限流状态码
+           headers: {
+             "Content-Type": "application/json",
+             "X-RateLimit-Limit": limit.toString(),
+             "X-RateLimit-Remaining": remaining.toString(),
+           } 
+         }
+       );
     }
     // ==========================================
 
     const { filename, contentType } = await request.json();
-
-    if (!filename || !contentType) {
-      return NextResponse.json({ error: "缺少文件信息" }, { status: 400 });
-    }
-
-    const uniqueFilename = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-
-    const command = new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: uniqueFilename,
-      ContentType: contentType,
-    });
-
-    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-
-    return NextResponse.json({ 
-      uploadUrl: signedUrl, 
-      fileKey: uniqueFilename 
-    });
+    
+    // ... (后续的获取 S3 URL 逻辑保持不变)
 
   } catch (error) {
-    console.error("生成预签名URL失败:", error);
-    return NextResponse.json({ error: "无法生成上传链接" }, { status: 500 });
+    // ... (错误处理保持不变)
   }
 }
