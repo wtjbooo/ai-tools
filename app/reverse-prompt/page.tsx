@@ -494,7 +494,11 @@ export default function ReversePromptPage() {
           body: JSON.stringify({ filename: file.name, contentType: file.type })
         });
         
-        if (!presignRes.ok) throw new Error("无法获取上传通道，请稍后再试");
+        if (!presignRes.ok) {
+          const errorData = await presignRes.json();
+          throw new Error(errorData.error || "无法获取上传通道，请稍后再试");
+        }
+
         const { uploadUrl, fileKey } = await presignRes.json();
 
         // 2. 绕过 Vercel，直接把大文件塞进 R2
