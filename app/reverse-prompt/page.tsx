@@ -15,36 +15,20 @@ import {
 type AnalyzerModel = 
   | "gemini-free" 
   | "moonshot-v1-8k"
-  | "doubao-seed-2-0-lite"  // 👈 修正为准确的豆包模型名
+  | "doubao-seed-2-0-lite"
   | "gemini-3.1-pro-preview" 
   | "claude-sonnet-4-6" 
-  | "gpt-5.4-mini";         // 👈 修正为准确的 GPT 模型名  
+  | "gpt-5.4-mini";
 type OutputLanguage = "zh" | "en" | "bilingual";
 type OutputStyle = "simple" | "standard" | "pro";
 
 // 2. 扩容的目标生成平台
 type TargetPlatform = 
-  | "generic" 
-  | "midjourney" 
-  | "stablediffusion"
-  | "leonardo"
-  | "sora"
-  | "runway" 
-  | "luma"
-  | "pika" 
-  | "jimeng" 
-  | "keling" 
-  | "doubao";
+  | "generic" | "midjourney" | "stablediffusion" | "leonardo"
+  | "sora" | "runway" | "luma" | "pika" | "jimeng" | "keling" | "doubao";
 
-type AnalysisBlock = {
-  label: string;
-  value: string;
-};
-
-type PromptText = {
-  zh: string;
-  en: string;
-};
+type AnalysisBlock = { label: string; value: string; };
+type PromptText = { zh: string; en: string; };
 
 type ReversePromptResult = {
   summary: AnalysisBlock[];
@@ -56,44 +40,28 @@ type ReversePromptResult = {
 };
 
 type PreviewItem = {
-  key: string;
-  name: string;
-  size: number;
-  url: string;
-  type: "image" | "video";
+  key: string; name: string; size: number; url: string; type: "image" | "video";
 };
 
 type TaskMeta = {
-  taskId?: string;
-  model?: string;
-  fileCount?: number;
-  outputLanguage?: OutputLanguage;
-  outputStyle?: OutputStyle;
-  targetPlatform?: TargetPlatform;
+  taskId?: string; model?: string; fileCount?: number;
+  outputLanguage?: OutputLanguage; outputStyle?: OutputStyle; targetPlatform?: TargetPlatform;
 };
 
-type RestoredFile = {
-  name: string;
-  size: number;
-  type?: string;
-};
+type RestoredFile = { name: string; size: number; type?: string; };
 
 const STYLE_LABELS: Record<OutputStyle, string> = {
-  simple: "精简版",
-  standard: "标准版",
-  pro: "专业版",
+  simple: "精简版", standard: "标准版", pro: "专业版",
 };
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
 
 const MODELS = [
-  // ⚠️ 提醒：谷歌免费版最近极其不稳定，测试时尽量别选它
   { id: "gemini-free", name: "Gemini Flash", badge: "免费(易拥堵)", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
-   { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "经常缺货", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
-  // 👇 下面这三个根据你的截图进行了精准修正：
-  { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" }, //
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" }, //
-  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" }, //
-  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" }, //
+  { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "经常缺货", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
+  { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" },
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" },
+  { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" },
 ];
 
 const PLATFORMS = [
@@ -118,7 +86,8 @@ const LANGUAGES = [
 
 const ACCEPTED_FILE_TYPES = "image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime";
 const MAX_FILE_COUNT = 4;
-const MAX_TOTAL_BYTES = 50 * 1024 * 1024; 
+// 🚀 核心升级：有了 R2 云存储撑腰，前端直传限制放大到 200MB！
+const MAX_TOTAL_BYTES = 200 * 1024 * 1024; 
 
 function getPromptByLanguage(value: PromptText, language: OutputLanguage) {
   if (!value) return "";
@@ -150,7 +119,7 @@ function validateFiles(selectedFiles: File[], options?: { requireAtLeastOne?: bo
   const videoCount = selectedFiles.filter(f => f.type.startsWith("video/")).length;
   if (videoCount > 1) return "每次解析最多支持上传 1 个短视频";
   const totalBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
-  if (totalBytes > MAX_TOTAL_BYTES) return "总文件体积请控制在 50MB 内";
+  if (totalBytes > MAX_TOTAL_BYTES) return "总文件体积请控制在 200MB 内"; // 👈 这里的提示也更新了
   return "";
 }
 
@@ -327,13 +296,12 @@ export default function ReversePromptPage() {
   const [result, setResult] = useState<ReversePromptResult | null>(null);
   const [taskMeta, setTaskMeta] = useState<TaskMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(""); // 🚀 新增：展示上传到云端的状态
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState("");
   const [pickerKey, setPickerKey] = useState(0);
   const hasTriedRestore = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
-  
-  // 🚀 新增：流式解析状态，用于实时展示 AI 吐出的数据
   const [streamedRaw, setStreamedRaw] = useState("");
 
   const displayTotalBytes = useMemo(() => {
@@ -482,13 +450,14 @@ export default function ReversePromptPage() {
     setTaskMeta(null);
     setError("");
     setIsLoading(false);
+    setUploadStatus(""); // 重置状态
     setIsRestoring(false);
     setStreamedRaw("");
     setPickerKey((value) => value + 1);
     removeTaskIdFromUrl();
   }
 
-// 🚀 全新重构的非流式解析引擎
+  // 🚀 核心架构重构：前端直传 R2 + 发送云端 FileKey 给后端
   async function handleAnalyze() {
     const validationError = validateFiles(files);
     if (validationError) {
@@ -497,39 +466,73 @@ export default function ReversePromptPage() {
     }
 
     try {
-      setIsLoading(true); // 开启加载状态，触发骨架屏动画
+      setIsLoading(true);
       setError("");
       setResult(null);
       setTaskMeta(null);
-      setStreamedRaw(""); // 因为改成了非流式，这里置空即可，UI 会自动回退显示骨架屏
+      setStreamedRaw(""); 
+      
+      // 自动滚动到加载区域
+      window.setTimeout(() => {
+        document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
 
-      const formData = new FormData();
+      // ==========================================
+      // 第一阶段：直传大文件到 Cloudflare R2
+      // ==========================================
+      const uploadedFileKeys: string[] = [];
       const isVideo = files.some(f => f.type.startsWith('video/'));
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadStatus(`正在传输大文件到云端 (${i + 1}/${files.length})...`);
+        
+        // 1. 向你刚才建的 /api/upload 要临时通行证
+        const presignRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: file.name, contentType: file.type })
+        });
+        
+        if (!presignRes.ok) throw new Error("无法获取上传通道，请稍后再试");
+        const { uploadUrl, fileKey } = await presignRes.json();
+
+        // 2. 绕过 Vercel，直接把大文件塞进 R2
+        const uploadRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file
+        });
+
+        if (!uploadRes.ok) throw new Error("视频/图片传输至云端失败");
+        uploadedFileKeys.push(fileKey);
+      }
+
+      // ==========================================
+      // 第二阶段：呼叫 AI 后端进行深度反推
+      // ==========================================
+      setUploadStatus("素材已就绪，AI 视觉引擎深度提取中...");
+
+      // 这里我们将原本发送真文件的逻辑，改成了发送文件在 R2 里的“提取码 (fileKeys)”
+      const formData = new FormData();
       formData.append("inputType", isVideo ? "video" : "images");
       formData.append("analyzerModel", analyzerModel);
       formData.append("outputLanguage", outputLanguage);
       formData.append("outputStyle", outputStyle);
       formData.append("targetPlatform", targetPlatform);
 
-      for (const file of files) {
-        formData.append("files", file);
+      // 把存好大文件的钥匙告诉后端，让后端去 R2 拿
+      for (const key of uploadedFileKeys) {
+        formData.append("fileKeys", key); 
       }
 
-      // 自动滚动到加载区域，让用户看到骨架屏
-      window.setTimeout(() => {
-        document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
-
-      // 发送请求，此处会等待大约 10~30 秒直到后端处理完毕
       const response = await fetch("/api/reverse-prompt", {
         method: "POST",
         body: formData,
       });
 
-      // 🚀 核心修改：直接一次性解析后端返回的完整 JSON
       const finalData = await response.json();
 
-      // 处理 HTTP 错误状态
       if (!response.ok) {
         throw new Error(finalData.error || "分析失败，请检查模型名称和额度");
       }
@@ -545,7 +548,6 @@ export default function ReversePromptPage() {
         targetPlatform,
       };
 
-      // 🚀 核心修改：由于后端 (route.ts) 已经进行了安全解析，我们直接把 finalData 喂给 React 状态！
       setResult(finalData);
       setTaskMeta(nextTaskMeta);
       setTaskIdToUrl(pseudoTaskId);
@@ -556,16 +558,15 @@ export default function ReversePromptPage() {
         createdAt: Date.now(),
       });
 
-      // 结果出来后，平滑滚动到结果展示区
       window.setTimeout(() => {
         document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
 
     } catch (err) {
-      // 捕获我们在 route.ts 里翻译好的中文报错提示
       setError(err instanceof Error ? err.message : "分析失败，请稍后再试");
     } finally {
-      setIsLoading(false); // 关闭加载状态
+      setIsLoading(false);
+      setUploadStatus(""); // 分析结束清空状态
     }
   }
 
@@ -645,7 +646,7 @@ export default function ReversePromptPage() {
             </div>
 
             <div className="space-y-4">
-              <PanelTitle title="上传参考素材" description="支持拖拽，可上传最高 50MB 的图片或短视频。" />
+              <PanelTitle title="上传参考素材" description="支持拖拽，可无缝上传最高 200MB 的图片或超清视频。" />
 
               <div 
                 className={`rounded-[24px] border border-dashed transition-all duration-300 p-5 sm:p-6 ${
@@ -673,7 +674,7 @@ export default function ReversePromptPage() {
                       {isDragging ? "松手即可上传" : "点击或拖拽上传素材"}
                     </div>
                     <div className="mt-2 text-xs leading-6 text-gray-500">
-                      支持 PNG / JPG / MP4 / MOV · 最多 50MB
+                      支持 PNG / JPG / MP4 / MOV · 最多 200MB
                     </div>
 
                     <input
@@ -726,7 +727,8 @@ export default function ReversePromptPage() {
                   disabled={isLoading || isRestoring}
                   className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
-                  {isLoading ? "解析计算中..." : isRestoring ? "恢复中..." : "开始反推分析"}
+                  {/* 🚀 按钮文案会根据上传阶段动态变化 */}
+                  {isLoading ? (uploadStatus || "解析计算中...") : isRestoring ? "恢复中..." : "开始反推分析"}
                 </button>
                 <button
                   type="button"
@@ -747,11 +749,10 @@ export default function ReversePromptPage() {
           </div>
         </SoftCard>
 
-        {/* 🚀 全新赛博朋克极客加载面板 */}
         {(isLoading || isRestoring) && !result && (
           <SoftCard className="scroll-mt-6" >
             <div id="reverse-prompt-loading">
-              <PanelTitle title={isRestoring ? "正在恢复结果" : "AI 视觉引擎深度扫描中..."} description="正在拆解像素与光影关系，请不要离开页面" />
+              <PanelTitle title={isRestoring ? "正在恢复结果" : uploadStatus ? uploadStatus : "AI 视觉引擎深度扫描中..."} description="正在拆解像素与光影关系，请不要离开页面" />
               
               {streamedRaw ? (
                 <div className="mt-5 max-h-[300px] overflow-y-auto rounded-[18px] bg-gray-900 px-5 py-4 font-mono text-[13px] text-green-400 shadow-inner custom-scrollbar">
@@ -783,7 +784,6 @@ export default function ReversePromptPage() {
           </SoftCard>
         )}
 
-        {/* 解析完成后的精美结果面板 */}
         {result && (
           <div id="reverse-prompt-result" className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <SoftCard>
