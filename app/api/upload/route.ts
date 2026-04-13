@@ -11,6 +11,8 @@ const s3Client = new S3Client({
     accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
+  // 👇 加上这一行救命的代码，强制使用正确的路径格式！
+  forcePathStyle: true, 
 });
 
 export async function POST(request: Request) {
