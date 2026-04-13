@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+// 💡 新增 1：引入你的 Prisma 实例和刚刚写好的额度扣除函数
+// （请根据你的实际目录层级调整这里的路径，比如 "@/lib/prisma" 或 "../../../lib/prisma"）
+import prisma from "@/lib/prisma"; 
+import { checkAndDeductQuota } from "@/lib/quota";
+
 export const maxDuration = 60;
 
-// 🚀 1. 初始化 R2 客户端（专门用来读取前端刚才传到云端的大视频）
+// 🚀 1. 初始化 R2 客户端
 const s3Client = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -24,6 +29,7 @@ const KEYS = {
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 
 function translateError(errorMsg: string): string {
+  // ... (保留你原有的 translateError 逻辑不变)
   const msg = errorMsg.toLowerCase();
   if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) return "😴 服务器当前排队人数过多被挤爆了，请稍后重试。";
   if (msg.includes("401") || msg.includes("api_key_invalid")) return "🔑 API 密钥无效或配置错误。";
@@ -34,6 +40,7 @@ function translateError(errorMsg: string): string {
 
 // 🛡️ 究极防弹 JSON 提取器
 function safeParseJSON(text: string) {
+  // ... (保留你原有的 safeParseJSON 逻辑不变)
   try { 
     return JSON.parse(text); 
   } catch (e) {
@@ -53,14 +60,44 @@ function safeParseJSON(text: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    // ==========================================
+    // 💡 新增 2：【第一道门槛】提取登录凭证 & 校验次数
+    // ==========================================
+    // 从 Cookie 中获取用户 token（注意：如果你前端设置普通用户登录时的 cookie 不叫 sessionToken，请换成你实际的名字）
+    const token = req.cookies.get("sessionToken")?.value; 
+    
+    if (!token) {
+      return NextResponse.json({ error: "您还没有登录，请先登录再使用高级反推功能哦。" }, { status: 401 });
+    }
+
+    // 去数据库核实这个 token 是谁的
+    const session = await prisma.session.findUnique({
+      where: { sessionToken: token },
+      select: { userId: true }
+    });
+
+    if (!session) {
+      return NextResponse.json({ error: "登录已失效，请重新登录。" }, { status: 401 });
+    }
+
+    // 调用我们的收费站逻辑
+    const quotaResult = await checkAndDeductQuota(session.userId);
+    if (!quotaResult.allowed) {
+      // 这里的 error 提示就是我们在 quota.ts 里写的 "您今天的免费次数已用完..."
+      return NextResponse.json({ error: quotaResult.error }, { status: 403 }); 
+    }
+    // ==========================================
+    // ✅ 校验通过！继续往下走原有的核心业务
+    // ==========================================
+
+
     const formData = await req.formData();
     const analyzerModel = formData.get("analyzerModel") as string;
     const targetPlatform = formData.get("targetPlatform") as string || "generic";
-    const inputType = formData.get("inputType") as string; // 获取前端传来的视频/图片标识
+    const inputType = formData.get("inputType") as string;
     
-    // 🚀 2. 核心改变：不再接真实的文件，而是接存满大视频的“云端提取码”
+    // 🚀 2. 获取云端提取码
     const fileKeys = formData.getAll("fileKeys") as string[];
-
     if (!fileKeys || fileKeys.length === 0) return NextResponse.json({ error: "未接收到云端素材" }, { status: 400 });
 
     // 智能路由分配
@@ -78,17 +115,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `服务端未配置该模型所属的 API Key` }, { status: 500 });
     }
 
-    // 🚀 3. 给大模型开“介绍信”：去 R2 仓库拿这个视频
+    // 🚀 3. 给大模型开“介绍信”
     const fileKey = fileKeys[0];
     const getCommand = new GetObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: fileKey,
     });
     
-    // 生成一个有效期为 10 分钟的临时下载链接，专门给大模型去拉取素材
     const fileUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 600 });
 
-    // 🚀 4. 视频级强化 System Prompt（史诗级防偷懒指令）
+    // 🚀 4. 视频级强化 System Prompt
     const systemPrompt = `你是一个世界顶级的多模态视觉解析专家与 AI 提示词（Prompt）工程师。
 请仔细分析提供的视觉素材。
 
@@ -124,7 +160,7 @@ export async function POST(req: NextRequest) {
           role: "user",
           content: [
             { type: "text", text: systemPrompt },
-            // 🚀 5. 把刚生成的“临时提货链接”喂给模型
+            // 🚀 5. 把临时提货链接喂给模型
             { type: "image_url", image_url: { url: fileUrl } }
           ]
         }
@@ -157,6 +193,11 @@ export async function POST(req: NextRequest) {
     const content = payloadData.choices[0].message.content;
     
     const finalJSON = safeParseJSON(content);
+    
+    // 💡 新增 3：顺便把剩余次数通过请求头或附加字段还给前端（可选，这里我为了不破坏你前端的解析格式，将剩余次数包在返回数据中）
+    // 你前端如果在页面上想显示剩余次数，可以读取 response.data._remainingQuota
+    finalJSON._remainingQuota = quotaResult.remaining; 
+
     return NextResponse.json(finalJSON);
 
   } catch (error: any) {

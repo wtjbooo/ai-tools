@@ -130,9 +130,14 @@ model User {
   sessions      Session[]
 
   reversePromptTasks ReversePromptTask[]
-  
-  // 💡 新增：关联收藏夹
   collections        Collection[]
+
+  // ==========================================
+  // 💡 新增：商业化与每日额度限制字段
+  // ==========================================
+  freeUsesToday Int       @default(0) // 今天已使用的免费次数
+  lastUsedDate  DateTime?             // 最后一次扣除次数的日期（用于跨天重置）
+  isPro         Boolean   @default(false) // 预留：判断是否为高级/付费用户，高级用户可以无限制或有更高额度
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
