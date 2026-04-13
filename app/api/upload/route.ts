@@ -2,7 +2,6 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
-// 💡 回归最初的方案：引入 Prisma
 import prisma from "@/lib/prisma"; 
 
 const s3Client = new S3Client({
@@ -18,22 +17,16 @@ const s3Client = new S3Client({
 export async function POST(request: NextRequest) {
   try {
     // ==========================================
-    // 🛡️ 修复：兼容本地和线上的 Cookie 命名规则
+    // 🎯 最终修复：使用截图中真实的 Cookie 名称
     // ==========================================
-    // 1. 先尝试获取本地的常规 Cookie
-    let token = request.cookies.get("next-auth.session-token")?.value;
-    
-    // 2. 如果没获取到，说明在线上环境，尝试获取带 __Secure- 前缀的 Cookie
-    if (!token) {
-      token = request.cookies.get("__Secure-next-auth.session-token")?.value;
-    }
+    const token = request.cookies.get("session_token")?.value;
 
-    // 3. 如果还是没有，说明真没登录
+    // 如果没拿到 token，说明没登录
     if (!token) {
       return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
     }
 
-    // 4. 去数据库核实 Token 是否有效
+    // 去数据库核实 Token 是否有效，并获取用户信息
     const session = await prisma.session.findUnique({
       where: { sessionToken: token },
       select: { userId: true }
