@@ -2,41 +2,37 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // 💡 引入 Prisma 校验用户
+import { getServerSession } from "next-auth/next";
+
+// 💡 重点：这里需要引入你配置 NextAuth 时的 authOptions。
+// 下面这行路径请根据你的实际项目进行修改！
+// 如果你把它写在了 lib/auth.ts 里，就是 "@/lib/auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"; 
 
 // 1. 初始化连通 Cloudflare R2 的客户端
 const s3Client = new S3Client({
-  region: "auto", // R2 必须填 auto
+  region: "auto", 
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
-  // 👇 加上这一行救命的代码，强制使用正确的路径格式！
   forcePathStyle: true, 
 });
 
 export async function POST(request: NextRequest) {
   try {
     // ==========================================
-    // 🛡️ 新增：防身逻辑 - 校验用户是否登录
+    // 🛡️ 修复：使用官方方案校验用户是否登录
     // ==========================================
-    const token = request.cookies.get("next-auth.session-token")?.value;
+    // 这一步会自动处理 Cookie 名称差异，并解析当前会话
+    const session = await getServerSession(authOptions);
     
-    if (!token) {
+    // 如果没有 session 或者没有 user，说明未登录或登录失效
+    if (!session || !session.user) {
       return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
     }
-
-    const session = await prisma.session.findUnique({
-      where: { sessionToken: token },
-      select: { userId: true }
-    });
-
-    if (!session) {
-      return NextResponse.json({ error: "登录已失效，请重新登录。" }, { status: 401 });
-    }
     // ==========================================
-
 
     // 2. 接收前端传过来的文件名和文件类型
     const { filename, contentType } = await request.json();
