@@ -62,7 +62,8 @@ export function withProtection(
         if (!quotaResult.allowed) {
           return NextResponse.json({ error: quotaResult.error }, { status: 403 }); 
         }
-        remainingQuota = quotaResult.remaining;
+        // ✅ 修复：加入类型转换，确保 Vercel 的 TS 编译器顺利通过
+        remainingQuota = quotaResult.remaining !== undefined ? Number(quotaResult.remaining) : undefined;
       }
 
       // 4. ✅ 所有安检全部通过！将纯净的数据交给真正的业务逻辑处理
