@@ -459,6 +459,7 @@ export default function ReversePromptPage() {
     removeTaskIdFromUrl();
   }
 
+// 💡 替换：带有进度监控的全新 handleAnalyze 方法
   async function handleAnalyze() {
     const validationError = validateFiles(files);
     if (validationError) {
@@ -472,20 +473,25 @@ export default function ReversePromptPage() {
       setResult(null);
       setTaskMeta(null);
       setStreamedRaw(""); 
+      // 重置状态
+      setUploadStatus("");
+      // 🔥 新增：用于存放进度数值（0-100）
+      let currentProgress = 0; 
       
       window.setTimeout(() => {
         document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 100);
 
       // ==========================================
-      // 第一阶段：直传大文件到 Cloudflare R2
+      // 第一阶段：直传大文件到 Cloudflare R2 (带真实进度)
       // ==========================================
       const uploadedFileKeys: string[] = [];
       const isVideo = files.some(f => f.type.startsWith('video/'));
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        setUploadStatus(`正在传输大文件到云端 (${i + 1}/${files.length})...`);
+        setUploadStatus(`正在获取传输通道 (${i + 1}/${files.length})...`);
+        currentProgress = 0; // 每个文件开始传之前，进度归零
         
         const presignRes = await fetch("/api/upload", {
           method: "POST",
@@ -499,13 +505,34 @@ export default function ReversePromptPage() {
         }
         const { uploadUrl, fileKey } = await presignRes.json();
 
-        const uploadRes = await fetch(uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file
+        // 🔥 核心魔法：使用 Promise 和 XMLHttpRequest 拦截上传过程
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", uploadUrl, true);
+          xhr.setRequestHeader("Content-Type", file.type);
+
+          // 监听上传进度，并动态更新你原本写好的 uploadStatus 状态！
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = Math.round((event.loaded / event.total) * 100);
+              currentProgress = percentComplete;
+              // 这样进度数字就会直接显示在你的 "开始反推分析" 按钮上
+              setUploadStatus(`视频传输中: ${percentComplete}% (${i + 1}/${files.length})`);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`文件传输失败，服务器状态码: ${xhr.status}`));
+            }
+          };
+          
+          xhr.onerror = () => reject(new Error("网络异常，传输被意外中断"));
+          xhr.send(file);
         });
 
-        if (!uploadRes.ok) throw new Error("视频/图片传输至云端失败");
         uploadedFileKeys.push(fileKey);
       }
 
@@ -532,7 +559,6 @@ export default function ReversePromptPage() {
 
       const finalData = await response.json();
 
-      // 💡 新增：如果后端返回了剩余次数，就更新到页面上
       if (finalData._remainingQuota !== undefined) {
         setRemainingQuota(finalData._remainingQuota);
       }
