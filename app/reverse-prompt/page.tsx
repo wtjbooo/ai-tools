@@ -86,7 +86,6 @@ const LANGUAGES = [
 
 const ACCEPTED_FILE_TYPES = "image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime";
 const MAX_FILE_COUNT = 4;
-// 🚀 核心升级：有了 R2 云存储撑腰，前端直传限制放大到 200MB！
 const MAX_TOTAL_BYTES = 200 * 1024 * 1024; 
 
 function getPromptByLanguage(value: PromptText, language: OutputLanguage) {
@@ -119,7 +118,7 @@ function validateFiles(selectedFiles: File[], options?: { requireAtLeastOne?: bo
   const videoCount = selectedFiles.filter(f => f.type.startsWith("video/")).length;
   if (videoCount > 1) return "每次解析最多支持上传 1 个短视频";
   const totalBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
-  if (totalBytes > MAX_TOTAL_BYTES) return "总文件体积请控制在 200MB 内"; // 👈 这里的提示也更新了
+  if (totalBytes > MAX_TOTAL_BYTES) return "总文件体积请控制在 200MB 内";
   return "";
 }
 
@@ -296,13 +295,16 @@ export default function ReversePromptPage() {
   const [result, setResult] = useState<ReversePromptResult | null>(null);
   const [taskMeta, setTaskMeta] = useState<TaskMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(""); // 🚀 新增：展示上传到云端的状态
+  const [uploadStatus, setUploadStatus] = useState(""); 
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState("");
   const [pickerKey, setPickerKey] = useState(0);
   const hasTriedRestore = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [streamedRaw, setStreamedRaw] = useState("");
+
+  // 💡 新增：记录剩余额度的状态
+  const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
 
   const displayTotalBytes = useMemo(() => {
     if (files.length > 0) return files.reduce((sum, f) => sum + f.size, 0);
@@ -450,14 +452,13 @@ export default function ReversePromptPage() {
     setTaskMeta(null);
     setError("");
     setIsLoading(false);
-    setUploadStatus(""); // 重置状态
+    setUploadStatus(""); 
     setIsRestoring(false);
     setStreamedRaw("");
     setPickerKey((value) => value + 1);
     removeTaskIdFromUrl();
   }
 
-  // 🚀 核心架构重构：前端直传 R2 + 发送云端 FileKey 给后端
   async function handleAnalyze() {
     const validationError = validateFiles(files);
     if (validationError) {
@@ -472,7 +473,6 @@ export default function ReversePromptPage() {
       setTaskMeta(null);
       setStreamedRaw(""); 
       
-      // 自动滚动到加载区域
       window.setTimeout(() => {
         document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 100);
@@ -487,7 +487,6 @@ export default function ReversePromptPage() {
         const file = files[i];
         setUploadStatus(`正在传输大文件到云端 (${i + 1}/${files.length})...`);
         
-        // 1. 向你刚才建的 /api/upload 要临时通行证
         const presignRes = await fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -495,21 +494,11 @@ export default function ReversePromptPage() {
         });
         
         if (!presignRes.ok) {
-          let errorMessage = "无法获取上传通道，请稍后再试";
-          try {
-            // 尝试读取后端的真话
-            const errorData = await presignRes.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch (parseError) {
-            // 如果后端彻底崩溃返回了乱码或 HTML，兜底报错
-            console.error("无法解析后端返回的错误信息");
-          }
-          throw new Error(errorMessage);
+          const errorData = await presignRes.json();
+          throw new Error(errorData.error || "无法获取上传通道，请稍后再试");
         }
-
         const { uploadUrl, fileKey } = await presignRes.json();
 
-        // 2. 绕过 Vercel，直接把大文件塞进 R2
         const uploadRes = await fetch(uploadUrl, {
           method: "PUT",
           headers: { "Content-Type": file.type },
@@ -525,7 +514,6 @@ export default function ReversePromptPage() {
       // ==========================================
       setUploadStatus("素材已就绪，AI 视觉引擎深度提取中...");
 
-      // 这里我们将原本发送真文件的逻辑，改成了发送文件在 R2 里的“提取码 (fileKeys)”
       const formData = new FormData();
       formData.append("inputType", isVideo ? "video" : "images");
       formData.append("analyzerModel", analyzerModel);
@@ -533,7 +521,6 @@ export default function ReversePromptPage() {
       formData.append("outputStyle", outputStyle);
       formData.append("targetPlatform", targetPlatform);
 
-      // 把存好大文件的钥匙告诉后端，让后端去 R2 拿
       for (const key of uploadedFileKeys) {
         formData.append("fileKeys", key); 
       }
@@ -545,11 +532,15 @@ export default function ReversePromptPage() {
 
       const finalData = await response.json();
 
+      // 💡 新增：如果后端返回了剩余次数，就更新到页面上
+      if (finalData._remainingQuota !== undefined) {
+        setRemainingQuota(finalData._remainingQuota);
+      }
+
       if (!response.ok) {
         throw new Error(finalData.error || "分析失败，请检查模型名称和额度");
       }
 
-      // 组装历史记录元数据
       const pseudoTaskId = `task_${Date.now()}`;
       const nextTaskMeta: TaskMeta = {
         taskId: pseudoTaskId,
@@ -578,7 +569,7 @@ export default function ReversePromptPage() {
       setError(err instanceof Error ? err.message : "分析失败，请稍后再试");
     } finally {
       setIsLoading(false);
-      setUploadStatus(""); // 分析结束清空状态
+      setUploadStatus(""); 
     }
   }
 
@@ -739,7 +730,6 @@ export default function ReversePromptPage() {
                   disabled={isLoading || isRestoring}
                   className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 >
-                  {/* 🚀 按钮文案会根据上传阶段动态变化 */}
                   {isLoading ? (uploadStatus || "解析计算中...") : isRestoring ? "恢复中..." : "开始反推分析"}
                 </button>
                 <button
@@ -751,6 +741,17 @@ export default function ReversePromptPage() {
                   清空
                 </button>
               </div>
+
+              {/* 💡 新增：剩余额度提示小组件 */}
+              {remainingQuota !== null && (
+                <div className="mt-4 flex items-center justify-center sm:justify-start gap-2 text-[13px] text-gray-500 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                  </span>
+                  今日免费高级算力还剩 <span className="font-bold text-emerald-600">{remainingQuota}</span> 次
+                </div>
+              )}
 
               {error && (
                 <div className="rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

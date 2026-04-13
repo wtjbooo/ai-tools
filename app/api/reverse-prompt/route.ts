@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     // 💡 新增 2：【第一道门槛】提取登录凭证 & 校验次数
     // ==========================================
     // 从 Cookie 中获取用户 token（注意：如果你前端设置普通用户登录时的 cookie 不叫 sessionToken，请换成你实际的名字）
-    const token = req.cookies.get("sessionToken")?.value; 
+    const token = req.cookies.get("next-auth.session-token")?.value;
     
     if (!token) {
       return NextResponse.json({ error: "您还没有登录，请先登录再使用高级反推功能哦。" }, { status: 401 });

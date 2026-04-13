@@ -1,7 +1,8 @@
 // app/api/upload/route.ts
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma"; // 💡 引入 Prisma 校验用户
 
 // 1. 初始化连通 Cloudflare R2 的客户端
 const s3Client = new S3Client({
@@ -15,8 +16,28 @@ const s3Client = new S3Client({
   forcePathStyle: true, 
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // ==========================================
+    // 🛡️ 新增：防身逻辑 - 校验用户是否登录
+    // ==========================================
+    const token = request.cookies.get("next-auth.session-token")?.value;
+    
+    if (!token) {
+      return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { sessionToken: token },
+      select: { userId: true }
+    });
+
+    if (!session) {
+      return NextResponse.json({ error: "登录已失效，请重新登录。" }, { status: 401 });
+    }
+    // ==========================================
+
+
     // 2. 接收前端传过来的文件名和文件类型
     const { filename, contentType } = await request.json();
 
