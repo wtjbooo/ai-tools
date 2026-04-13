@@ -495,8 +495,16 @@ export default function ReversePromptPage() {
         });
         
         if (!presignRes.ok) {
-          const errorData = await presignRes.json();
-          throw new Error(errorData.error || "无法获取上传通道，请稍后再试");
+          let errorMessage = "无法获取上传通道，请稍后再试";
+          try {
+            // 尝试读取后端的真话
+            const errorData = await presignRes.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (parseError) {
+            // 如果后端彻底崩溃返回了乱码或 HTML，兜底报错
+            console.error("无法解析后端返回的错误信息");
+          }
+          throw new Error(errorMessage);
         }
 
         const { uploadUrl, fileKey } = await presignRes.json();
