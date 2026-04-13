@@ -2,14 +2,9 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+// 💡 回归最初的方案：引入 Prisma
+import prisma from "@/lib/prisma"; 
 
-// 💡 重点：这里需要引入你配置 NextAuth 时的 authOptions。
-// 下面这行路径请根据你的实际项目进行修改！
-// 如果你把它写在了 lib/auth.ts 里，就是 "@/lib/auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; 
-
-// 1. 初始化连通 Cloudflare R2 的客户端
 const s3Client = new S3Client({
   region: "auto", 
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -23,38 +18,52 @@ const s3Client = new S3Client({
 export async function POST(request: NextRequest) {
   try {
     // ==========================================
-    // 🛡️ 修复：使用官方方案校验用户是否登录
+    // 🛡️ 修复：兼容本地和线上的 Cookie 命名规则
     // ==========================================
-    // 这一步会自动处理 Cookie 名称差异，并解析当前会话
-    const session = await getServerSession(authOptions);
+    // 1. 先尝试获取本地的常规 Cookie
+    let token = request.cookies.get("next-auth.session-token")?.value;
     
-    // 如果没有 session 或者没有 user，说明未登录或登录失效
-    if (!session || !session.user) {
+    // 2. 如果没获取到，说明在线上环境，尝试获取带 __Secure- 前缀的 Cookie
+    if (!token) {
+      token = request.cookies.get("__Secure-next-auth.session-token")?.value;
+    }
+
+    // 3. 如果还是没有，说明真没登录
+    if (!token) {
       return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
+    }
+
+    // 4. 去数据库核实 Token 是否有效
+    const session = await prisma.session.findUnique({
+      where: { sessionToken: token },
+      select: { userId: true }
+    });
+
+    if (!session) {
+      return NextResponse.json({ error: "登录已失效，请重新登录。" }, { status: 401 });
     }
     // ==========================================
 
-    // 2. 接收前端传过来的文件名和文件类型
+    // 接收前端传过来的文件名和文件类型
     const { filename, contentType } = await request.json();
 
     if (!filename || !contentType) {
       return NextResponse.json({ error: "缺少文件信息" }, { status: 400 });
     }
 
-    // 3. 给文件加个时间戳前缀，防止两个用户上传同名文件互相覆盖
+    // 给文件加个时间戳前缀
     const uniqueFilename = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-    // 4. 创建上传指令
+    // 创建上传指令
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: uniqueFilename,
       ContentType: contentType,
     });
 
-    // 5. 核心魔法：生成一个 1 小时有效期的“免死金牌”直传链接
+    // 生成预签名链接
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
-    // 把临时链接发给前端
     return NextResponse.json({ 
       uploadUrl: signedUrl, 
       fileKey: uniqueFilename 
