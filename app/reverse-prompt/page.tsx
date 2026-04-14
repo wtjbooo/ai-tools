@@ -1,5 +1,6 @@
 "use client";
 
+import UpgradeModal from '@/components/UpgradeModal';
 import GuideAndShowcase from '@/components/GuideAndShowcase';
 import Link from "next/link";
 import {
@@ -286,6 +287,7 @@ function recordTaskHistory(task: { taskId: string; fileCount: number; firstFileN
 }
 
 export default function ReversePromptPage() {
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [analyzerModel, setAnalyzerModel] = useState<AnalyzerModel>("gemini-free");
   const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>("zh");
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("standard");
@@ -303,7 +305,6 @@ export default function ReversePromptPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [streamedRaw, setStreamedRaw] = useState("");
 
-  // 💡 新增：记录剩余额度的状态
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
 
   const displayTotalBytes = useMemo(() => {
@@ -459,7 +460,6 @@ export default function ReversePromptPage() {
     removeTaskIdFromUrl();
   }
 
-// 💡 替换：带有进度监控的全新 handleAnalyze 方法
   async function handleAnalyze() {
     const validationError = validateFiles(files);
     if (validationError) {
@@ -473,25 +473,20 @@ export default function ReversePromptPage() {
       setResult(null);
       setTaskMeta(null);
       setStreamedRaw(""); 
-      // 重置状态
       setUploadStatus("");
-      // 🔥 新增：用于存放进度数值（0-100）
       let currentProgress = 0; 
       
       window.setTimeout(() => {
         document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 100);
 
-      // ==========================================
-      // 第一阶段：直传大文件到 Cloudflare R2 (带真实进度)
-      // ==========================================
       const uploadedFileKeys: string[] = [];
       const isVideo = files.some(f => f.type.startsWith('video/'));
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setUploadStatus(`正在获取传输通道 (${i + 1}/${files.length})...`);
-        currentProgress = 0; // 每个文件开始传之前，进度归零
+        currentProgress = 0; 
         
         const presignRes = await fetch("/api/upload", {
           method: "POST",
@@ -505,18 +500,15 @@ export default function ReversePromptPage() {
         }
         const { uploadUrl, fileKey } = await presignRes.json();
 
-        // 🔥 核心魔法：使用 Promise 和 XMLHttpRequest 拦截上传过程
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.open("PUT", uploadUrl, true);
           xhr.setRequestHeader("Content-Type", file.type);
 
-          // 监听上传进度，并动态更新你原本写好的 uploadStatus 状态！
           xhr.upload.onprogress = (event) => {
             if (event.lengthComputable) {
               const percentComplete = Math.round((event.loaded / event.total) * 100);
               currentProgress = percentComplete;
-              // 这样进度数字就会直接显示在你的 "开始反推分析" 按钮上
               setUploadStatus(`视频传输中: ${percentComplete}% (${i + 1}/${files.length})`);
             }
           };
@@ -536,9 +528,6 @@ export default function ReversePromptPage() {
         uploadedFileKeys.push(fileKey);
       }
 
-      // ==========================================
-      // 第二阶段：呼叫 AI 后端进行深度反推
-      // ==========================================
       setUploadStatus("素材已就绪，AI 视觉引擎深度提取中...");
 
       const formData = new FormData();
@@ -553,26 +542,36 @@ export default function ReversePromptPage() {
       }
 
       const response = await fetch("/api/reverse-prompt", {
-     method: "POST",
-     body: formData,
-   });
+        method: "POST",
+        body: formData,
+      });
 
-   // 🛡️ 究极防弹解析法：先读纯文本，就算后端崩溃也能看到真凶是谁
-   let finalData;
-   const responseText = await response.text(); 
-   try {
-     finalData = JSON.parse(responseText);
-   } catch (parseError) {
-     // 如果连 JSON 都不是，直接把服务器底层的真实报错弹出来！
-     throw new Error(`服务器底层异常: ${responseText.slice(0, 100)}...`);
-   }
+      // 🛡️ 修复冲突：优雅地合并“防弹解析”和“403 拦截”
+      const responseText = await response.text(); 
+      let finalData: any = {};
+      
+      try {
+        if (responseText) finalData = JSON.parse(responseText);
+      } catch (parseError) {
+        if (!response.ok) {
+           throw new Error(`服务器异常 (${response.status}): ${responseText.slice(0, 100)}...`);
+        } else {
+           throw new Error("解析返回数据失败，请稍后重试");
+        }
+      }
+
+      // 💡 核心拦截点：判断后端的 403 报错
+      if (!response.ok) {
+        if (response.status === 403) {
+          setShowUpgradeModal(true);
+          setError(""); 
+          return; 
+        }
+        throw new Error(finalData.error || "分析失败，请检查模型名称和额度");
+      }
 
       if (finalData._remainingQuota !== undefined) {
         setRemainingQuota(finalData._remainingQuota);
-      }
-
-      if (!response.ok) {
-        throw new Error(finalData.error || "分析失败，请检查模型名称和额度");
       }
 
       const pseudoTaskId = `task_${Date.now()}`;
@@ -776,7 +775,6 @@ export default function ReversePromptPage() {
                 </button>
               </div>
 
-              {/* 💡 新增：剩余额度提示小组件 */}
               {remainingQuota !== null && (
                 <div className="mt-4 flex items-center justify-center sm:justify-start gap-2 text-[13px] text-gray-500 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <span className="relative flex h-2 w-2">
@@ -902,6 +900,11 @@ export default function ReversePromptPage() {
 
         <GuideAndShowcase />
 
+        {/* 🚀 成功在页面最底部挂载升级弹窗 */}
+        <UpgradeModal 
+          isOpen={showUpgradeModal} 
+          onClose={() => setShowUpgradeModal(false)} 
+        />
       </div>
     </div>
   );
