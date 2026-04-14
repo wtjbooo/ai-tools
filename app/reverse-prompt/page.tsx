@@ -496,6 +496,12 @@ export default function ReversePromptPage() {
         
         if (!presignRes.ok) {
           const errorData = await presignRes.json();
+          // 🛡️ 修复点 1：如果在传图片时就被后端查出没额度了，直接拦截！
+          if (presignRes.status === 403) {
+            setShowUpgradeModal(true);
+            setError("");
+            return;
+          }
           throw new Error(errorData.error || "无法获取上传通道，请稍后再试");
         }
         const { uploadUrl, fileKey } = await presignRes.json();
@@ -546,7 +552,6 @@ export default function ReversePromptPage() {
         body: formData,
       });
 
-      // 🛡️ 修复冲突：优雅地合并“防弹解析”和“403 拦截”
       const responseText = await response.text(); 
       let finalData: any = {};
       
@@ -560,7 +565,7 @@ export default function ReversePromptPage() {
         }
       }
 
-      // 💡 核心拦截点：判断后端的 403 报错
+      // 🛡️ 修复点 2：AI 解析时的 403 拦截
       if (!response.ok) {
         if (response.status === 403) {
           setShowUpgradeModal(true);
@@ -598,8 +603,16 @@ export default function ReversePromptPage() {
         document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "分析失败，请稍后再试");
+    } catch (err: any) {
+      const errMsg = err instanceof Error ? err.message : "分析失败，请稍后再试";
+      
+      // 🛡️ 终极防线：不管上面漏掉了什么，只要错误提示里有这些字眼，强制呼出弹窗！
+      if (errMsg.includes("次数") && errMsg.includes("已用完")) {
+        setShowUpgradeModal(true);
+        setError("");
+      } else {
+        setError(errMsg);
+      }
     } finally {
       setIsLoading(false);
       setUploadStatus(""); 
