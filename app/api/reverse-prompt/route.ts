@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     // ==========================================
     // 💡 修复：使用正确的 Cookie 名称 session_token
     // ==========================================
-    const token = req.cookies.get("session_token")?.value;
+    const token = req.cookies.get("next-auth.session-token")?.value || req.cookies.get("__Secure-next-auth.session-token")?.value;
     
     if (!token) {
       return NextResponse.json({ error: "您还没有登录，请先登录再使用高级反推功能哦。" }, { status: 401 });

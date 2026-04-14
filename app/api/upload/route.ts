@@ -21,7 +21,7 @@ const s3Client = new S3Client({
 export async function POST(request: NextRequest) {
   try {
     // 🛡️ 3. 提取 Token（务必用正确的 NextAuth 名称！）
-    const token = request.cookies.get("next-auth.session-token")?.value;
+    const token = request.cookies.get("next-auth.session-token")?.value || request.cookies.get("__Secure-next-auth.session-token")?.value;
 
     if (!token) {
       return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
