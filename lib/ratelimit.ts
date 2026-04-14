@@ -35,3 +35,11 @@ export const searchRateLimit = new Ratelimit({
   limiter: Ratelimit.slidingWindow(5, "1 m"), 
   analytics: true,
 });
+
+// 🚀 5. 新增：创建订单的专属限流器（防止恶意刷单，每分钟最多创建 5 个订单）
+// 【注意：这里只保留这一个就够了，千万别重复！】
+export const createOrderRateLimit = new Ratelimit({
+  redis: redis,
+  limiter: Ratelimit.slidingWindow(5, "1 m"), 
+  analytics: true,
+});

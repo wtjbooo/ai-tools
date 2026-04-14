@@ -131,6 +131,7 @@ model User {
 
   reversePromptTasks ReversePromptTask[]
   collections        Collection[]
+  orders        Order[]
 
   // ==========================================
   // 💡 新增：商业化与每日额度限制字段
@@ -313,5 +314,28 @@ model Collection {
 
   @@index([userId])
   @@index([platform])
+  @@index([createdAt])
+}
+
+// ==========================================
+// 💡 新增：商业化订单模型
+// ==========================================
+model Order {
+  id            String   @id @default(cuid())
+  userId        String
+  outTradeNo    String   @unique // 传给微信/支付宝的唯一商户订单号
+  amount        Int      // 订单金额（⚠️ 强烈建议单位为“分”，例如 990 代表 9.9 元，避免浮点数精度丢失）
+  planType      String   // 套餐类型：例如 "quota_50" (加油包) 或 "monthly_pro" (包月会员)
+  status        String   @default("pending") // 支付状态：pending(待支付), paid(已支付), failed(失败), closed(已关闭)
+  paymentMethod String   @default("wechat")  // 支付方式：wechat, alipay
+  paidAt        DateTime? // 支付成功的时间戳
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([outTradeNo])
   @@index([createdAt])
 }
