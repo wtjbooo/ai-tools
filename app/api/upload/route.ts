@@ -21,7 +21,10 @@ const s3Client = new S3Client({
 export async function POST(request: NextRequest) {
   try {
     // 🛡️ 3. 提取 Token（务必用正确的 NextAuth 名称！）
-    const token = request.cookies.get("next-auth.session-token")?.value || request.cookies.get("__Secure-next-auth.session-token")?.value;
+    // 🛡️ 终极无敌 Cookie 提取法（本地、安全前缀、主机前缀全通吃）
+    const token = request.cookies.get("next-auth.session-token")?.value 
+               || request.cookies.get("__Secure-next-auth.session-token")?.value
+               || request.cookies.get("__Host-next-auth.session-token")?.value;
 
     if (!token) {
       return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
