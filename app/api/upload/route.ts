@@ -1,22 +1,33 @@
+// app/api/upload/route.ts
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma"; 
-// 🔥 1. 引入我们刚才写的限流器
+// 🔥 1. 引入刚才写的限流器
 import { uploadRateLimit } from "@/lib/ratelimit";
 
+// 🚀 2. 初始化连通 Cloudflare R2 的客户端
 const s3Client = new S3Client({
-  // ... (保持你原来的 S3Client 配置不变)
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+  },
+  // 👇 这个救命配置千万不能丢
+  forcePathStyle: true, 
 });
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get("session_token")?.value;
+    // 🛡️ 3. 提取 Token（务必用正确的 NextAuth 名称！）
+    const token = request.cookies.get("next-auth.session-token")?.value;
 
     if (!token) {
       return NextResponse.json({ error: "您还没有登录，无法上传文件哦。" }, { status: 401 });
     }
 
+    // 🛡️ 4. 查库核实身份
     const session = await prisma.session.findUnique({
       where: { sessionToken: token },
       select: { 
@@ -30,24 +41,21 @@ export async function POST(request: NextRequest) {
     }
 
     // ==========================================
-    // 🛡️ 核心新增：基于用户 ID 执行 Redis 级限流
+    // 🛡️ 5. 核心新增：基于用户 ID 执行 Redis 级限流
     // ==========================================
-    // 使用 userId 作为识别唯一用户的标识
     const identifier = session.userId;
     const { success, pending, limit, reset, remaining } = await uploadRateLimit.limit(identifier);
     
-    // 如果 success 为 false，说明超出了我们在 lib/ratelimit.ts 里设置的频率限制
+    // 如果 success 为 false，说明超频了
     if (!success) {
-       return new NextResponse(
-         JSON.stringify({ 
-           error: "上传请求过于频繁，请稍作休息（建议1分钟后再试）。",
-           // 还可以优雅地告诉前端什么时候解封
-           resetTime: reset 
-         }), 
+       return NextResponse.json(
          { 
-           status: 429, // 429 Too Many Requests 是标准的限流状态码
+           error: "上传请求过于频繁，请稍作休息（建议1分钟后再试）。",
+           resetTime: reset 
+         }, 
+         { 
+           status: 429,
            headers: {
-             "Content-Type": "application/json",
              "X-RateLimit-Limit": limit.toString(),
              "X-RateLimit-Remaining": remaining.toString(),
            } 
@@ -56,11 +64,33 @@ export async function POST(request: NextRequest) {
     }
     // ==========================================
 
-    const { filename, contentType } = await request.json();
-    
-    // ... (后续的获取 S3 URL 逻辑保持不变)
+    // 🚀 6. 接收文件并生成上传链接
+    const body = await request.json();
+    const filename = body.filename;
+    const contentType = body.contentType;
 
-  } catch (error) {
-    // ... (错误处理保持不变)
+    if (!filename || !contentType) {
+      return NextResponse.json({ error: "缺少文件信息" }, { status: 400 });
+    }
+
+    const uniqueFilename = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: uniqueFilename,
+      ContentType: contentType,
+    });
+
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+
+    return NextResponse.json({ uploadUrl: signedUrl, fileKey: uniqueFilename }, { status: 200 });
+
+  } catch (error: any) {
+    console.error("上传接口发生严重错误:", error);
+    // 🛡️ 7. 究极防弹兜底：专门对付 Neon 数据库休眠！
+    return NextResponse.json(
+      { error: "连接数据库或云存储失败（数据库可能在休眠），请刷新页面重试！" }, 
+      { status: 500 }
+    );
   }
 }
