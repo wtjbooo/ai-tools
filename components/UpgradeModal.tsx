@@ -12,6 +12,9 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [amount, setAmount] = useState(0);
   const [error, setError] = useState("");
+  
+  // 💡 新增：保存当前正在支付的订单号，用于轮询查询
+  const [currentOutTradeNo, setCurrentOutTradeNo] = useState("");
 
   // 每次关闭弹窗时，重置状态
   useEffect(() => {
@@ -19,6 +22,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
       setQrCodeUrl("");
       setIsLoading(false);
       setError("");
+      setCurrentOutTradeNo(""); // 重置订单号
     }
   }, [isOpen]);
 
@@ -50,6 +54,9 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
       // 成功拿到二维码和金额，更新到视图
       setQrCodeUrl(data.qrCodeUrl);
       setAmount(data.displayAmount);
+      
+      // 💡 记录下这笔订单号，留给轮询用！
+      setCurrentOutTradeNo(data.outTradeNo);
 
     } catch (err: any) {
       setError(err.message);
@@ -57,6 +64,39 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
       setIsLoading(false);
     }
   }
+
+  // ==========================================
+  // 🚀 核心新增：定时轮询查状态！
+  // ==========================================
+  useEffect(() => {
+    // 只有当二维码显示出来，且有订单号时，才开始轮询
+    if (!qrCodeUrl || !currentOutTradeNo) return;
+
+    const checkInterval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/pay/check-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ outTradeNo: currentOutTradeNo })
+        });
+        
+        const data = await res.json();
+        
+        if (data.status === "paid") {
+           // 💰 发现已经付款！
+           clearInterval(checkInterval); // 停止轮询
+           alert("支付成功！系统已为您发放专属算力！");
+           onClose(); // 自动关闭付费弹窗
+           window.location.reload(); // 刷新页面，让新的额度在页面上显示出来
+        }
+      } catch (e) {
+        console.error("轮询状态失败", e);
+      }
+    }, 3000); // 每 3 秒钟悄悄查一次
+
+    // 组件卸载或关闭时，清理定时器，防止内存泄漏
+    return () => clearInterval(checkInterval);
+  }, [qrCodeUrl, currentOutTradeNo, onClose]);
 
   if (!isOpen) return null;
 
