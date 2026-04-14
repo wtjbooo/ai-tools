@@ -121,10 +121,14 @@ export async function POST(req: NextRequest) {
 
     let selectedKey = KEYS.openai;
     let targetModel = analyzerModel;
+    // 默认请求地址：中转平台
+    let apiUrl = `${N1N_BASE_URL}/chat/completions`; 
 
     if (analyzerModel.includes("gemini")) {
-      selectedKey = KEYS.gemini;
-      targetModel = analyzerModel === 'gemini-free' ? 'gemini-1.5-flash' : analyzerModel;
+      // 🌟 核心分流：遇到 Gemini，直接掏出官方免费钥匙，并请求谷歌官方接口！
+      selectedKey = process.env.GEMINI_API_KEY; 
+      apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+      targetModel = analyzerModel === 'gemini-free' ? 'gemini-1.5-flash' : 'gemini-1.5-pro';
     } else if (analyzerModel.includes("claude")) {
       selectedKey = KEYS.claude;
     }
@@ -188,7 +192,7 @@ export async function POST(req: NextRequest) {
       payload.response_format = { type: "json_object" };
     }
 
-    const response = await fetch(`${N1N_BASE_URL}/chat/completions`, {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
