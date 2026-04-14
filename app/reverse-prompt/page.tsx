@@ -553,11 +553,19 @@ export default function ReversePromptPage() {
       }
 
       const response = await fetch("/api/reverse-prompt", {
-        method: "POST",
-        body: formData,
-      });
+     method: "POST",
+     body: formData,
+   });
 
-      const finalData = await response.json();
+   // 🛡️ 究极防弹解析法：先读纯文本，就算后端崩溃也能看到真凶是谁
+   let finalData;
+   const responseText = await response.text(); 
+   try {
+     finalData = JSON.parse(responseText);
+   } catch (parseError) {
+     // 如果连 JSON 都不是，直接把服务器底层的真实报错弹出来！
+     throw new Error(`服务器底层异常: ${responseText.slice(0, 100)}...`);
+   }
 
       if (finalData._remainingQuota !== undefined) {
         setRemainingQuota(finalData._remainingQuota);

@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     if (analyzerModel.includes("gemini")) {
       selectedKey = KEYS.gemini;
-      targetModel = analyzerModel === 'gemini-free' ? 'gemini-2.5-flash' : analyzerModel;
+      targetModel = analyzerModel === 'gemini-free' ? 'gemini-1.5-flash' : analyzerModel;
     } else if (analyzerModel.includes("claude")) {
       selectedKey = KEYS.claude;
     }
