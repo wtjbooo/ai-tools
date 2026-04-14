@@ -124,11 +124,15 @@ export async function POST(req: NextRequest) {
     // 默认请求地址：中转平台
     let apiUrl = `${N1N_BASE_URL}/chat/completions`; 
 
-    if (analyzerModel.includes("gemini")) {
-      // 🌟 核心分流：遇到 Gemini，直接掏出官方免费钥匙，并请求谷歌官方接口！
+    if (analyzerModel === 'gemini-free') {
+      // 🌟 分流 A：只要是免费的 Flash，直接掏出官方钥匙，白嫖谷歌官方接口！
       selectedKey = process.env.GEMINI_API_KEY; 
       apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-      targetModel = analyzerModel === 'gemini-free' ? 'gemini-1.5-flash' : 'gemini-1.5-pro';
+      targetModel = 'gemini-1.5-flash';
+    } else if (analyzerModel.includes("gemini")) {
+      // 🌟 分流 B：如果是 Gemini 的高级模型 (Pro 等)，依然走 N1N 中转平台！
+      selectedKey = KEYS.gemini;
+      targetModel = analyzerModel; 
     } else if (analyzerModel.includes("claude")) {
       selectedKey = KEYS.claude;
     }
@@ -143,7 +147,23 @@ export async function POST(req: NextRequest) {
       Key: fileKey,
     });
     
-    const fileUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 600 });
+   const fileUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 600 });
+
+    // ==========================================
+    // 🌟 新增：自动图片转码（谷歌官方接口拒收外链，必须喂 base64 文本）
+    // ==========================================
+    let finalImageUrl = fileUrl;
+    if (apiUrl.includes("googleapis.com")) {
+      try {
+        const imgRes = await fetch(fileUrl);
+        const arrayBuffer = await imgRes.arrayBuffer();
+        const base64String = Buffer.from(arrayBuffer).toString('base64');
+        const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+        finalImageUrl = `data:${mimeType};base64,${base64String}`;
+      } catch (err) {
+        throw new Error("云端图片读取失败，请重试！");
+      }
+    }
 
     const systemPrompt = `你是一个世界顶级的多模态视觉解析专家与 AI 提示词（Prompt）工程师。
 请仔细分析提供的视觉素材。
@@ -180,7 +200,8 @@ export async function POST(req: NextRequest) {
           role: "user",
           content: [
             { type: "text", text: systemPrompt },
-            { type: "image_url", image_url: { url: fileUrl } }
+            // 🌟 注意：这里换成了处理过后的 finalImageUrl
+            { type: "image_url", image_url: { url: finalImageUrl } } 
           ]
         }
       ],
@@ -192,6 +213,9 @@ export async function POST(req: NextRequest) {
       payload.response_format = { type: "json_object" };
     }
 
+    // ==========================================
+    // 🌟 彻底修复 404 错误：严格只使用 apiUrl，千万不要再拼 /chat/completions！
+    // ==========================================
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
@@ -202,6 +226,7 @@ export async function POST(req: NextRequest) {
     });
 
     const responseText = await response.text();
+
     if (!response.ok) {
       let errMsg = `HTTP ${response.status}`;
       try { errMsg = JSON.parse(responseText).error?.message || errMsg; } catch (e) {} 
