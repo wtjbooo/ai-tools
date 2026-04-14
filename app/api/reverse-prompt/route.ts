@@ -60,10 +60,10 @@ export async function POST(req: NextRequest) {
     // ==========================================
     // 💡 修复：使用正确的 Cookie 名称 session_token
     // ==========================================
-    // 🛡️ 终极无敌 Cookie 提取法（本地、安全前缀、主机前缀全通吃）
-    const token = req.cookies.get("next-auth.session-token")?.value 
-               || req.cookies.get("__Secure-next-auth.session-token")?.value
-               || req.cookies.get("__Host-next-auth.session-token")?.value;
+    // 🛡️ 终极大满贯：优先查找 session_token
+    const token = req.cookies.get("session_token")?.value 
+               || req.cookies.get("next-auth.session-token")?.value 
+               || req.cookies.get("__Secure-next-auth.session-token")?.value;
     
     if (!token) {
       return NextResponse.json({ error: "您还没有登录，请先登录再使用高级反推功能哦。" }, { status: 401 });
