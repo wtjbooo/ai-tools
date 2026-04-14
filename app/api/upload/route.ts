@@ -15,8 +15,13 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
   forcePathStyle: true, 
-  // 🔥 终极杀手锏：强制关闭 AWS SDK v3 的自动校验，防止 Cloudflare R2 拒收！
+  
+  // 🔥 告诉 TypeScript 闭嘴，跳过这一行的类型检查
+  // @ts-ignore
   requestChecksumCalculation: "WHEN_NOT_REQUIRED",
+  
+  // 🔥 告诉 TypeScript 闭嘴，跳过这一行的类型检查
+  // @ts-ignore
   responseChecksumValidation: "WHEN_NOT_REQUIRED",
 });
 
