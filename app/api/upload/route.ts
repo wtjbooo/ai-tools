@@ -14,8 +14,10 @@ const s3Client = new S3Client({
     accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
-  // 👇 这个救命配置千万不能丢
   forcePathStyle: true, 
+  // 🔥 终极杀手锏：强制关闭 AWS SDK v3 的自动校验，防止 Cloudflare R2 拒收！
+  requestChecksumCalculation: "WHEN_NOT_REQUIRED",
+  responseChecksumValidation: "WHEN_NOT_REQUIRED",
 });
 
 export async function POST(request: NextRequest) {
