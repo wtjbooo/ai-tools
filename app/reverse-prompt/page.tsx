@@ -10,24 +10,13 @@ import {
   useRef,
   useState,
 } from "react";
-// 🚀 1. 引入一键唤起全局充值弹窗的钩子（Hook）
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
 
-// 1. 商业化模型分层
-type AnalyzerModel = 
-  | "gemini-free" 
-  | "moonshot-v1-8k"
-  | "doubao-seed-2-0-lite"
-  | "gemini-3.1-pro-preview" 
-  | "claude-sonnet-4-6" 
-  | "gpt-5.4-mini";
+type AnalyzerModel = "gemini-free" | "moonshot-v1-8k" | "doubao-seed-2-0-lite" | "gemini-3.1-pro-preview" | "claude-sonnet-4-6" | "gpt-5.4-mini";
 type OutputLanguage = "zh" | "en" | "bilingual";
 type OutputStyle = "simple" | "standard" | "pro";
 
-// 2. 扩容的目标生成平台
-type TargetPlatform = 
-  | "generic" | "midjourney" | "stablediffusion" | "leonardo"
-  | "sora" | "runway" | "luma" | "pika" | "jimeng" | "keling" | "doubao";
+type TargetPlatform = "generic" | "midjourney" | "stablediffusion" | "leonardo" | "sora" | "runway" | "luma" | "pika" | "jimeng" | "keling" | "doubao";
 
 type AnalysisBlock = { label: string; value: string; };
 type PromptText = { zh: string; en: string; };
@@ -41,20 +30,11 @@ type ReversePromptResult = {
   disclaimer: string;
 };
 
-type PreviewItem = {
-  key: string; name: string; size: number; url: string; type: "image" | "video";
-};
-
-type TaskMeta = {
-  taskId?: string; model?: string; fileCount?: number;
-  outputLanguage?: OutputLanguage; outputStyle?: OutputStyle; targetPlatform?: TargetPlatform;
-};
-
+type PreviewItem = { key: string; name: string; size: number; url: string; type: "image" | "video"; };
+type TaskMeta = { taskId?: string; model?: string; fileCount?: number; outputLanguage?: OutputLanguage; outputStyle?: OutputStyle; targetPlatform?: TargetPlatform; };
 type RestoredFile = { name: string; size: number; type?: string; };
 
-const STYLE_LABELS: Record<OutputStyle, string> = {
-  simple: "精简版", standard: "标准版", pro: "专业版",
-};
+const STYLE_LABELS: Record<OutputStyle, string> = { simple: "精简版", standard: "标准版", pro: "导演剪辑版(Pro)" };
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
 
 const MODELS = [
@@ -90,8 +70,8 @@ const ACCEPTED_FILE_TYPES = "image/png,image/jpeg,image/webp,video/mp4,video/web
 const MAX_FILE_COUNT = 4;
 const MAX_TOTAL_BYTES = 200 * 1024 * 1024; 
 
-function getPromptByLanguage(value: PromptText, language: OutputLanguage) {
-  if (!value) return "";
+function getPromptByLanguage(value: PromptText | undefined, language: OutputLanguage) {
+  if (!value) return "AI 未能生成该平台的提示词，请重试或选择【通用大模型】。";
   if (language === "zh") return value.zh;
   if (language === "en") return value.en;
   return `${value.zh}\n\n${value.en}`;
@@ -104,9 +84,7 @@ function formatBytes(bytes: number) {
 }
 
 function isVideoFile(file: File | RestoredFile) {
-  if ("type" in file && file.type) {
-    return file.type.startsWith("video/");
-  }
+  if ("type" in file && file.type) { return file.type.startsWith("video/"); }
   return /\.(mp4|webm|mov)$/i.test(file.name);
 }
 
@@ -148,9 +126,7 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
           {selectedOption.logo ? (
             <img src={selectedOption.logo} alt="" className="w-4 h-4 object-contain shrink-0" />
           ) : (
-            <div className="w-4 h-4 rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0">
-              {selectedOption.name.charAt(0)}
-            </div>
+             <div className="w-4 h-4 rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0">{selectedOption.name.charAt(0)}</div>
           )}
           <span className="truncate">{selectedOption.name}</span>
         </div>
@@ -164,31 +140,20 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
           <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
             {options.map((opt) => (
               <button
-                key={opt.id}
-                type="button"
-                onClick={() => { onChange(opt.id); setIsOpen(false); }}
+                key={opt.id} type="button" onClick={() => { onChange(opt.id); setIsOpen(false); }}
                 className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}
               >
                 <div className="shrink-0 mt-0.5">
-                  {opt.logo ? (
-                    <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />
-                  ) : (
-                     <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">
-                      {opt.name.charAt(0)}
-                    </div>
+                  {opt.logo ? ( <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />) : (
+                     <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">{opt.name.charAt(0)}</div>
                   )}
                 </div>
-                
                 <div className="flex flex-col gap-1 pr-1">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-semibold ${value === opt.id ? 'text-blue-700' : 'text-zinc-900'}`}>{opt.name}</span>
                     {opt.badge && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-500 shrink-0 border border-zinc-200/60">{opt.badge}</span>}
                   </div>
-                  {opt.desc && (
-                    <p className={`text-[11.5px] leading-relaxed line-clamp-2 ${value === opt.id ? 'text-blue-600/80' : 'text-zinc-500'}`}>
-                      {opt.desc}
-                    </p>
-                  )}
+                  {opt.desc && <p className={`text-[11.5px] leading-relaxed line-clamp-2 ${value === opt.id ? 'text-blue-600/80' : 'text-zinc-500'}`}>{opt.desc}</p>}
                 </div>
               </button>
             ))}
@@ -203,9 +168,7 @@ function PanelTitle({ title, description, action }: { title: string; description
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="space-y-1">
-        <h2 className="text-[21px] font-semibold tracking-tight text-gray-950 sm:text-[24px]">
-          {title}
-        </h2>
+        <h2 className="text-[21px] font-semibold tracking-tight text-gray-950 sm:text-[24px]">{title}</h2>
         {description ? <p className="text-sm leading-6 text-gray-500">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -225,11 +188,7 @@ function CopyButton({ text }: { text: string }) {
     }
   }
   return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50"
-    >
+    <button type="button" onClick={handleCopy} className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50">
       {copied ? "已复制" : "复制"}
     </button>
   );
@@ -237,17 +196,7 @@ function CopyButton({ text }: { text: string }) {
 
 function OptionButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "rounded-full border px-4 py-2 text-sm transition-all duration-300",
-        active
-          ? "border-black bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]"
-          : "border-black/10 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50",
-      ].join(" ")
-    }
-    >
+    <button type="button" onClick={onClick} className={["rounded-full border px-4 py-2 text-sm transition-all duration-300", active ? "border-black bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]" : "border-black/10 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50"].join(" ")}>
       {children}
     </button>
   );
@@ -255,46 +204,34 @@ function OptionButton({ active, children, onClick }: { active: boolean; children
 
 function SoftCard({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <section className={["rounded-[28px] border border-black/8 bg-white/70 backdrop-blur-xl p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-6", className].join(" ")}>
-      {children}
-    </section>
+    <section className={["rounded-[28px] border border-black/8 bg-white/70 backdrop-blur-xl p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-6", className].join(" ")}>{children}</section>
   );
 }
 
 function setTaskIdToUrl(taskId: string) {
-  const url = new URL(window.location.href);
-  url.searchParams.set("task", taskId);
-  window.history.replaceState({}, "", url.toString());
+  const url = new URL(window.location.href); url.searchParams.set("task", taskId); window.history.replaceState({}, "", url.toString());
 }
-
 function removeTaskIdFromUrl() {
-  const url = new URL(window.location.href);
-  url.searchParams.delete("task");
-  window.history.replaceState({}, "", url.toString());
+  const url = new URL(window.location.href); url.searchParams.delete("task"); window.history.replaceState({}, "", url.toString());
 }
-
 function getTaskIdFromUrl() {
-  if (typeof window === "undefined") return "";
-  return new URL(window.location.href).searchParams.get("task") || "";
+  if (typeof window === "undefined") return ""; return new URL(window.location.href).searchParams.get("task") || "";
 }
-
 function recordTaskHistory(task: { taskId: string; fileCount: number; firstFileName: string; createdAt: number }) {
   if (typeof window === "undefined") return;
   try {
     const history = JSON.parse(localStorage.getItem("rp_history") || "[]");
     const filtered = history.filter((h: any) => h.taskId !== task.taskId);
-    filtered.unshift(task);
-    localStorage.setItem("rp_history", JSON.stringify(filtered.slice(0, 50)));
+    filtered.unshift(task); localStorage.setItem("rp_history", JSON.stringify(filtered.slice(0, 50)));
   } catch (e) {}
 }
 
 export default function ReversePromptPage() {
-  // 🚀 2. 获取全局遥控器！再也不用在组件里维护繁杂的 state 了
   const { openModal } = useUpgradeModal();
 
   const [analyzerModel, setAnalyzerModel] = useState<AnalyzerModel>("gemini-free");
   const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>("zh");
-  const [outputStyle, setOutputStyle] = useState<OutputStyle>("standard");
+  const [outputStyle, setOutputStyle] = useState<OutputStyle>("pro"); // 默认调为 Pro 导演剪辑版
   const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>("generic");
   const [files, setFiles] = useState<File[]>([]);
   const [restoredFiles, setRestoredFiles] = useState<RestoredFile[]>([]);
@@ -304,12 +241,13 @@ export default function ReversePromptPage() {
   const [uploadStatus, setUploadStatus] = useState(""); 
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState("");
+  // 💡 额度通知状态：负责展示扣钱/退钱信息
+  const [quotaNotice, setQuotaNotice] = useState<{ type: 'success' | 'refund', msg: string } | null>(null);
+
   const [pickerKey, setPickerKey] = useState(0);
   const hasTriedRestore = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [streamedRaw, setStreamedRaw] = useState("");
-
-  const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
 
   const displayTotalBytes = useMemo(() => {
     if (files.length > 0) return files.reduce((sum, f) => sum + f.size, 0);
@@ -320,46 +258,33 @@ export default function ReversePromptPage() {
   const previewItems = useMemo<PreviewItem[]>(() => {
     if (files.length > 0) {
       return files.map((file) => ({
-        key: `${file.name}-${file.lastModified}`,
-        name: file.name,
-        size: file.size,
-        url: URL.createObjectURL(file),
-        type: isVideoFile(file) ? "video" : "image",
+        key: `${file.name}-${file.lastModified}`, name: file.name, size: file.size,
+        url: URL.createObjectURL(file), type: isVideoFile(file) ? "video" : "image",
       }));
     }
     if (restoredFiles.length > 0) {
       return restoredFiles.map((file, idx) => ({
-        key: `restored-${idx}`,
-        name: file.name,
-        size: file.size,
-        url: "",
-        type: isVideoFile(file) ? "video" : "image",
+        key: `restored-${idx}`, name: file.name, size: file.size,
+        url: "", type: isVideoFile(file) ? "video" : "image",
       }));
     }
     return [];
   }, [files, restoredFiles]);
 
   useEffect(() => {
-    return () => {
-      previewItems.forEach((item) => {
-        if (item.url) URL.revokeObjectURL(item.url);
-      });
-    };
+    return () => { previewItems.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url); }); };
   }, [previewItems]);
 
   useEffect(() => {
     if (hasTriedRestore.current) return;
     hasTriedRestore.current = true;
-
     const taskId = getTaskIdFromUrl();
     if (!taskId) return;
-
     let cancelled = false;
 
     async function restoreTask() {
       try {
-        setIsRestoring(true);
-        setError("");
+        setIsRestoring(true); setError("");
         const response = await fetch(`/api/reverse-prompt?taskId=${encodeURIComponent(taskId)}`);
         const payload = await response.json();
         if (!response.ok) throw new Error(payload?.error || "恢复失败");
@@ -369,25 +294,13 @@ export default function ReversePromptPage() {
         if (payload?.result) setResult(payload.result as ReversePromptResult);
         if (Array.isArray(task.inputFiles)) setRestoredFiles(task.inputFiles);
 
-        setTaskMeta({
-          taskId: task.id,
-          model: task.model,
-          fileCount: task.sourceCount,
-          outputLanguage: task.outputLanguage,
-          outputStyle: task.outputStyle,
-          targetPlatform: task.targetPlatform,
-        });
-
+        setTaskMeta({ taskId: task.id, model: task.model, fileCount: task.sourceCount, outputLanguage: task.outputLanguage, outputStyle: task.outputStyle, targetPlatform: task.targetPlatform });
         if (task.outputLanguage) setOutputLanguage(task.outputLanguage);
         if (task.outputStyle) setOutputStyle(task.outputStyle);
         if (task.targetPlatform) setTargetPlatform(task.targetPlatform);
-
-        window.setTimeout(() => {
-          document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 80);
+        window.setTimeout(() => { document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 80);
       } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "恢复结果失败");
+        if (cancelled) return; setError(err instanceof Error ? err.message : "恢复结果失败");
       } finally {
         if (!cancelled) setIsRestoring(false);
       }
@@ -403,86 +316,34 @@ export default function ReversePromptPage() {
   function processSelectedFiles(selectedFiles: File[]) {
     if (selectedFiles.length === 0) return;
     const nextError = validateFiles(selectedFiles);
-
     const hasVideo = selectedFiles.some(f => f.type.startsWith('video/'));
-    if (hasVideo && analyzerModel === 'gemini-free') {
-        setAnalyzerModel('gemini-3.1-pro-preview'); 
-    }
-
+    if (hasVideo && analyzerModel === 'gemini-free') setAnalyzerModel('gemini-3.1-pro-preview'); 
     if (nextError) {
-      setFiles([]);
-      setRestoredFiles([]);
-      setResult(null);
-      setTaskMeta(null);
-      setError(nextError);
-      setPickerKey((value) => value + 1);
-      removeTaskIdFromUrl();
-      return;
+      setFiles([]); setRestoredFiles([]); setResult(null); setTaskMeta(null);
+      setError(nextError); setPickerKey((value) => value + 1); removeTaskIdFromUrl(); return;
     }
-
-    setFiles(selectedFiles);
-    setRestoredFiles([]);
-    setResult(null);
-    setTaskMeta(null);
-    setError("");
-    removeTaskIdFromUrl();
+    setFiles(selectedFiles); setRestoredFiles([]); setResult(null); setTaskMeta(null); setError(""); setQuotaNotice(null); removeTaskIdFromUrl();
   }
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    processSelectedFiles(Array.from(event.target.files || []));
-  }
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault();
-    setIsDragging(true);
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    e.preventDefault();
-    setIsDragging(false);
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processSelectedFiles(Array.from(e.dataTransfer.files));
-    }
-  }
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) { processSelectedFiles(Array.from(event.target.files || [])); }
+  function handleDragOver(e: React.DragEvent) { e.preventDefault(); setIsDragging(true); }
+  function handleDragLeave(e: React.DragEvent) { e.preventDefault(); setIsDragging(false); }
+  function handleDrop(e: React.DragEvent) { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) processSelectedFiles(Array.from(e.dataTransfer.files)); }
 
   function resetForm() {
-    setFiles([]);
-    setRestoredFiles([]);
-    setResult(null);
-    setTaskMeta(null);
-    setError("");
-    setIsLoading(false);
-    setUploadStatus(""); 
-    setIsRestoring(false);
-    setStreamedRaw("");
-    setPickerKey((value) => value + 1);
-    removeTaskIdFromUrl();
+    setFiles([]); setRestoredFiles([]); setResult(null); setTaskMeta(null); setError(""); setQuotaNotice(null);
+    setIsLoading(false); setUploadStatus(""); setIsRestoring(false); setStreamedRaw(""); setPickerKey((value) => value + 1); removeTaskIdFromUrl();
   }
 
   async function handleAnalyze() {
     const validationError = validateFiles(files);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+    if (validationError) { setError(validationError); return; }
 
     try {
-      setIsLoading(true);
-      setError("");
-      setResult(null);
-      setTaskMeta(null);
-      setStreamedRaw(""); 
-      setUploadStatus("");
+      setIsLoading(true); setError(""); setQuotaNotice(null); setResult(null); setTaskMeta(null); setStreamedRaw(""); setUploadStatus("");
       let currentProgress = 0; 
       
-      window.setTimeout(() => {
-        document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+      window.setTimeout(() => { document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" }); }, 100);
 
       const uploadedFileKeys: string[] = [];
       const isVideo = files.some(f => f.type.startsWith('video/'));
@@ -492,47 +353,20 @@ export default function ReversePromptPage() {
         setUploadStatus(`正在获取传输通道 (${i + 1}/${files.length})...`);
         currentProgress = 0; 
         
-        const presignRes = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: file.name, contentType: file.type })
-        });
+        const presignRes = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filename: file.name, contentType: file.type }) });
         
         if (!presignRes.ok) {
           const errorData = await presignRes.json();
-          // 🛡️ 修复点 1：使用全局遥控器！
-          if (presignRes.status === 403) {
-            openModal(); // 👈 一键呼唤全局充值弹窗
-            setError("");
-            return;
-          }
+          if (presignRes.status === 403) { openModal(); setError(""); return; }
           throw new Error(errorData.error || "无法获取上传通道，请稍后再试");
         }
         const { uploadUrl, fileKey } = await presignRes.json();
 
         await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open("PUT", uploadUrl, true);
-          xhr.setRequestHeader("Content-Type", file.type);
-
-          xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-              const percentComplete = Math.round((event.loaded / event.total) * 100);
-              currentProgress = percentComplete;
-              setUploadStatus(`视频传输中: ${percentComplete}% (${i + 1}/${files.length})`);
-            }
-          };
-
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              resolve();
-            } else {
-              reject(new Error(`文件传输失败，服务器状态码: ${xhr.status}`));
-            }
-          };
-          
-          xhr.onerror = () => reject(new Error("网络异常，传输被意外中断"));
-          xhr.send(file);
+          const xhr = new XMLHttpRequest(); xhr.open("PUT", uploadUrl, true); xhr.setRequestHeader("Content-Type", file.type);
+          xhr.upload.onprogress = (event) => { if (event.lengthComputable) { currentProgress = Math.round((event.loaded / event.total) * 100); setUploadStatus(`视频传输中: ${currentProgress}% (${i + 1}/${files.length})`); } };
+          xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) resolve(); else reject(new Error(`文件传输失败，状态码: ${xhr.status}`)); };
+          xhr.onerror = () => reject(new Error("网络异常，传输被意外中断")); xhr.send(file);
         });
 
         uploadedFileKeys.push(fileKey);
@@ -540,90 +374,51 @@ export default function ReversePromptPage() {
 
       setUploadStatus("素材已就绪，AI 视觉引擎深度提取中...");
 
-      // ==========================================
-      // 🚨 修复点：将 FormData 替换为干净的 JSON 对象
-      // ==========================================
-      const requestBody = {
-        inputType: isVideo ? "video" : "images",
-        analyzerModel: analyzerModel,
-        outputLanguage: outputLanguage,
-        outputStyle: outputStyle,
-        targetPlatform: targetPlatform,
-        fileKeys: uploadedFileKeys
-      };
-
-      const response = await fetch("/api/reverse-prompt", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
+      const requestBody = { inputType: isVideo ? "video" : "images", analyzerModel, outputLanguage, outputStyle, targetPlatform, fileKeys: uploadedFileKeys };
+      const response = await fetch("/api/reverse-prompt", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) });
       const responseText = await response.text(); 
       let finalData: any = {};
       
-      try {
-        if (responseText) finalData = JSON.parse(responseText);
-      } catch (parseError) {
-        if (!response.ok) {
-           throw new Error(`服务器异常 (${response.status}): ${responseText.slice(0, 100)}...`);
-        } else {
-           throw new Error("解析返回数据失败，请稍后重试");
-        }
+      try { if (responseText) finalData = JSON.parse(responseText); } catch (parseError) {
+        if (!response.ok) throw new Error(`服务器异常 (${response.status}): ${responseText.slice(0, 100)}...`); else throw new Error("解析返回数据失败，请稍后重试");
       }
 
-      // 🛡️ 修复点 2：AI 解析时的全局拦截
       if (!response.ok) {
-        if (response.status === 403) {
-          openModal(); // 👈 一键呼唤全局充值弹窗
-          setError(""); 
-          return; 
-        }
+        if (response.status === 403) { openModal(); setError(""); return; }
         throw new Error(finalData.error || "分析失败，请检查模型名称和额度");
       }
 
+      // 💡 成功逻辑：展示扣钱成功通知！
       if (finalData._remainingQuota !== undefined) {
-        setRemainingQuota(finalData._remainingQuota);
+        setQuotaNotice({ 
+          type: 'success', 
+          msg: `✅ 史诗级长镜头解析成功！本次消耗 1 次高级算力，今日还剩 ${finalData._remainingQuota === 'unlimited' ? '无限' : finalData._remainingQuota} 次。` 
+        });
       }
 
       const pseudoTaskId = `task_${Date.now()}`;
-      const nextTaskMeta: TaskMeta = {
-        taskId: pseudoTaskId,
-        model: analyzerModel,
-        fileCount: files.length,
-        outputLanguage,
-        outputStyle,
-        targetPlatform,
-      };
-
-      setResult(finalData);
-      setTaskMeta(nextTaskMeta);
+      setResult(finalData); setTaskMeta({ taskId: pseudoTaskId, model: analyzerModel, fileCount: files.length, outputLanguage, outputStyle, targetPlatform });
       setTaskIdToUrl(pseudoTaskId);
-      recordTaskHistory({
-        taskId: pseudoTaskId,
-        fileCount: files.length,
-        firstFileName: files[0]?.name || "已归档素材",
-        createdAt: Date.now(),
-      });
+      recordTaskHistory({ taskId: pseudoTaskId, fileCount: files.length, firstFileName: files[0]?.name || "已归档素材", createdAt: Date.now() });
 
-      window.setTimeout(() => {
-        document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
+      window.setTimeout(() => { document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 80);
 
     } catch (err: any) {
       const errMsg = err instanceof Error ? err.message : "分析失败，请稍后再试";
       
-      // 🛡️ 终极防线：全局拦截
       if (errMsg.includes("次数") && errMsg.includes("已用完")) {
-        openModal(); // 👈 一键呼唤全局充值弹窗
-        setError("");
+        openModal(); setError("");
       } else {
-        setError(errMsg);
+        // 💡 失败拦截逻辑：如果是后端触发的回滚退钱，展示醒目的退钱提示！
+        if (errMsg.includes("退还")) {
+          setQuotaNotice({ type: 'refund', msg: errMsg });
+          setError(""); // 隐藏默认的红色报错，用专门的 Refund 通知替代
+        } else {
+          setError(errMsg);
+        }
       }
     } finally {
-      setIsLoading(false);
-      setUploadStatus(""); 
+      setIsLoading(false); setUploadStatus(""); 
     }
   }
 
@@ -632,28 +427,14 @@ export default function ReversePromptPage() {
       <div className="space-y-6 sm:space-y-8">
         <section className="relative overflow-hidden rounded-[32px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-6 py-8 shadow-[0_18px_54px_rgba(15,23,42,0.06)] sm:px-8 sm:py-10">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.10),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.08),transparent_26%)]" />
-
           <div className="relative max-w-3xl space-y-5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <Link
-                href="/"
-                className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950"
-              >
-                ← 返回首页
-              </Link>
-
-              <span className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">
-                AI REVERSE PROMPT
-              </span>
+              <Link href="/" className="inline-flex items-center rounded-full border border-black/10 bg-white/88 px-3.5 py-2 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:text-gray-950">← 返回首页</Link>
+              <span className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">AI REVERSE PROMPT</span>
             </div>
-
             <div className="space-y-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">
-                从关键帧反推专业 Prompt
-              </h1>
-              <p className="max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">
-                上传图像或短视频，多模态视觉模型将精准提取主体、运镜与风格，并自动适配国内外主流平台的专业级 Prompt。
-              </p>
+              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">从关键帧反推专业 Prompt</h1>
+              <p className="max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">上传图像或短视频，多模态视觉模型将精准提取主体、运镜与风格，并自动适配国内外主流平台的专业级 Prompt。</p>
             </div>
           </div>
         </section>
@@ -662,113 +443,47 @@ export default function ReversePromptPage() {
           <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr]">
             <div className="space-y-6">
               <PanelTitle title="参数配置" description="配置解析引擎与输出偏好。" />
-
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                
                 <div className="space-y-1.5 sm:col-span-2 lg:col-span-1 xl:col-span-2 relative z-30">
-                  <label className="text-sm font-medium text-gray-900">
-                    解析大模型 (Vision Model)
-                  </label>
-                  <CustomDropdown 
-                    options={MODELS} 
-                    value={analyzerModel} 
-                    onChange={(val) => setAnalyzerModel(val as AnalyzerModel)} 
-                  />
+                  <label className="text-sm font-medium text-gray-900">解析大模型 (Vision Model)</label>
+                  <CustomDropdown options={MODELS} value={analyzerModel} onChange={(val) => setAnalyzerModel(val as AnalyzerModel)} />
                 </div>
-
                 <div className="space-y-1.5 relative z-20">
                   <label className="text-sm font-medium text-gray-900">目标生成平台</label>
-                  <CustomDropdown 
-                    options={PLATFORMS} 
-                    value={targetPlatform} 
-                    onChange={(val) => setTargetPlatform(val as TargetPlatform)} 
-                  />
+                  <CustomDropdown options={PLATFORMS} value={targetPlatform} onChange={(val) => setTargetPlatform(val as TargetPlatform)} />
                 </div>
-
                 <div className="space-y-1.5 relative z-10">
                   <label className="text-sm font-medium text-gray-900">输出语言</label>
-                  <CustomDropdown 
-                    options={LANGUAGES} 
-                    value={outputLanguage} 
-                    onChange={(val) => setOutputLanguage(val as OutputLanguage)} 
-                  />
+                  <CustomDropdown options={LANGUAGES} value={outputLanguage} onChange={(val) => setOutputLanguage(val as OutputLanguage)} />
                 </div>
               </div>
-
               {analyzerModel !== 'gemini-free' && (
-                <div className="rounded-[18px] border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-xs leading-6 text-amber-800">
-                  👑 你当前选择的是 PRO 级模型，将消耗高级算力。
-                </div>
+                <div className="rounded-[18px] border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-xs leading-6 text-amber-800">👑 你当前选择的是 PRO 级模型，将消耗高级算力。</div>
               )}
             </div>
 
             <div className="space-y-4">
               <PanelTitle title="上传参考素材" description="支持拖拽，可无缝上传最高 200MB 的图片或超清视频。" />
-
-              <div 
-                className={`rounded-[24px] border border-dashed transition-all duration-300 p-5 sm:p-6 ${
-                  isDragging 
-                    ? "border-blue-500 bg-blue-50/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]" 
-                    : "border-black/12 bg-[linear-gradient(180deg,rgba(250,250,250,0.72),rgba(255,255,255,0.98))] hover:bg-white"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
+              <div className={`rounded-[24px] border border-dashed transition-all duration-300 p-5 sm:p-6 ${isDragging ? "border-blue-500 bg-blue-50/50 shadow-[0_0_20px_rgba(59,130,246,0.15)]" : "border-black/12 bg-[linear-gradient(180deg,rgba(250,250,250,0.72),rgba(255,255,255,0.98))] hover:bg-white"}`} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
                 <div className="space-y-4 pointer-events-none">
-                  <label className={`flex min-h-[190px] cursor-pointer flex-col items-center justify-center rounded-[22px] border bg-white px-6 py-8 text-center transition-all duration-300 pointer-events-auto ${
-                    isDragging ? "border-blue-200 shadow-sm scale-[1.01]" : "border-black/10 hover:border-black/15 hover:shadow-sm"
-                  }`}>
-                    <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                      isDragging ? "bg-blue-100 text-blue-600" : "bg-gray-50 text-gray-400"
-                    }`}>
-                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
+                  <label className={`flex min-h-[190px] cursor-pointer flex-col items-center justify-center rounded-[22px] border bg-white px-6 py-8 text-center transition-all duration-300 pointer-events-auto ${isDragging ? "border-blue-200 shadow-sm scale-[1.01]" : "border-black/10 hover:border-black/15 hover:shadow-sm"}`}>
+                    <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full transition-colors ${isDragging ? "bg-blue-100 text-blue-600" : "bg-gray-50 text-gray-400"}`}>
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     </div>
-
-                    <div className={`text-sm font-medium transition-colors ${isDragging ? "text-blue-600" : "text-gray-900"}`}>
-                      {isDragging ? "松手即可上传" : "点击或拖拽上传素材"}
-                    </div>
-                    <div className="mt-2 text-xs leading-6 text-gray-500">
-                      支持 PNG / JPG / MP4 / MOV · 最多 200MB
-                    </div>
-
-                    <input
-                      key={pickerKey}
-                      type="file"
-                      accept={ACCEPTED_FILE_TYPES}
-                      multiple
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
+                    <div className={`text-sm font-medium transition-colors ${isDragging ? "text-blue-600" : "text-gray-900"}`}>{isDragging ? "松手即可上传" : "点击或拖拽上传素材"}</div>
+                    <div className="mt-2 text-xs leading-6 text-gray-500">支持 PNG / JPG / MP4 / MOV · 最多 200MB</div>
+                    <input key={pickerKey} type="file" accept={ACCEPTED_FILE_TYPES} multiple onChange={handleFileChange} className="hidden" />
                   </label>
-
                   {previewItems.length > 0 && (
                     <div className="space-y-3 pointer-events-auto">
                       <div className="grid gap-3 sm:grid-cols-2">
                         {previewItems.map((item) => (
                           <div key={item.key} className="relative overflow-hidden rounded-[18px] border border-black/8 bg-white group">
                             <div className="flex aspect-[16/10] items-center justify-center bg-gray-50">
-                              {item.url ? (
-                                item.type === "video" ? (
-                                  <video src={item.url} className="h-full w-full object-cover" muted loop autoPlay playsInline />
-                                ) : (
-                                  <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
-                                )
-                              ) : (
-                                <span className="text-[11px] tracking-widest text-gray-400">ARCHIVED</span>
-                              )}
-                              {item.type === "video" && (
-                                <div className="absolute top-2 right-2 rounded-full bg-black/40 backdrop-blur-md px-2 py-0.5 text-[10px] text-white">
-                                  VIDEO
-                                </div>
-                              )}
+                              {item.url ? ( item.type === "video" ? ( <video src={item.url} className="h-full w-full object-cover" muted loop autoPlay playsInline /> ) : ( <img src={item.url} alt={item.name} className="h-full w-full object-cover" /> ) ) : ( <span className="text-[11px] tracking-widest text-gray-400">ARCHIVED</span> )}
+                              {item.type === "video" && ( <div className="absolute top-2 right-2 rounded-full bg-black/40 backdrop-blur-md px-2 py-0.5 text-[10px] text-white">VIDEO</div> )}
                             </div>
-                            <div className="space-y-1 px-3 py-3">
-                              <div className="truncate text-sm font-medium text-gray-900">{item.name}</div>
-                              <div className="text-xs text-gray-500">{formatBytes(item.size)}</div>
-                            </div>
+                            <div className="space-y-1 px-3 py-3"><div className="truncate text-sm font-medium text-gray-900">{item.name}</div><div className="text-xs text-gray-500">{formatBytes(item.size)}</div></div>
                           </div>
                         ))}
                       </div>
@@ -778,36 +493,25 @@ export default function ReversePromptPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={handleAnalyze}
-                  disabled={isLoading || isRestoring}
-                  className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-                >
-                  {isLoading ? (uploadStatus || "解析计算中...") : isRestoring ? "恢复中..." : "开始反推分析"}
+                <button type="button" onClick={handleAnalyze} disabled={isLoading || isRestoring} className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0">
+                  {isLoading ? (uploadStatus || "解析计算中...") : isRestoring ? "恢复中..." : "开始导演级反推"}
                 </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  disabled={isLoading || isRestoring}
-                  className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:bg-gray-50 disabled:opacity-60"
-                >
-                  清空
-                </button>
+                <button type="button" onClick={resetForm} disabled={isLoading || isRestoring} className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:bg-gray-50 disabled:opacity-60">清空</button>
               </div>
 
-              {remainingQuota !== null && (
-                <div className="mt-4 flex items-center justify-center sm:justify-start gap-2 text-[13px] text-gray-500 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                  </span>
-                  今日免费高级算力还剩 <span className="font-bold text-emerald-600">{remainingQuota}</span> 次
+              {/* 💡 额度拦截/成功/退款 的专属提示框 */}
+              {quotaNotice && (
+                <div className={`mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300 rounded-[18px] border px-4 py-3.5 text-sm leading-relaxed whitespace-pre-line ${
+                  quotaNotice.type === 'success' 
+                    ? 'border-emerald-200/80 bg-emerald-50/60 text-emerald-800' 
+                    : 'border-orange-200/80 bg-orange-50/60 text-orange-800'
+                }`}>
+                  {quotaNotice.msg}
                 </div>
               )}
 
               {error && (
-                <div className="rounded-[18px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="mt-4 rounded-[18px] border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-600">
                   {error}
                 </div>
               )}
@@ -819,31 +523,16 @@ export default function ReversePromptPage() {
           <SoftCard className="scroll-mt-6" >
             <div id="reverse-prompt-loading">
               <PanelTitle title={isRestoring ? "正在恢复结果" : uploadStatus ? uploadStatus : "AI 视觉引擎深度扫描中..."} description="正在拆解像素与光影关系，请不要离开页面" />
-              
               {streamedRaw ? (
                 <div className="mt-5 max-h-[300px] overflow-y-auto rounded-[18px] bg-gray-900 px-5 py-4 font-mono text-[13px] text-green-400 shadow-inner custom-scrollbar">
                   <div className="sticky top-0 mb-3 flex items-center gap-2 bg-gray-900/90 py-1 text-xs text-gray-400 backdrop-blur-sm">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                    </span>
-                    RECEIVING STREAM DATA...
+                    <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span></span>RECEIVING STREAM DATA...
                   </div>
-                  <div className="whitespace-pre-wrap break-all opacity-90 leading-relaxed">
-                    {streamedRaw}
-                    <span className="ml-1 inline-block h-3 w-2 animate-pulse bg-green-400"></span>
-                  </div>
+                  <div className="whitespace-pre-wrap break-all opacity-90 leading-relaxed">{streamedRaw}<span className="ml-1 inline-block h-3 w-2 animate-pulse bg-green-400"></span></div>
                 </div>
               ) : (
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  {[1, 2, 3].map((item) => (
-                    <div key={item} className="rounded-[18px] border border-black/8 bg-white/86 p-4">
-                      <div className="mt-3 space-y-2">
-                        <div className="h-2.5 w-4/5 animate-pulse rounded-full bg-gray-200" />
-                        <div className="h-2.5 w-3/5 animate-pulse rounded-full bg-gray-200" />
-                      </div>
-                    </div>
-                  ))}
+                  {[1, 2, 3].map((item) => ( <div key={item} className="rounded-[18px] border border-black/8 bg-white/86 p-4"><div className="mt-3 space-y-2"><div className="h-2.5 w-4/5 animate-pulse rounded-full bg-gray-200" /><div className="h-2.5 w-3/5 animate-pulse rounded-full bg-gray-200" /></div></div> ))}
                 </div>
               )}
             </div>
@@ -856,30 +545,21 @@ export default function ReversePromptPage() {
               <PanelTitle title="深度结构化拆解" description="大模型提取出的高置信度画面特征与构图关系。" />
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[...(result.summary || []), ...(result.cinematography || [])].map((item, idx) => (
-                  <div key={idx} className="rounded-[18px] border border-black/8 bg-white/86 px-4 py-3.5">
-                    <div className="text-xs text-gray-500">{item.label}</div>
-                    <div className="mt-1 text-sm leading-7 text-gray-800">{item.value}</div>
-                  </div>
+                  <div key={idx} className="rounded-[18px] border border-black/8 bg-white/86 px-4 py-3.5"><div className="text-xs text-gray-500">{item.label}</div><div className="mt-1 text-sm leading-7 text-gray-800">{item.value}</div></div>
                 ))}
               </div>
             </SoftCard>
 
             <SoftCard>
-              <PanelTitle
-                title="平台专属适配版 (强烈推荐)"
-                description={`已针对 [${PLATFORMS.find(p => p.id === targetPlatform)?.name}] 进行底层规则调优。`}
-                action={<CopyButton text={primaryPlatformPrompt} />}
-              />
+              <PanelTitle title="平台专属适配版 (强烈推荐)" description={`已针对各个底层模型规则深度调优。点击下方切换对应平台。`} action={<CopyButton text={primaryPlatformPrompt} />} />
               <div className="mt-5 space-y-4">
-                <div className="flex flex-wrap gap-2.5">
+                <div className="flex flex-wrap gap-2.5 overflow-x-auto pb-2 custom-scrollbar">
                   {PLATFORMS.map((p) => (
-                    <OptionButton key={p.id} active={targetPlatform === p.id} onClick={() => setTargetPlatform(p.id as TargetPlatform)}>
-                      {p.name.split(' ')[0]}
-                    </OptionButton>
+                    <OptionButton key={p.id} active={targetPlatform === p.id} onClick={() => setTargetPlatform(p.id as TargetPlatform)}>{p.name.split(' ')[0]}</OptionButton>
                   ))}
                 </div>
                 <div className="rounded-[22px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 sm:p-5">
-                  <div className="whitespace-pre-line rounded-[18px] bg-gray-50/90 px-5 py-5 text-sm leading-7 text-gray-800 border border-black/5 font-mono">
+                  <div className="whitespace-pre-line rounded-[18px] bg-gray-50/90 px-5 py-5 text-sm leading-8 text-gray-800 border border-black/5 font-mono">
                     {primaryPlatformPrompt}
                   </div>
                 </div>
@@ -891,36 +571,26 @@ export default function ReversePromptPage() {
                 <PanelTitle title="标准提示词库" action={<CopyButton text={primaryPrompt} />} />
                 <div className="mt-4 flex flex-wrap gap-2 mb-4">
                   {STYLE_OPTIONS.map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => setOutputStyle(key as OutputStyle)}
-                      className={`px-3 py-1 rounded-full text-xs transition ${outputStyle === key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                    >
-                      {label}
-                    </button>
+                    <button key={key} onClick={() => setOutputStyle(key as OutputStyle)} className={`px-3 py-1 rounded-full text-[13px] font-medium transition ${outputStyle === key ? 'bg-black text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{label}</button>
                   ))}
                 </div>
-                <div className="whitespace-pre-line rounded-[18px] bg-gray-50 px-4 py-4 text-[13px] leading-7 text-gray-800">
+                <div className="whitespace-pre-line rounded-[18px] bg-gray-50 px-5 py-5 text-[14px] leading-8 text-gray-800 font-mono">
                   {primaryPrompt}
                 </div>
               </SoftCard>
 
               <SoftCard>
                 <PanelTitle title="推荐负面词 (Negative Prompt)" action={<CopyButton text={primaryNegativePrompt} />} />
-                <div className="mt-4 whitespace-pre-line rounded-[18px] bg-red-50/50 px-4 py-4 text-[13px] leading-7 text-red-900/80">
+                <div className="mt-4 whitespace-pre-line rounded-[18px] bg-red-50/50 px-5 py-5 text-[13px] leading-7 text-red-900/80">
                   {primaryNegativePrompt}
                 </div>
               </SoftCard>
             </div>
             
-            <div className="border-t border-black/10 px-1 pt-4 text-center text-xs leading-6 text-gray-500">
-              {result.disclaimer}
-            </div>
+            <div className="border-t border-black/10 px-1 pt-4 text-center text-xs leading-6 text-gray-500">{result.disclaimer}</div>
           </div>
         )}
-
         <GuideAndShowcase />
-        {/* ❌ 全局架构升级：这里之前的本地 <UpgradeModal /> 已经被完全干掉了！整个文件变得更纯粹更干净！ */}
       </div>
     </div>
   );
