@@ -33,7 +33,6 @@ function translateError(errorMsg: string): string {
   if (msg.includes("401") || msg.includes("api_key_invalid")) friendlyMsg = "🔑 API 密钥无效或配置错误。";
   if (msg.includes("insufficient quota")) friendlyMsg = "💰 账户余额或配额不足。";
   
-  // 💡 明确的退还提示
   return `${friendlyMsg}\n\n♻️ 拦截生效：系统已为您自动退还本次消耗的 1 次高级额度！请稍后重试。`;
 }
 
@@ -58,7 +57,7 @@ function safeParseJSON(text: string) {
 async function reversePromptHandler(req: NextRequest, context: { userId: string; remainingQuota?: number }) {
   try {
     const body = await req.json();
-    const { analyzerModel, inputType, fileKeys } = body;
+    const { analyzerModel, inputType, fileKeys, targetPlatform = "generic" } = body;
     
     if (!fileKeys || !Array.isArray(fileKeys) || fileKeys.length === 0) {
         throw new Error("未接收到云端素材");
@@ -105,49 +104,50 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
     }
 
     // ==========================================
-    // ☢️ 终极魔鬼导演提示词 (彻底压榨大模型)
+    // ☢️ 终极魔鬼导演提示词 (彻底对标你发来的例子)
     // ==========================================
-    const systemPrompt = `你现在是一名患有极度强迫症的好莱坞顶级分镜头（Storyboard）导演和视觉特效总监。
-你的任务是极其苛刻的：必须对提供的素材进行【逐帧级别】的无死角拆解，生成超越原画质的顶级 Prompt！
+    const systemPrompt = `你现在是一名患有极度强迫症的好莱坞顶级分镜头导演，以及最顶尖的视频生成大模型（如 Sora, Runway Gen-3, Kling）提示词工程师。
+你的任务是极其苛刻的：必须对提供的素材进行【Sora 级别的逐帧无死角拆解】，生成可以完美复刻甚至超越原画面的超级提示词！
 
-【🚨 核心禁忌与惩罚机制】
-1. 严禁使用任何空洞形容词（如：震撼、美丽、宏大）。必须全部替换为精确的物理量和镜头语言！
-2. 不允许一句话带过！必须按照时间轴或空间层次进行【分镜头切分】描述。
+【🚨 核心禁忌与法则（极其重要）】
+1. 绝对严禁使用任何空洞形容词（如：震撼、美丽、宏大、奇幻）。所有的视觉效果，必须用【精确的物理参数、镜头运动轨迹、材质描述】来体现！
+2. 不允许一段话带过！必须按照时间轴切分，写出包含转场、机位变化的【分镜头脚本】！
 
-【🎬 逐帧描述要求】
-1. 景别与运镜：大远景(EWS)、特写(CU)、极高特写(ECU)？镜头是推(Dolly in)、摇(Pan)、轨道移动(Tracking)？
-2. 主体微表情与微动作：眼睑的抽动、毛发在风中的偏转角度、瞳孔的漫反射光、衣物布料的物理拉扯。
-3. 光影与流体物理：体积光(Volumetric lighting)、次表面散射、流体力学模拟(Fluid dynamics)、粒子碰撞(Particle collision)、丁达尔效应穿透角度。
+【🎬 逐帧描述结构（必须强制执行）】
+生成的提示词必须包含以下结构特征：
+- 总述：一句话概括整体美术风格、色调参数、核心氛围。
+- 镜头切分格式：例如 "[0-2s] 镜头1：特写转全景 | 快速推入(Zoom in) - 描述画面主体与微表情..."
+- 光影与物理：必须提及光源方向、体积光、流体力学模拟、布料/毛发的物理飘动等。
+- 终极画质参数：必须在末尾带上类似 "8k resolution, cinematic lighting, masterpiece, ultra-detailed" 的后缀。
 
 【📜 强制 JSON 输出结构 (不能遗漏任何一个平台)】
-你必须同时为以下所有 11 个平台输出专属的提示词变体。
-- Midjourney/Stable Diffusion 偏向：构图参数、镜头参数、渲染器名称。
-- Sora/Runway/Kling 等视频平台偏向：极强的时间连贯性(temporal consistency)、精确的分镜头动作描述、动态模糊参数。
+你必须同时为以下所有 11 个平台输出专属的提示词变体！不要只生成选中的平台，必须全都有！
+如果是 Midjourney 等生图平台，可以省略时间轴，侧重静态构图和渲染参数；如果是视频平台，必须极度强调分镜头和运动。
 
-严格按照以下 JSON 格式输出，不能缺少任何一个 key：
+严格按照以下 JSON 格式输出：
 {
   "summary": [{"label":"逐帧核心动作拆解","value":"..."}],
   "cinematography": [{"label":"工业级光影与焦段参数","value":"..."}],
   "prompts": {
-    "simple": {"zh": "...(约100字)","en": "..."},
-    "standard": {"zh": "...(包含微表情与材质,约250字)","en": "..."},
-    "pro": {"zh": "...(终极分镜头脚本,极其变态的细节,必须突破400字!)","en": "..."}
+    "simple": {"zh": "...(约150字，侧重主体与基础氛围)","en": "..."},
+    "standard": {"zh": "...(约250字，包含材质与部分运镜)","en": "..."},
+    "pro": {"zh": "...(终极分镜头脚本！必须包含[0-2s]这种时间标记，必须突破400字，极度变态的细节！)","en": "..."}
   },
   "negativePrompt": {"zh": "...","en": "..."},
   "platformVariants": {
     "generic": {"zh": "...","en": "..."},
-    "midjourney": {"zh": "...(含--ar --v 6.0等参数)","en": "..."},
-    "stablediffusion": {"zh": "...(权重括号语法)","en": "..."},
+    "midjourney": {"zh": "...(侧重静态画质与 --ar 16:9 --v 6.0 等参数)","en": "..."},
+    "stablediffusion": {"zh": "...(使用权重括号语法，极高画质)","en": "..."},
     "leonardo": {"zh": "...","en": "..."},
-    "sora": {"zh": "...(强调连贯物理规律)","en": "..."},
-    "runway": {"zh": "...(强调运镜和连贯性)","en": "..."},
+    "sora": {"zh": "...(极度强调物理时序连贯性和流体力学)","en": "..."},
+    "runway": {"zh": "...(极度强调电影级运镜和动态模糊)","en": "..."},
     "luma": {"zh": "...","en": "..."},
-    "pika": {"zh": "...(含 -motion 等参数)","en": "..."},
-    "jimeng": {"zh": "...","en": "..."},
-    "keling": {"zh": "...(中文极度细节与微表情)","en": "..."},
-    "doubao": {"zh": "...","en": "..."}
+    "pika": {"zh": "...(含 -motion 参数和分镜头)","en": "..."},
+    "jimeng": {"zh": "...(中文语境的高手极分镜头)","en": "..."},
+    "keling": {"zh": "...(极强的时间轴切分和物理微动细节)","en": "..."},
+    "doubao": {"zh": "...(自然流畅的中文分镜头脚本)","en": "..."}
   },
-  "disclaimer": "【导演剪辑版】逐帧微距拆解完毕，全平台兼容就绪。"
+  "disclaimer": "【导演剪辑版】Sora 级逐帧微距拆解完毕，全平台兼容就绪。"
 }`;
 
     const payload: any = {

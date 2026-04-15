@@ -231,7 +231,7 @@ export default function ReversePromptPage() {
 
   const [analyzerModel, setAnalyzerModel] = useState<AnalyzerModel>("gemini-free");
   const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>("zh");
-  const [outputStyle, setOutputStyle] = useState<OutputStyle>("pro"); // 默认调为 Pro 导演剪辑版
+  const [outputStyle, setOutputStyle] = useState<OutputStyle>("pro"); 
   const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>("generic");
   const [files, setFiles] = useState<File[]>([]);
   const [restoredFiles, setRestoredFiles] = useState<RestoredFile[]>([]);
@@ -241,7 +241,6 @@ export default function ReversePromptPage() {
   const [uploadStatus, setUploadStatus] = useState(""); 
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState("");
-  // 💡 额度通知状态：负责展示扣钱/退钱信息
   const [quotaNotice, setQuotaNotice] = useState<{ type: 'success' | 'refund', msg: string } | null>(null);
 
   const [pickerKey, setPickerKey] = useState(0);
@@ -388,11 +387,10 @@ export default function ReversePromptPage() {
         throw new Error(finalData.error || "分析失败，请检查模型名称和额度");
       }
 
-      // 💡 成功逻辑：展示扣钱成功通知！
       if (finalData._remainingQuota !== undefined) {
         setQuotaNotice({ 
           type: 'success', 
-          msg: `✅ 史诗级长镜头解析成功！本次消耗 1 次高级算力，今日还剩 ${finalData._remainingQuota === 'unlimited' ? '无限' : finalData._remainingQuota} 次。` 
+          msg: `✅ 导演级长镜头解析成功！本次消耗 1 次高级算力，今日还剩 ${finalData._remainingQuota === 'unlimited' ? '无限' : finalData._remainingQuota} 次。` 
         });
       }
 
@@ -409,10 +407,9 @@ export default function ReversePromptPage() {
       if (errMsg.includes("次数") && errMsg.includes("已用完")) {
         openModal(); setError("");
       } else {
-        // 💡 失败拦截逻辑：如果是后端触发的回滚退钱，展示醒目的退钱提示！
         if (errMsg.includes("退还")) {
           setQuotaNotice({ type: 'refund', msg: errMsg });
-          setError(""); // 隐藏默认的红色报错，用专门的 Refund 通知替代
+          setError(""); 
         } else {
           setError(errMsg);
         }
@@ -499,7 +496,6 @@ export default function ReversePromptPage() {
                 <button type="button" onClick={resetForm} disabled={isLoading || isRestoring} className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:bg-gray-50 disabled:opacity-60">清空</button>
               </div>
 
-              {/* 💡 额度拦截/成功/退款 的专属提示框 */}
               {quotaNotice && (
                 <div className={`mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300 rounded-[18px] border px-4 py-3.5 text-sm leading-relaxed whitespace-pre-line ${
                   quotaNotice.type === 'success' 
@@ -559,7 +555,7 @@ export default function ReversePromptPage() {
                   ))}
                 </div>
                 <div className="rounded-[22px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 sm:p-5">
-                  <div className="whitespace-pre-line rounded-[18px] bg-gray-50/90 px-5 py-5 text-sm leading-8 text-gray-800 border border-black/5 font-mono">
+                  <div className="whitespace-pre-line rounded-[18px] bg-gray-50/90 px-5 py-5 text-[15px] leading-8 text-gray-800 border border-black/5 font-mono">
                     {primaryPlatformPrompt}
                   </div>
                 </div>
