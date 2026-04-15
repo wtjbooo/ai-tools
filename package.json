@@ -20,6 +20,7 @@
     "@upstash/redis": "^1.37.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.3.1",
+    "alipay-sdk": "^4.14.0",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.3.1",
     "lucide-react": "^1.7.0",

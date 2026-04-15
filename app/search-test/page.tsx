@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Heart, Camera, Wand2, ChevronRight, Sparkles, Target } from "lucide-react";
-// 🚀 1. 引入我们刚刚抽离的全局组件
 import TypewriterEffect from "@/components/TypewriterEffect";
 import SkeletonLoader from "@/components/SkeletonLoader";
 import CustomDropdown from "@/components/CustomDropdown";
-// 🚀 2. 引入我们封装的高级请求 Hook
 import { useAiTool } from "@/hooks/useAiTool";
+// 🚀 1. 引入全局遥控器
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
 
 const MODELS = [
   { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "全网情报侦察兵：极速响应，适合处理全网通用型、基础资料类的搜索规划。" },
@@ -58,12 +58,20 @@ export default function SearchTestPage() {
   const [activeModel, setActiveModel] = useState("gemini-free");
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
-  // 🚀 3. 使用 Hook，一键接管所有 Loading、数据和 Error 状态！
+  // 🚀 2. 拿到全局弹窗的钥匙
+  const { openModal } = useUpgradeModal();
+
   const { loading, results, error, execute } = useAiTool<any[]>();
+
+  // 🚀 3. 神奇的拦截器：只要全网搜索抛出了没额度，直接唤出！
+  useEffect(() => {
+    if (error && (error.includes("次数") || error.includes("已用完") || error.includes("额度"))) {
+      openModal();
+    }
+  }, [error, openModal]);
 
   const handleSearch = () => {
     if (!query.trim()) return;
-    // 🚀 4. 发起请求变得如此简单
     execute("/api/ai/search-assets", { query, mode, targetModel: activeModel });
   };
 
@@ -106,7 +114,6 @@ export default function SearchTestPage() {
     window.open(fallbackUrl, "_blank");
   };
 
-  // 安全地处理 results (因为初始状态是 null)
   const safeResults = results || [];
   const groupedResults = PLATFORMS.map(platform => ({
     platform, items: safeResults.filter(r => r.platform === platform)
@@ -115,7 +122,6 @@ export default function SearchTestPage() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-gray-900 pb-20 selection:bg-zinc-200">
       
-      {/* 🚀 高级悬浮控制台 */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-black/5 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="max-w-6xl mx-auto flex flex-col gap-3">
           
@@ -150,13 +156,12 @@ export default function SearchTestPage() {
               {loading ? <span className="animate-pulse">✨ 规划中...</span> : "全网搜"}
             </button>
           </div>
-          {/* 如果请求出错，优雅地显示错误 */}
-          {error && <div className="text-red-500 text-sm mt-1">⚠️ {error}</div>}
+          {/* 其他错误照常显示，如果是额度错误则会隐藏（因为弹窗出来了） */}
+          {error && !error.includes("次数") && <div className="text-red-500 text-sm mt-1">⚠️ {error}</div>}
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 mt-10 space-y-16">
-        
         {loading ? (
           <SkeletonLoader />
         ) : groupedResults.length > 0 ? (

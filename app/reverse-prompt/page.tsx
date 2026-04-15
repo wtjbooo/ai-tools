@@ -1,6 +1,5 @@
 "use client";
 
-import UpgradeModal from '@/components/UpgradeModal';
 import GuideAndShowcase from '@/components/GuideAndShowcase';
 import Link from "next/link";
 import {
@@ -11,6 +10,8 @@ import {
   useRef,
   useState,
 } from "react";
+// 🚀 1. 引入一键唤起全局充值弹窗的钩子（Hook）
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
 
 // 1. 商业化模型分层
 type AnalyzerModel = 
@@ -244,7 +245,8 @@ function OptionButton({ active, children, onClick }: { active: boolean; children
         active
           ? "border-black bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]"
           : "border-black/10 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50",
-      ].join(" ")}
+      ].join(" ")
+    }
     >
       {children}
     </button>
@@ -287,7 +289,9 @@ function recordTaskHistory(task: { taskId: string; fileCount: number; firstFileN
 }
 
 export default function ReversePromptPage() {
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  // 🚀 2. 获取全局遥控器！再也不用在组件里维护繁杂的 state 了
+  const { openModal } = useUpgradeModal();
+
   const [analyzerModel, setAnalyzerModel] = useState<AnalyzerModel>("gemini-free");
   const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>("zh");
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("standard");
@@ -496,9 +500,9 @@ export default function ReversePromptPage() {
         
         if (!presignRes.ok) {
           const errorData = await presignRes.json();
-          // 🛡️ 修复点 1：如果在传图片时就被后端查出没额度了，直接拦截！
+          // 🛡️ 修复点 1：使用全局遥控器！
           if (presignRes.status === 403) {
-            setShowUpgradeModal(true);
+            openModal(); // 👈 一键呼唤全局充值弹窗
             setError("");
             return;
           }
@@ -565,10 +569,10 @@ export default function ReversePromptPage() {
         }
       }
 
-      // 🛡️ 修复点 2：AI 解析时的 403 拦截
+      // 🛡️ 修复点 2：AI 解析时的全局拦截
       if (!response.ok) {
         if (response.status === 403) {
-          setShowUpgradeModal(true);
+          openModal(); // 👈 一键呼唤全局充值弹窗
           setError(""); 
           return; 
         }
@@ -606,9 +610,9 @@ export default function ReversePromptPage() {
     } catch (err: any) {
       const errMsg = err instanceof Error ? err.message : "分析失败，请稍后再试";
       
-      // 🛡️ 终极防线：不管上面漏掉了什么，只要错误提示里有这些字眼，强制呼出弹窗！
+      // 🛡️ 终极防线：全局拦截
       if (errMsg.includes("次数") && errMsg.includes("已用完")) {
-        setShowUpgradeModal(true);
+        openModal(); // 👈 一键呼唤全局充值弹窗
         setError("");
       } else {
         setError(errMsg);
@@ -912,12 +916,7 @@ export default function ReversePromptPage() {
         )}
 
         <GuideAndShowcase />
-
-        {/* 🚀 成功在页面最底部挂载升级弹窗 */}
-        <UpgradeModal 
-          isOpen={showUpgradeModal} 
-          onClose={() => setShowUpgradeModal(false)} 
-        />
+        {/* ❌ 全局架构升级：这里之前的本地 <UpgradeModal /> 已经被完全干掉了！整个文件变得更纯粹更干净！ */}
       </div>
     </div>
   );

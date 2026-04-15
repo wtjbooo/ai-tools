@@ -7,6 +7,8 @@ import NavLinks from "./NavLinks";
 import { AuthButton, AuthProvider } from "../components/auth/auth-provider";
 // ✨ 1. 在这里引入了 Analytics 组件 ✨
 import { Analytics } from '@vercel/analytics/react';
+// 🚀 引入我们刚写的全局弹窗 Provider
+import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -227,12 +229,15 @@ export default function RootLayout({
         className={`${inter.className} min-h-screen bg-[linear-gradient(180deg,#fafafa_0%,#f7f7f8_100%)] text-gray-900 antialiased`}
       >
         <AuthProvider>
-          <DevDatabaseWarning />
-          <Header />
-          <main>{children}</main>
-          <Footer />
+          {/* 🚀 2. 在这里用 Provider 包裹全局，提供跨页面的充值弹窗能力 */}
+          <UpgradeModalProvider>
+            <DevDatabaseWarning />
+            <Header />
+            <main>{children}</main>
+            <Footer />
+          </UpgradeModalProvider>
         </AuthProvider>
-        {/* ✨ 2. 在 body 闭合前，安放探针 ✨ */}
+        {/* ✨ 在 body 闭合前，安放探针 ✨ */}
         <Analytics />
       </body>
     </html>

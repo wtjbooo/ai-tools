@@ -1,25 +1,23 @@
 "use client";
 
-import { useState, useRef } from "react";
-// 🚀 1. 引入全局组件，删掉原本写死在文件里的冗余代码！
+import { useState, useRef, useEffect } from "react";
 import TypewriterEffect from "@/components/TypewriterEffect";
 import CustomDropdown from "@/components/CustomDropdown";
-// 🚀 2. 引入我们封装的高级请求 Hook
 import { useAiTool } from "@/hooks/useAiTool";
+// 🚀 1. 引入全局遥控器
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
 
 const STYLE_PILLS = ["通用", "🎬 电影质感", "📸 拍立得复古", "🤖 赛博朋克", "🌸 吉卜力动画", "🏛️ 史诗奇幻"];
 
 const MODELS = [
-  // ⚠️ 提醒：谷歌免费版最近极其不稳定，测试时尽量别选它
   { id: "gemini-free", name: "Gemini Flash", badge: "免费(易拥堵)", logo: "/logos/gemini.png", desc: "快速扫描仪：极速识别图像主体，适合简单画面的批量反推任务。" },
   { id: "deepseek-chat", name: "DeepSeek V3/R1", badge: "国产真神", logo: "/logos/deepseek.png", desc: "深度解析专家：推理能力卓越，能从画面细节中还原创作逻辑。" },
   { id: "moonshot-v1-8k", name: "Kimi 智能助手", badge: "经常缺货", logo: "/logos/kimi.png", desc: "语境还原者：擅长分析具有中国风或国内特定文化背景的图像素材。" },
-  // 👇 下面这三个根据你的截图进行了精准修正：
-  { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" }, //
-  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" }, //
-  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" }, //
+  { id: "doubao-seed-2-0-lite", name: "豆包 Doubao", badge: "接地气", logo: "/logos/doubao.png", desc: "日常捕捉者：对生活场景、实拍图的理解非常亲民，反推语气更自然。" }, 
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", badge: "多模态霸主", logo: "/logos/gemini.png", desc: "反推绝对首选：谷歌旗舰级多模态能力，反推视频关键帧与运镜细节的王者。" }, 
+  { id: "claude-sonnet-4-6", name: "Claude 4.6 Sonnet", badge: "文案大师", logo: "/logos/claude.png", desc: "艺术风格解析师：对色彩、光影和情绪识别度极高，适合艺术创作反推。" }, 
   { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "工业级参数专家：擅长将图像拆解为专业的 MJ/SD 风格标签与技术参数。" }, 
-  { id: "gpt-4o-mini", name: "GPT 4o 标准测试", badge: "稳定测试", logo: "/logos/OpenAI.png", desc: "用于测试海外中转链路是否完全打通的标准模型。" },//
+  { id: "gpt-4o-mini", name: "GPT 4o 标准测试", badge: "稳定测试", logo: "/logos/OpenAI.png", desc: "用于测试海外中转链路是否完全打通的标准模型。" },
 ];
 
 const PLATFORMS = [
@@ -44,8 +42,17 @@ export default function EnhancePromptPage() {
   const [copied, setCopied] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // 🚀 3. 一键接管状态！
+  // 🚀 2. 拿到全局弹窗的钥匙
+  const { openModal } = useUpgradeModal();
+
   const { loading: isLoading, results: result, error: apiError, execute } = useAiTool<{ promptZh?: string; promptEn?: string; negativeEn?: string }>();
+
+  // 🚀 3. 神奇的拦截器：只要 Hook 抛出了额度不足的错误，瞬间唤起弹窗！
+  useEffect(() => {
+    if (apiError && (apiError.includes("次数") || apiError.includes("已用完") || apiError.includes("额度"))) {
+      openModal();
+    }
+  }, [apiError, openModal]);
 
   const handleEnhance = () => {
     if (!input.trim()) {
@@ -55,7 +62,6 @@ export default function EnhancePromptPage() {
     }
     setValidationError("");
     setCopied("");
-    // 🚀 4. 发起请求变得极其优雅
     execute("/api/enhance-prompt", { 
       text: input, style: activeStyle, targetModel: activeModel, targetPlatform: activePlatform 
     });
@@ -130,7 +136,8 @@ export default function EnhancePromptPage() {
           </div>
         </div>
 
-        {(validationError || apiError) && (
+        {/* 如果没触发弹窗，但有其他报错（比如断网），依然正常显示在这里 */}
+        {(validationError || (apiError && !apiError.includes("次数"))) && (
           <p className="mt-6 text-center text-sm font-medium text-red-500 animate-in fade-in zoom-in-95">
             {validationError || apiError}
           </p>
