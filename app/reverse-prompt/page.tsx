@@ -2,34 +2,17 @@
 
 import GuideAndShowcase from '@/components/GuideAndShowcase';
 import Link from "next/link";
-import {
-  type ChangeEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
 
 type AnalyzerModel = "gemini-free" | "moonshot-v1-8k" | "doubao-seed-2-0-lite" | "gemini-3.1-pro-preview" | "claude-sonnet-4-6" | "gpt-5.4-mini";
 type OutputLanguage = "zh" | "en" | "bilingual";
 type OutputStyle = "simple" | "standard" | "pro";
-
 type TargetPlatform = "generic" | "midjourney" | "stablediffusion" | "leonardo" | "sora" | "runway" | "luma" | "pika" | "jimeng" | "keling" | "doubao";
 
 type AnalysisBlock = { label: string; value: string; };
 type PromptText = { zh: string; en: string; };
-
-type ReversePromptResult = {
-  summary: AnalysisBlock[];
-  cinematography: AnalysisBlock[];
-  prompts: Record<OutputStyle, PromptText>;
-  negativePrompt: PromptText;
-  platformVariants: Record<TargetPlatform, PromptText>;
-  disclaimer: string;
-};
-
+type ReversePromptResult = { summary: AnalysisBlock[]; cinematography: AnalysisBlock[]; prompts: Record<OutputStyle, PromptText>; negativePrompt: PromptText; platformVariants: Record<TargetPlatform, PromptText>; disclaimer: string; };
 type PreviewItem = { key: string; name: string; size: number; url: string; type: "image" | "video"; };
 type TaskMeta = { taskId?: string; model?: string; fileCount?: number; outputLanguage?: OutputLanguage; outputStyle?: OutputStyle; targetPlatform?: TargetPlatform; };
 type RestoredFile = { name: string; size: number; type?: string; };
@@ -92,13 +75,9 @@ function validateFiles(selectedFiles: File[], options?: { requireAtLeastOne?: bo
   const requireAtLeastOne = options?.requireAtLeastOne ?? true;
   if (requireAtLeastOne && selectedFiles.length === 0) return "请先上传参考图或视频素材";
   if (selectedFiles.length > MAX_FILE_COUNT) return `当前最多支持 ${MAX_FILE_COUNT} 个文件`;
-  if (selectedFiles.some((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"))) {
-    return "当前仅支持 JPG/PNG/WEBP 图片 或 MP4/MOV 视频";
-  }
-  const videoCount = selectedFiles.filter(f => f.type.startsWith("video/")).length;
-  if (videoCount > 1) return "每次解析最多支持上传 1 个短视频";
-  const totalBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
-  if (totalBytes > MAX_TOTAL_BYTES) return "总文件体积请控制在 200MB 内";
+  if (selectedFiles.some((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"))) return "当前仅支持 JPG/PNG/WEBP 图片 或 MP4/MOV 视频";
+  if (selectedFiles.filter(f => f.type.startsWith("video/")).length > 1) return "每次解析最多支持上传 1 个短视频";
+  if (selectedFiles.reduce((sum, file) => sum + file.size, 0) > MAX_TOTAL_BYTES) return "总文件体积请控制在 200MB 内";
   return "";
 }
 
@@ -117,36 +96,20 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
 
   return (
     <div className="relative w-full sm:w-auto" ref={dropdownRef}>
-      <button 
-        type="button"
-        onClick={() => setIsOpen(!isOpen)} 
-        className="flex w-full items-center justify-between gap-3 bg-white text-[13px] font-semibold text-zinc-700 hover:text-black transition-colors outline-none py-2 px-3.5 rounded-xl sm:rounded-full border border-black/10 hover:bg-black/[0.02] shadow-sm"
-      >
+      <button type="button" onClick={() => setIsOpen(!isOpen)} className="flex w-full items-center justify-between gap-3 bg-white text-[13px] font-semibold text-zinc-700 hover:text-black transition-colors outline-none py-2 px-3.5 rounded-xl sm:rounded-full border border-black/10 hover:bg-black/[0.02] shadow-sm">
         <div className="flex items-center gap-2 overflow-hidden">
-          {selectedOption.logo ? (
-            <img src={selectedOption.logo} alt="" className="w-4 h-4 object-contain shrink-0" />
-          ) : (
-             <div className="w-4 h-4 rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0">{selectedOption.name.charAt(0)}</div>
-          )}
+          {selectedOption.logo ? ( <img src={selectedOption.logo} alt="" className="w-4 h-4 object-contain shrink-0" /> ) : ( <div className="w-4 h-4 rounded-full bg-zinc-200 flex justify-center items-center text-[8px] shrink-0">{selectedOption.name.charAt(0)}</div> )}
           <span className="truncate">{selectedOption.name}</span>
         </div>
-        <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
       </button>
-
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-[360px] max-w-[90vw] rounded-2xl bg-white/95 backdrop-blur-2xl shadow-[0_16px_40px_rgb(0,0,0,0.12)] border border-zinc-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="max-h-[380px] overflow-y-auto custom-scrollbar px-1.5">
             {options.map((opt) => (
-              <button
-                key={opt.id} type="button" onClick={() => { onChange(opt.id); setIsOpen(false); }}
-                className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}
-              >
+              <button key={opt.id} type="button" onClick={() => { onChange(opt.id); setIsOpen(false); }} className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl transition-colors text-left ${value === opt.id ? 'bg-blue-50/50' : 'hover:bg-zinc-50'}`}>
                 <div className="shrink-0 mt-0.5">
-                  {opt.logo ? ( <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />) : (
-                     <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">{opt.name.charAt(0)}</div>
-                  )}
+                  {opt.logo ? ( <img src={opt.logo} alt="" className="w-6 h-6 object-contain rounded-full bg-white shadow-sm border border-zinc-100" />) : ( <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-500 border border-zinc-200">{opt.name.charAt(0)}</div> )}
                 </div>
                 <div className="flex flex-col gap-1 pr-1">
                   <div className="flex items-center gap-2">
@@ -167,10 +130,7 @@ function CustomDropdown({ options, value, onChange }: { options: any[], value: s
 function PanelTitle({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="space-y-1">
-        <h2 className="text-[21px] font-semibold tracking-tight text-gray-950 sm:text-[24px]">{title}</h2>
-        {description ? <p className="text-sm leading-6 text-gray-500">{description}</p> : null}
-      </div>
+      <div className="space-y-1"><h2 className="text-[21px] font-semibold tracking-tight text-gray-950 sm:text-[24px]">{title}</h2>{description ? <p className="text-sm leading-6 text-gray-500">{description}</p> : null}</div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );
@@ -178,58 +138,30 @@ function PanelTitle({ title, description, action }: { title: string; description
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      window.alert("复制失败，请手动复制内容");
-    }
-  }
-  return (
-    <button type="button" onClick={handleCopy} className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50">
-      {copied ? "已复制" : "复制"}
-    </button>
-  );
+  async function handleCopy() { try { await navigator.clipboard.writeText(text); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { window.alert("复制失败，请手动复制内容"); } }
+  return ( <button type="button" onClick={handleCopy} className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50">{copied ? "已复制" : "复制"}</button> );
 }
 
 function OptionButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className={["rounded-full border px-4 py-2 text-sm transition-all duration-300", active ? "border-black bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]" : "border-black/10 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50"].join(" ")}>
-      {children}
-    </button>
-  );
+  return ( <button type="button" onClick={onClick} className={["rounded-full border px-4 py-2 text-sm transition-all duration-300", active ? "border-black bg-black text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]" : "border-black/10 bg-white text-gray-700 hover:-translate-y-0.5 hover:border-black/15 hover:bg-gray-50"].join(" ")}>{children}</button> );
 }
 
 function SoftCard({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <section className={["rounded-[28px] border border-black/8 bg-white/70 backdrop-blur-xl p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-6", className].join(" ")}>{children}</section>
-  );
+  return ( <section className={["rounded-[28px] border border-black/8 bg-white/70 backdrop-blur-xl p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-6", className].join(" ")}>{children}</section> );
 }
 
-function setTaskIdToUrl(taskId: string) {
-  const url = new URL(window.location.href); url.searchParams.set("task", taskId); window.history.replaceState({}, "", url.toString());
-}
-function removeTaskIdFromUrl() {
-  const url = new URL(window.location.href); url.searchParams.delete("task"); window.history.replaceState({}, "", url.toString());
-}
-function getTaskIdFromUrl() {
-  if (typeof window === "undefined") return ""; return new URL(window.location.href).searchParams.get("task") || "";
-}
+function setTaskIdToUrl(taskId: string) { const url = new URL(window.location.href); url.searchParams.set("task", taskId); window.history.replaceState({}, "", url.toString()); }
+function removeTaskIdFromUrl() { const url = new URL(window.location.href); url.searchParams.delete("task"); window.history.replaceState({}, "", url.toString()); }
+function getTaskIdFromUrl() { if (typeof window === "undefined") return ""; return new URL(window.location.href).searchParams.get("task") || ""; }
 function recordTaskHistory(task: { taskId: string; fileCount: number; firstFileName: string; createdAt: number }) {
   if (typeof window === "undefined") return;
-  try {
-    const history = JSON.parse(localStorage.getItem("rp_history") || "[]");
-    const filtered = history.filter((h: any) => h.taskId !== task.taskId);
-    filtered.unshift(task); localStorage.setItem("rp_history", JSON.stringify(filtered.slice(0, 50)));
-  } catch (e) {}
+  try { const history = JSON.parse(localStorage.getItem("rp_history") || "[]"); const filtered = history.filter((h: any) => h.taskId !== task.taskId); filtered.unshift(task); localStorage.setItem("rp_history", JSON.stringify(filtered.slice(0, 50))); } catch (e) {}
 }
 
 export default function ReversePromptPage() {
   const { openModal } = useUpgradeModal();
 
-  const [analyzerModel, setAnalyzerModel] = useState<AnalyzerModel>("gemini-free");
+  const [analyzerModel, setAnalyzerModel] = useState<AnalyzerModel>("gemini-3.1-pro-preview");
   const [outputLanguage, setOutputLanguage] = useState<OutputLanguage>("zh");
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("pro"); 
   const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>("generic");
@@ -241,38 +173,20 @@ export default function ReversePromptPage() {
   const [uploadStatus, setUploadStatus] = useState(""); 
   const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState("");
-  const [quotaNotice, setQuotaNotice] = useState<{ type: 'success' | 'refund', msg: string } | null>(null);
+  const [quotaNotice, setQuotaNotice] = useState<{ type: 'success' | 'refund' | 'timeout', msg: string } | null>(null);
 
   const [pickerKey, setPickerKey] = useState(0);
   const hasTriedRestore = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [streamedRaw, setStreamedRaw] = useState("");
 
-  const displayTotalBytes = useMemo(() => {
-    if (files.length > 0) return files.reduce((sum, f) => sum + f.size, 0);
-    if (restoredFiles.length > 0) return restoredFiles.reduce((sum, f) => sum + f.size, 0);
-    return 0;
-  }, [files, restoredFiles]);
-
   const previewItems = useMemo<PreviewItem[]>(() => {
-    if (files.length > 0) {
-      return files.map((file) => ({
-        key: `${file.name}-${file.lastModified}`, name: file.name, size: file.size,
-        url: URL.createObjectURL(file), type: isVideoFile(file) ? "video" : "image",
-      }));
-    }
-    if (restoredFiles.length > 0) {
-      return restoredFiles.map((file, idx) => ({
-        key: `restored-${idx}`, name: file.name, size: file.size,
-        url: "", type: isVideoFile(file) ? "video" : "image",
-      }));
-    }
+    if (files.length > 0) return files.map((file) => ({ key: `${file.name}-${file.lastModified}`, name: file.name, size: file.size, url: URL.createObjectURL(file), type: isVideoFile(file) ? "video" : "image", }));
+    if (restoredFiles.length > 0) return restoredFiles.map((file, idx) => ({ key: `restored-${idx}`, name: file.name, size: file.size, url: "", type: isVideoFile(file) ? "video" : "image", }));
     return [];
   }, [files, restoredFiles]);
 
-  useEffect(() => {
-    return () => { previewItems.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url); }); };
-  }, [previewItems]);
+  useEffect(() => { return () => { previewItems.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url); }); }; }, [previewItems]);
 
   useEffect(() => {
     if (hasTriedRestore.current) return;
@@ -288,11 +202,9 @@ export default function ReversePromptPage() {
         const payload = await response.json();
         if (!response.ok) throw new Error(payload?.error || "恢复失败");
         if (cancelled) return;
-
         const task = payload?.task ?? {};
         if (payload?.result) setResult(payload.result as ReversePromptResult);
         if (Array.isArray(task.inputFiles)) setRestoredFiles(task.inputFiles);
-
         setTaskMeta({ taskId: task.id, model: task.model, fileCount: task.sourceCount, outputLanguage: task.outputLanguage, outputStyle: task.outputStyle, targetPlatform: task.targetPlatform });
         if (task.outputLanguage) setOutputLanguage(task.outputLanguage);
         if (task.outputStyle) setOutputStyle(task.outputStyle);
@@ -318,8 +230,7 @@ export default function ReversePromptPage() {
     const hasVideo = selectedFiles.some(f => f.type.startsWith('video/'));
     if (hasVideo && analyzerModel === 'gemini-free') setAnalyzerModel('gemini-3.1-pro-preview'); 
     if (nextError) {
-      setFiles([]); setRestoredFiles([]); setResult(null); setTaskMeta(null);
-      setError(nextError); setPickerKey((value) => value + 1); removeTaskIdFromUrl(); return;
+      setFiles([]); setRestoredFiles([]); setResult(null); setTaskMeta(null); setError(nextError); setPickerKey((value) => value + 1); removeTaskIdFromUrl(); return;
     }
     setFiles(selectedFiles); setRestoredFiles([]); setResult(null); setTaskMeta(null); setError(""); setQuotaNotice(null); removeTaskIdFromUrl();
   }
@@ -350,8 +261,6 @@ export default function ReversePromptPage() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setUploadStatus(`正在获取传输通道 (${i + 1}/${files.length})...`);
-        currentProgress = 0; 
-        
         const presignRes = await fetch("/api/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filename: file.name, contentType: file.type }) });
         
         if (!presignRes.ok) {
@@ -367,19 +276,33 @@ export default function ReversePromptPage() {
           xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) resolve(); else reject(new Error(`文件传输失败，状态码: ${xhr.status}`)); };
           xhr.onerror = () => reject(new Error("网络异常，传输被意外中断")); xhr.send(file);
         });
-
         uploadedFileKeys.push(fileKey);
       }
 
       setUploadStatus("素材已就绪，AI 视觉引擎深度提取中...");
 
       const requestBody = { inputType: isVideo ? "video" : "images", analyzerModel, outputLanguage, outputStyle, targetPlatform, fileKeys: uploadedFileKeys };
-      const response = await fetch("/api/reverse-prompt", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) });
+      
+      let response;
+      try {
+        // 🚨 核心修复：捕获恶心的 Failed to fetch 超时报错！
+        response = await fetch("/api/reverse-prompt", { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify(requestBody) 
+        });
+      } catch (networkError) {
+        throw new Error("🚨 网络请求中断 (Failed to fetch)。\n原因可能是大模型解析超时（生成内容极度庞大导致超过60秒），或您的本地服务已崩溃。\n\n⚠️ 注：由于连接是意外断开的，系统可能未能成功执行自动退款，请检查后台记录。");
+      }
+
       const responseText = await response.text(); 
       let finalData: any = {};
       
-      try { if (responseText) finalData = JSON.parse(responseText); } catch (parseError) {
-        if (!response.ok) throw new Error(`服务器异常 (${response.status}): ${responseText.slice(0, 100)}...`); else throw new Error("解析返回数据失败，请稍后重试");
+      try { 
+        if (responseText) finalData = JSON.parse(responseText); 
+      } catch (parseError) {
+        if (!response.ok) throw new Error(`服务器异常 (${response.status}): 无法处理 AI 的长篇回复，请重试`); 
+        else throw new Error("解析返回数据失败，请稍后重试");
       }
 
       if (!response.ok) {
@@ -409,6 +332,10 @@ export default function ReversePromptPage() {
       } else {
         if (errMsg.includes("退还")) {
           setQuotaNotice({ type: 'refund', msg: errMsg });
+          setError(""); 
+        } else if (errMsg.includes("Failed to fetch")) {
+          // 💡 针对超时的专属红色警告
+          setQuotaNotice({ type: 'timeout', msg: errMsg });
           setError(""); 
         } else {
           setError(errMsg);
@@ -497,10 +424,10 @@ export default function ReversePromptPage() {
               </div>
 
               {quotaNotice && (
-                <div className={`mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300 rounded-[18px] border px-4 py-3.5 text-sm leading-relaxed whitespace-pre-line ${
-                  quotaNotice.type === 'success' 
-                    ? 'border-emerald-200/80 bg-emerald-50/60 text-emerald-800' 
-                    : 'border-orange-200/80 bg-orange-50/60 text-orange-800'
+                <div className={`mt-4 animate-in fade-in slide-in-from-bottom-2 duration-300 rounded-[18px] border px-4 py-3.5 text-[13px] leading-relaxed whitespace-pre-line ${
+                  quotaNotice.type === 'success' ? 'border-emerald-200/80 bg-emerald-50/60 text-emerald-800' : 
+                  quotaNotice.type === 'refund' ? 'border-amber-200/80 bg-amber-50/60 text-amber-800' :
+                  'border-red-200/80 bg-red-50/60 text-red-800 font-medium'
                 }`}>
                   {quotaNotice.msg}
                 </div>
