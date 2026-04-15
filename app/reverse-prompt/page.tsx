@@ -540,20 +540,24 @@ export default function ReversePromptPage() {
 
       setUploadStatus("素材已就绪，AI 视觉引擎深度提取中...");
 
-      const formData = new FormData();
-      formData.append("inputType", isVideo ? "video" : "images");
-      formData.append("analyzerModel", analyzerModel);
-      formData.append("outputLanguage", outputLanguage);
-      formData.append("outputStyle", outputStyle);
-      formData.append("targetPlatform", targetPlatform);
-
-      for (const key of uploadedFileKeys) {
-        formData.append("fileKeys", key); 
-      }
+      // ==========================================
+      // 🚨 修复点：将 FormData 替换为干净的 JSON 对象
+      // ==========================================
+      const requestBody = {
+        inputType: isVideo ? "video" : "images",
+        analyzerModel: analyzerModel,
+        outputLanguage: outputLanguage,
+        outputStyle: outputStyle,
+        targetPlatform: targetPlatform,
+        fileKeys: uploadedFileKeys
+      };
 
       const response = await fetch("/api/reverse-prompt", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
       });
 
       const responseText = await response.text(); 

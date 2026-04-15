@@ -98,16 +98,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: quotaResult.error }, { status: 403 }); 
     }
 
-    const formData = await req.formData();
-    const analyzerModel = formData.get("analyzerModel") as string;
-    const targetPlatform = formData.get("targetPlatform") as string || "generic";
-    const inputType = formData.get("inputType") as string;
+    // ==========================================
+    // 🚨 修复点：将 formData 替换为 JSON 解析
+    // ==========================================
+    const body = await req.json();
+    const { 
+      analyzerModel, 
+      targetPlatform = "generic", 
+      inputType, 
+      fileKeys 
+    } = body;
     
-    const fileKeys = formData.getAll("fileKeys") as string[];
-    if (!fileKeys || fileKeys.length === 0) return NextResponse.json({ error: "未接收到云端素材" }, { status: 400 });
+    if (!fileKeys || !Array.isArray(fileKeys) || fileKeys.length === 0) {
+        return NextResponse.json({ error: "未接收到云端素材" }, { status: 400 });
+    }
 
     // ==========================================
-    // 🚨 核心修复：视频模型智能拦截器 🚨
+    // 🚨 核心拦截：视频模型智能拦截器 🚨
     // 拦截不支持视频的模型，引导用户使用最高级的 Gemini Pro
     // ==========================================
     if (inputType === "video" && analyzerModel !== "gemini-3.1-pro-preview") {
@@ -141,7 +148,7 @@ export async function POST(req: NextRequest) {
       Key: fileKey,
     });
     
-   const fileUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 600 });
+    const fileUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 600 });
 
     let finalImageUrl = fileUrl;
     if (apiUrl.includes("googleapis.com")) {
