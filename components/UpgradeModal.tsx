@@ -96,7 +96,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <ul className="space-y-2 text-[13px] text-blue-800/80">
                   <li className="flex items-start gap-2">
                     <span className="font-bold">1.</span> 
-                    请添加站长微信：<span className="font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200 select-all">这里填你的微信号</span>
+                    请添加站长微信：<span className="font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200 select-all">y13095092613</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="font-bold">2.</span> 
