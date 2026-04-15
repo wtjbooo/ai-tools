@@ -8,6 +8,7 @@ import { analyzeRateLimit } from "@/lib/ratelimit";
 
 export const maxDuration = 60;
 
+// 1. 初始化 R2 客户端
 const s3Client = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -26,13 +27,18 @@ const KEYS = {
 
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 
+// 💡 优化：将报错翻译成大白话，并提示额度已退回
 function translateError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase();
-  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) return "😴 服务器当前排队人数过多被挤爆了，请稍后重试。";
-  if (msg.includes("401") || msg.includes("api_key_invalid")) return "🔑 API 密钥无效或配置错误。";
-  if (msg.includes("insufficient quota")) return "💰 账户余额或配额不足。";
-  if (msg.includes("not found")) return "🔍 模型名称不匹配，请检查配置。";
-  return `⚠️ AI 引擎处理异常: ${errorMsg}`;
+  let friendlyMsg = `⚠️ 解析失败: ${errorMsg}`;
+  
+  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) friendlyMsg = "😴 服务器当前排队人数过多被挤爆了，请稍后重试。";
+  if (msg.includes("401") || msg.includes("api_key_invalid")) friendlyMsg = "🔑 API 密钥无效或配置错误。";
+  if (msg.includes("insufficient quota")) friendlyMsg = "💰 账户余额或配额不足。";
+  if (msg.includes("not found")) friendlyMsg = "🔍 模型名称不匹配，请检查配置。";
+  
+  // 核心：统一加上退款提示！
+  return `${friendlyMsg}\n\n♻️ 别担心，系统已自动为您退还本次失败消耗的 1 次额度！`;
 }
 
 function safeParseJSON(text: string) {
@@ -54,10 +60,11 @@ function safeParseJSON(text: string) {
 }
 
 // ==========================================
-// 🚨 核心业务逻辑处理器（不包含任何鉴权和扣费代码）
+// 🚨 核心业务逻辑处理器（纯粹处理业务，不掺杂鉴权和扣费）
 // ==========================================
 async function reversePromptHandler(req: NextRequest, context: { userId: string; remainingQuota?: number }) {
   try {
+    // 💡 核心修复：这里使用 req.json()，彻底解决 Content-Type 报错！
     const body = await req.json();
     const { 
       analyzerModel, 
@@ -66,14 +73,9 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
       fileKeys 
     } = body;
     
-    // 💡 注意：这里全部改成了 throw new Error()
-    // 因为抛出错误后，外层的 API Wrapper 会捕捉到，并自动退回已经扣除的次数！
+    // 如果没有获取到文件，直接抛出异常，触发自动退款！
     if (!fileKeys || !Array.isArray(fileKeys) || fileKeys.length === 0) {
         throw new Error("未接收到云端素材");
-    }
-
-    if (inputType === "video" && analyzerModel !== "gemini-3.1-pro-preview") {
-      throw new Error("⚠️ 视频反推需要极高算力，当前选择的 Claude / 免费模型仅支持图片。\n\n👉 解决方案：请在左侧切换为【Gemini 3.1 Pro】多模态霸主模型，它是目前唯一能完美解析动态视频与运镜的引擎！");
     }
 
     let selectedKey = KEYS.openai;
@@ -112,7 +114,7 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
         const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
         finalImageUrl = `data:${mimeType};base64,${base64String}`;
       } catch (err) {
-        throw new Error("云端素材读取失败，请重试！");
+        throw new Error("云端图片读取失败，请重试！");
       }
     }
 
@@ -122,9 +124,10 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
 【动态与视频专属解析规则（极度重要）】
 如果检测到素材包含动态变化（或输入类型为 ${inputType}），你必须极其详细地提取以下维度：
 1. 镜头语言 (Camera Language)：是固定机位、推镜头(Zoom in)、拉镜头(Zoom out)、平移(Pan)、还是手持晃动感(Handheld)？
-2. 动作序列 (Action Sequence)：主体在时间线内发生了什么具体动作？
+2. 动作序列 (Action Sequence)：主体在时间线内发生了什么具体动作？（例如：角色转头、眨眼、衣服飘动）
 3. 物理与环境变化 (Dynamics)：光影的流转、天气变化、背景物体的运动等。
 
+【输出丰富度要求】
 最终生成的各个版本的提示词，绝对不能是简单的短句。必须是一段包含主体、环境、光影、材质、风格、镜头（或动作）的高质量长段落（至少 50 个字以上）。
 
 必须且只能输出纯 JSON 数据。严禁任何前言、后语或 Markdown 标记。严格遵循以下结构：
@@ -184,13 +187,13 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
     
     const finalJSON = safeParseJSON(content);
     
-    // 从 context 中获取刚扣除后剩余的次数返回给前端
+    // 💡 将包装器扣减后剩余的次数带回给前端
     finalJSON._remainingQuota = context.remainingQuota; 
 
     return NextResponse.json(finalJSON);
 
   } catch (error: any) {
-    // 拦截任何异常，翻译成中文，然后抛出去给 Wrapper 触发退钱！
+    // 拦截任何异常，翻译成中文并加上退款提示，然后抛出去给 Wrapper 触发真实退费！
     console.error("素材反推业务逻辑异常，抛出给包装器执行回滚:", error);
     throw new Error(translateError(error.message));
   }
