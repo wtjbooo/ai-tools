@@ -27,7 +27,6 @@ const KEYS = {
 
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 
-// 💡 优化：将报错翻译成大白话，并提示额度已退回
 function translateError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase();
   let friendlyMsg = `⚠️ 解析失败: ${errorMsg}`;
@@ -37,7 +36,6 @@ function translateError(errorMsg: string): string {
   if (msg.includes("insufficient quota")) friendlyMsg = "💰 账户余额或配额不足。";
   if (msg.includes("not found")) friendlyMsg = "🔍 模型名称不匹配，请检查配置。";
   
-  // 核心：统一加上退款提示！
   return `${friendlyMsg}\n\n♻️ 别担心，系统已自动为您退还本次失败消耗的 1 次额度！`;
 }
 
@@ -59,12 +57,8 @@ function safeParseJSON(text: string) {
   }
 }
 
-// ==========================================
-// 🚨 核心业务逻辑处理器（纯粹处理业务，不掺杂鉴权和扣费）
-// ==========================================
 async function reversePromptHandler(req: NextRequest, context: { userId: string; remainingQuota?: number }) {
   try {
-    // 💡 核心修复：这里使用 req.json()，彻底解决 Content-Type 报错！
     const body = await req.json();
     const { 
       analyzerModel, 
@@ -73,7 +67,6 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
       fileKeys 
     } = body;
     
-    // 如果没有获取到文件，直接抛出异常，触发自动退款！
     if (!fileKeys || !Array.isArray(fileKeys) || fileKeys.length === 0) {
         throw new Error("未接收到云端素材");
     }
@@ -118,22 +111,36 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
       }
     }
 
-    const systemPrompt = `你是一个世界顶级的多模态视觉解析专家与 AI 提示词（Prompt）工程师。
-请仔细分析提供的视觉素材。
+    // ==========================================
+    // ☢️ 核心进化：核弹级工业提示词系统
+    // ==========================================
+    const systemPrompt = `你现在是好莱坞顶级视觉特效总监兼全球顶尖的 AI 视频与绘画 Prompt 架构师。
+你的任务是对用户上传的视觉素材进行“像素级”的深度拆解，并生成足以复刻甚至超越原素材画质的超级提示词！
 
-【动态与视频专属解析规则（极度重要）】
-如果检测到素材包含动态变化（或输入类型为 ${inputType}），你必须极其详细地提取以下维度：
-1. 镜头语言 (Camera Language)：是固定机位、推镜头(Zoom in)、拉镜头(Zoom out)、平移(Pan)、还是手持晃动感(Handheld)？
-2. 动作序列 (Action Sequence)：主体在时间线内发生了什么具体动作？（例如：角色转头、眨眼、衣服飘动）
-3. 物理与环境变化 (Dynamics)：光影的流转、天气变化、背景物体的运动等。
+【🚨 核心禁忌与惩罚机制（极其重要）】
+绝对严禁使用空洞的形容词（如：美丽的、震撼的、奇幻的、宏大的、史诗级的）。你必须使用绝对客观、精确的摄影机参数与物理材质来描述画面！
+❌ 错误示范：“一条震撼的巨龙在奇幻的云层中飞行。”
+✅ 正确示范：“极高特写镜头（Extreme Close-up），一条覆满黑曜石般粗糙鳞片的巨龙，瞳孔散发着高强度的金黄色的体积光。巨龙张开双翼，伴随流体动力学模拟的云层扰动（Fluid Dynamics），镜头缓慢向后拉远（Dolly out），呈现电影级景深（Depth of Field），8k分辨率，辛烷渲染（Octane Render）。”
 
-【输出丰富度要求】
-最终生成的各个版本的提示词，绝对不能是简单的短句。必须是一段包含主体、环境、光影、材质、风格、镜头（或动作）的高质量长段落（至少 50 个字以上）。
+【🎬 工业级结构化解析公式（必须严格套用）】
+你生成的 Prompt 必须涵盖以下 5 个维度：
+1. 镜头语言 (Camera & Lens): 明确指出是广角(Wide angle)、特写(Macro)、FPV穿梭机视角，以及运动轨迹(Pan/Tilt/Tracking)和焦段(例如 35mm lens, f/1.8)。
+2. 光影与色彩 (Lighting & Atmos): 描述主光源方向、边缘光(Rim light)、丁达尔效应(God rays)、全局光照(Global Illumination)。
+3. 主体材质 (Textures): 皮肤的毛孔、鳞片的反射率、衣服的布料纹理、次表面散射(Subsurface scattering)。
+4. 动作与物理时序 (Action & Dynamics) [视频专属]: 如果输入类型是 ${inputType} 且包含动作，必须描述微表情变化、风对毛发/衣服的吹动、烟雾流体的物理碰撞轨迹。
+5. 终极画质词 (Render Boosters): 必须带上 "masterpiece, best quality, ultra-detailed, 8k resolution, cinematic lighting, photorealistic, Unreal Engine 5" 等触发极致画质的咒语。
+
+【📜 输出要求】
+- simple (精简版): 侧重核心主体和基础氛围 (约 80 字)
+- standard (标准版): 包含主体、环境、光影、材质 (约 150 字)
+- pro (专业版): 必须是极致细节的长段落，包含所有的镜头参数、物理变化、顶级渲染词汇 (至少 250 字以上)
+- negativePrompt: 列出必须避免的负面因素 (如: blurry, low quality, deformed, mutated, text, watermark...)
+- platformVariants: 针对 [${targetPlatform}] 给出最硬核的适配词。如果是视频模型(Sora/Runway/Kling)，必须极度强调"时序连贯性(temporal consistency)"和"流畅慢动作(smooth slow motion)"；如果是生图模型(Midjourney/SD)，请加入类似 "--ar 16:9 --v 6.0" 或专属画质 tag。
 
 必须且只能输出纯 JSON 数据。严禁任何前言、后语或 Markdown 标记。严格遵循以下结构：
 {
-  "summary": [{"label":"主体与动作","value":"..."}],
-  "cinematography": [{"label":"运镜与光影","value":"..."}],
+  "summary": [{"label":"主体与核心动作","value":"..."}],
+  "cinematography": [{"label":"摄影机运动与光影工业参数","value":"..."}],
   "prompts": {
     "simple": {"zh": "...","en": "..."},
     "standard": {"zh": "...","en": "..."},
@@ -143,7 +150,7 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
   "platformVariants": {
     "${targetPlatform}": {"zh": "...","en": "..."}
   },
-  "disclaimer": "深度结构化解析完毕，已适配对应平台。"
+  "disclaimer": "工业级像素拆解完毕，已自动注入极高画质渲染参数。"
 }`;
 
     const payload: any = {
@@ -157,7 +164,7 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
           ]
         }
       ],
-      temperature: 0.6,
+      temperature: 0.7, // 稍微提高一点温度，让 AI 的词汇更丰富
       stream: false 
     };
 
@@ -186,23 +193,17 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
     const content = payloadData.choices[0].message.content;
     
     const finalJSON = safeParseJSON(content);
-    
-    // 💡 将包装器扣减后剩余的次数带回给前端
     finalJSON._remainingQuota = context.remainingQuota; 
 
     return NextResponse.json(finalJSON);
 
   } catch (error: any) {
-    // 拦截任何异常，翻译成中文并加上退款提示，然后抛出去给 Wrapper 触发真实退费！
     console.error("素材反推业务逻辑异常，抛出给包装器执行回滚:", error);
     throw new Error(translateError(error.message));
   }
 }
 
-// ==========================================
-// 🚀 对外导出 API，套上终极护盾！
-// ==========================================
 export const POST = withProtection(reversePromptHandler, {
-  rateLimiter: analyzeRateLimit, // 开启防刷限流
-  deductQuota: true              // 开启商业化扣费（且支持报错自动回滚退费！）
+  rateLimiter: analyzeRateLimit, 
+  deductQuota: true              
 });
