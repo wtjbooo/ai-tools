@@ -4,7 +4,6 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import prisma from "@/lib/prisma"; 
 import { checkAndDeductQuota } from "@/lib/quota";
-// 🔥 新增：引入我们在第三步写的分析接口限流器
 import { analyzeRateLimit } from "@/lib/ratelimit";
 
 export const maxDuration = 60;
@@ -34,7 +33,7 @@ function translateError(errorMsg: string): string {
   if (msg.includes("401") || msg.includes("api_key_invalid")) return "🔑 API 密钥无效或配置错误。";
   if (msg.includes("insufficient quota")) return "💰 账户余额或配额不足。";
   if (msg.includes("not found")) return "🔍 模型名称不匹配，请检查配置。";
-  return `⚠️ 解析失败: ${errorMsg}`;
+  return `⚠️ AI 引擎处理异常: ${errorMsg}`;
 }
 
 function safeParseJSON(text: string) {
@@ -57,10 +56,6 @@ function safeParseJSON(text: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    // ==========================================
-    // 💡 修复：使用正确的 Cookie 名称 session_token
-    // ==========================================
-    // 🛡️ 终极大满贯：优先查找 session_token
     const token = req.cookies.get("session_token")?.value 
                || req.cookies.get("next-auth.session-token")?.value 
                || req.cookies.get("__Secure-next-auth.session-token")?.value;
@@ -78,9 +73,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "登录已失效，请重新登录。" }, { status: 401 });
     }
 
-    // ==========================================
-    // 🛡️ 新增：基于 Upstash Redis 的高频防刷限流
-    // ==========================================
     const identifier = session.userId;
     const { success, limit, remaining, reset } = await analyzeRateLimit.limit(identifier);
 
@@ -100,17 +92,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ==========================================
-    // 💰 调用我们的收费站逻辑（扣减免费次数）
-    // ==========================================
+    // 💰 扣减额度
     const quotaResult = await checkAndDeductQuota(session.userId);
     if (!quotaResult.allowed) {
       return NextResponse.json({ error: quotaResult.error }, { status: 403 }); 
     }
 
-    // ==========================================
-    // ✅ 校验通过！继续往下走原有的核心业务
-    // ==========================================
     const formData = await req.formData();
     const analyzerModel = formData.get("analyzerModel") as string;
     const targetPlatform = formData.get("targetPlatform") as string || "generic";
@@ -119,18 +106,25 @@ export async function POST(req: NextRequest) {
     const fileKeys = formData.getAll("fileKeys") as string[];
     if (!fileKeys || fileKeys.length === 0) return NextResponse.json({ error: "未接收到云端素材" }, { status: 400 });
 
+    // ==========================================
+    // 🚨 核心修复：视频模型智能拦截器 🚨
+    // 拦截不支持视频的模型，引导用户使用最高级的 Gemini Pro
+    // ==========================================
+    if (inputType === "video" && analyzerModel !== "gemini-3.1-pro-preview") {
+      return NextResponse.json({ 
+          error: "⚠️ 视频反推需要极高算力，当前选择的 Claude / 免费模型仅支持图片。\n\n👉 解决方案：请在左侧切换为【Gemini 3.1 Pro】多模态霸主模型，它是目前唯一能完美解析动态视频与运镜的引擎！" 
+      }, { status: 400 });
+    }
+
     let selectedKey = KEYS.openai;
     let targetModel = analyzerModel;
-    // 默认请求地址：中转平台
     let apiUrl = `${N1N_BASE_URL}/chat/completions`; 
 
     if (analyzerModel === 'gemini-free') {
-      // 🌟 分流 A：只要是免费的 Flash，直接掏出官方钥匙，白嫖谷歌官方接口！
       selectedKey = process.env.GEMINI_API_KEY; 
       apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
       targetModel = 'gemini-1.5-flash';
     } else if (analyzerModel.includes("gemini")) {
-      // 🌟 分流 B：如果是 Gemini 的高级模型 (Pro 等)，依然走 N1N 中转平台！
       selectedKey = KEYS.gemini;
       targetModel = analyzerModel; 
     } else if (analyzerModel.includes("claude")) {
@@ -149,9 +143,6 @@ export async function POST(req: NextRequest) {
     
    const fileUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 600 });
 
-    // ==========================================
-    // 🌟 新增：自动图片转码（谷歌官方接口拒收外链，必须喂 base64 文本）
-    // ==========================================
     let finalImageUrl = fileUrl;
     if (apiUrl.includes("googleapis.com")) {
       try {
@@ -161,7 +152,7 @@ export async function POST(req: NextRequest) {
         const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
         finalImageUrl = `data:${mimeType};base64,${base64String}`;
       } catch (err) {
-        throw new Error("云端图片读取失败，请重试！");
+        throw new Error("云端素材读取失败，请重试！");
       }
     }
 
@@ -171,10 +162,9 @@ export async function POST(req: NextRequest) {
 【动态与视频专属解析规则（极度重要）】
 如果检测到素材包含动态变化（或输入类型为 ${inputType}），你必须极其详细地提取以下维度：
 1. 镜头语言 (Camera Language)：是固定机位、推镜头(Zoom in)、拉镜头(Zoom out)、平移(Pan)、还是手持晃动感(Handheld)？
-2. 动作序列 (Action Sequence)：主体在时间线内发生了什么具体动作？（例如：角色转头、眨眼、衣服飘动）
+2. 动作序列 (Action Sequence)：主体在时间线内发生了什么具体动作？
 3. 物理与环境变化 (Dynamics)：光影的流转、天气变化、背景物体的运动等。
 
-【输出丰富度要求】
 最终生成的各个版本的提示词，绝对不能是简单的短句。必须是一段包含主体、环境、光影、材质、风格、镜头（或动作）的高质量长段落（至少 50 个字以上）。
 
 必须且只能输出纯 JSON 数据。严禁任何前言、后语或 Markdown 标记。严格遵循以下结构：
@@ -200,7 +190,6 @@ export async function POST(req: NextRequest) {
           role: "user",
           content: [
             { type: "text", text: systemPrompt },
-            // 🌟 注意：这里换成了处理过后的 finalImageUrl
             { type: "image_url", image_url: { url: finalImageUrl } } 
           ]
         }
@@ -213,9 +202,6 @@ export async function POST(req: NextRequest) {
       payload.response_format = { type: "json_object" };
     }
 
-    // ==========================================
-    // 🌟 彻底修复 404 错误：严格只使用 apiUrl，千万不要再拼 /chat/completions！
-    // ==========================================
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
@@ -238,7 +224,6 @@ export async function POST(req: NextRequest) {
     
     const finalJSON = safeParseJSON(content);
     
-    // 💡 将剩余次数带回前端
     finalJSON._remainingQuota = quotaResult.remaining; 
 
     return NextResponse.json(finalJSON);
