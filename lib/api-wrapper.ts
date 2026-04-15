@@ -81,13 +81,15 @@ export function withProtection(
           console.log(`[回滚成功] 已成功为用户 ${userId} 退还 1 次免费额度！`);
         }
         
-        // 额度退还后，继续把错误抛给外层，让外层返回 500 报错给前端
+        // 额度退还后，继续把错误抛给外层
         throw handlerError; 
       }
 
     } catch (error: any) {
-      console.error("API 包装器捕获到未处理的异常:", error);
-      return NextResponse.json({ error: "服务器内部处理错误，请稍后再试。" }, { status: 500 });
+      console.error("API 包装器捕获到异常:", error);
+      // 💡 核心修复：透传原始报错信息给前端，否则会被统一覆盖成“内部错误”！
+      const errorMsg = error.message || "服务器内部处理错误，请稍后再试。";
+      return NextResponse.json({ error: errorMsg }, { status: 500 });
     }
   };
 }

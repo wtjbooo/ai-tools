@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import prisma from "@/lib/prisma"; 
-import { checkAndDeductQuota } from "@/lib/quota";
+// 🚀 引入我们强大的全局包装器和限流器
+import { withProtection } from "@/lib/api-wrapper";
 import { analyzeRateLimit } from "@/lib/ratelimit";
 
 export const maxDuration = 60;
 
-// 1. 初始化 R2 客户端
 const s3Client = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -54,53 +53,11 @@ function safeParseJSON(text: string) {
   }
 }
 
-export async function POST(req: NextRequest) {
+// ==========================================
+// 🚨 核心业务逻辑处理器（不包含任何鉴权和扣费代码）
+// ==========================================
+async function reversePromptHandler(req: NextRequest, context: { userId: string; remainingQuota?: number }) {
   try {
-    const token = req.cookies.get("session_token")?.value 
-               || req.cookies.get("next-auth.session-token")?.value 
-               || req.cookies.get("__Secure-next-auth.session-token")?.value;
-    
-    if (!token) {
-      return NextResponse.json({ error: "您还没有登录，请先登录再使用高级反推功能哦。" }, { status: 401 });
-    }
-
-    const session = await prisma.session.findUnique({
-      where: { sessionToken: token },
-      select: { userId: true, expires: true }
-    });
-
-    if (!session || session.expires < new Date()) {
-      return NextResponse.json({ error: "登录已失效，请重新登录。" }, { status: 401 });
-    }
-
-    const identifier = session.userId;
-    const { success, limit, remaining, reset } = await analyzeRateLimit.limit(identifier);
-
-    if (!success) {
-      return new NextResponse(
-        JSON.stringify({ 
-          error: "解析请求过于频繁，保护机制已触发。请稍作休息（建议1分钟后再试）。",
-        }), 
-        { 
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "X-RateLimit-Limit": limit.toString(),
-            "X-RateLimit-Remaining": remaining.toString(),
-          } 
-        }
-      );
-    }
-
-    // 💰 扣减额度
-    const quotaResult = await checkAndDeductQuota(session.userId);
-    if (!quotaResult.allowed) {
-      return NextResponse.json({ error: quotaResult.error }, { status: 403 }); 
-    }
-
-    // ==========================================
-    // 🚨 修复点：将 formData 替换为 JSON 解析
-    // ==========================================
     const body = await req.json();
     const { 
       analyzerModel, 
@@ -109,18 +66,14 @@ export async function POST(req: NextRequest) {
       fileKeys 
     } = body;
     
+    // 💡 注意：这里全部改成了 throw new Error()
+    // 因为抛出错误后，外层的 API Wrapper 会捕捉到，并自动退回已经扣除的次数！
     if (!fileKeys || !Array.isArray(fileKeys) || fileKeys.length === 0) {
-        return NextResponse.json({ error: "未接收到云端素材" }, { status: 400 });
+        throw new Error("未接收到云端素材");
     }
 
-    // ==========================================
-    // 🚨 核心拦截：视频模型智能拦截器 🚨
-    // 拦截不支持视频的模型，引导用户使用最高级的 Gemini Pro
-    // ==========================================
     if (inputType === "video" && analyzerModel !== "gemini-3.1-pro-preview") {
-      return NextResponse.json({ 
-          error: "⚠️ 视频反推需要极高算力，当前选择的 Claude / 免费模型仅支持图片。\n\n👉 解决方案：请在左侧切换为【Gemini 3.1 Pro】多模态霸主模型，它是目前唯一能完美解析动态视频与运镜的引擎！" 
-      }, { status: 400 });
+      throw new Error("⚠️ 视频反推需要极高算力，当前选择的 Claude / 免费模型仅支持图片。\n\n👉 解决方案：请在左侧切换为【Gemini 3.1 Pro】多模态霸主模型，它是目前唯一能完美解析动态视频与运镜的引擎！");
     }
 
     let selectedKey = KEYS.openai;
@@ -139,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!selectedKey) {
-      return NextResponse.json({ error: `服务端未配置该模型所属的 API Key` }, { status: 500 });
+      throw new Error(`服务端未配置该模型所属的 API Key`);
     }
 
     const fileKey = fileKeys[0];
@@ -231,12 +184,22 @@ export async function POST(req: NextRequest) {
     
     const finalJSON = safeParseJSON(content);
     
-    finalJSON._remainingQuota = quotaResult.remaining; 
+    // 从 context 中获取刚扣除后剩余的次数返回给前端
+    finalJSON._remainingQuota = context.remainingQuota; 
 
     return NextResponse.json(finalJSON);
 
   } catch (error: any) {
-    console.error("素材反推解析失败:", error);
-    return NextResponse.json({ error: translateError(error.message) }, { status: 500 });
+    // 拦截任何异常，翻译成中文，然后抛出去给 Wrapper 触发退钱！
+    console.error("素材反推业务逻辑异常，抛出给包装器执行回滚:", error);
+    throw new Error(translateError(error.message));
   }
 }
+
+// ==========================================
+// 🚀 对外导出 API，套上终极护盾！
+// ==========================================
+export const POST = withProtection(reversePromptHandler, {
+  rateLimiter: analyzeRateLimit, // 开启防刷限流
+  deductQuota: true              // 开启商业化扣费（且支持报错自动回滚退费！）
+});
