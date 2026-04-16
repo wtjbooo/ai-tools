@@ -25,7 +25,7 @@ export type AuthUser = {
   nickname?: string | null;
   name?: string | null;
   avatar?: string | null;
-  isPro?: boolean; // ✨ 新增：VIP 标识
+  isPro?: boolean;
 };
 
 type AuthContextValue = {
@@ -104,7 +104,7 @@ function normalizeUser(value: unknown): AuthUser | null {
     nickname: (record.nickname || record.name) as string | null,
     name: typeof record.name === "string" ? record.name : null,
     avatar: rawImage, 
-    isPro: Boolean(record.isPro || record.isVip), // ✨ 兼容解析 VIP 状态
+    isPro: Boolean(record.isPro || record.isVip), 
   };
 }
 
@@ -298,7 +298,6 @@ export function AuthButton() {
               <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] ml-1" />
             )}
             
-            {/* ✨ Pro 专属皇冠角标 ✨ */}
             {user.isPro && (
               <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-sm ring-1 ring-white">
                 <svg className="h-2 w-2" fill="currentColor" viewBox="0 0 24 24">
@@ -323,7 +322,6 @@ export function AuthButton() {
                 <div className="text-[11px] text-zinc-400 truncate mt-0.5">{user.email || '已验证账户'}</div>
               </div>
               
-              {/* ✨ 下拉菜单中的 Pro 身份展示 ✨ */}
               {user.isPro && (
                 <div className="mx-1 mb-1.5 px-3 py-2 bg-gradient-to-r from-amber-50 to-amber-100/50 rounded-xl border border-amber-100/50 flex items-center justify-between">
                   <span className="text-[12px] font-bold text-amber-700">Pro 会员</span>
@@ -447,7 +445,7 @@ function LoginModal({ open, onClose }: ModalProps) {
 }
 
 // ----------------------------------------------------------------------
-// ProfileModal (终极三合一版：资料 + 历史 + 收藏)
+// ProfileModal (AI 视效版升级！)
 // ----------------------------------------------------------------------
 
 type TabType = "profile" | "history" | "collections";
@@ -479,8 +477,7 @@ function ProfileModal({ open, onClose }: ModalProps) {
       setAvatar(user?.avatar || "");
       setActiveTab("profile"); 
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, user]);
 
   useEffect(() => {
     if (!open) return;
@@ -567,7 +564,7 @@ function ProfileModal({ open, onClose }: ModalProps) {
         onClose(); 
       } else { 
         const errorMsg = await res.text();
-        alert(`保存失败，请检查后端状态或网络。详情: ${errorMsg.slice(0, 50)}`); 
+        alert(`保存失败，请检查详情: ${errorMsg.slice(0, 50)}`); 
       }
     } catch (error) { 
       alert("网络错误，请检查连接"); 
@@ -580,23 +577,29 @@ function ProfileModal({ open, onClose }: ModalProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-[4px] transition-opacity" onClick={onClose} />
       
-      <div className="relative w-full max-w-[440px] overflow-hidden rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] transition-all animate-in zoom-in-95 duration-200">
+      {/* ✨ 弹窗背后的微光环境 ✨ */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-indigo-500/10 via-purple-500/5 to-cyan-400/10 rounded-full blur-[100px] pointer-events-none animate-pulse duration-[6000ms]" />
+
+      <div className="relative w-full max-w-[440px] overflow-hidden rounded-[32px] bg-white/90 backdrop-blur-xl border border-white p-6 sm:p-8 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] transition-all animate-in zoom-in-95 duration-200">
         <button onClick={onClose} className="absolute right-5 top-5 sm:right-6 sm:top-6 text-zinc-400 transition-colors hover:text-zinc-900 z-10">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <div className="flex bg-zinc-100/80 p-1.5 rounded-2xl mb-6 mt-2 relative">
+        {/* ✨ 高级感的毛玻璃导航栏 ✨ */}
+        <div className="flex bg-zinc-100/50 p-1.5 rounded-[20px] mb-6 mt-2 relative border border-zinc-200/50 backdrop-blur-md shadow-inner">
           {(["profile", "history", "collections"] as const).map((tab) => (
             <button 
               key={tab}
               onClick={() => setActiveTab(tab)} 
-              className={`flex-1 py-2 text-[13px] font-semibold rounded-[12px] transition-all z-10 ${activeTab === tab ? "text-zinc-900 shadow-sm bg-white" : "text-zinc-500 hover:text-zinc-700"}`}
+              className={`flex-1 py-2.5 text-[13px] font-semibold rounded-[14px] transition-all duration-300 z-10 ${
+                activeTab === tab 
+                  ? "text-zinc-900 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.06)] border border-black/[0.04] scale-100" 
+                  : "text-zinc-400 hover:text-zinc-700 hover:bg-white/40 scale-95"
+              }`}
             >
-              {tab === "profile" ? "资料" : tab === "history" ? "历史" : "收藏夹"}
+              {tab === "profile" ? "基础资料" : tab === "history" ? "生成记录" : "灵感收藏"}
             </button>
           ))}
         </div>
@@ -604,37 +607,62 @@ function ProfileModal({ open, onClose }: ModalProps) {
         {activeTab === "profile" && (
           <form onSubmit={handleSave} className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex flex-col items-center justify-center pt-2">
-              <div onClick={() => fileInputRef.current?.click()} className="relative h-[88px] w-[88px] cursor-pointer group rounded-full overflow-hidden shadow-sm border border-zinc-200 bg-zinc-100 flex items-center justify-center transition-all hover:ring-4 hover:ring-indigo-50">
+              <div onClick={() => fileInputRef.current?.click()} className="relative h-[96px] w-[96px] cursor-pointer group rounded-full overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.08)] border-2 border-white bg-zinc-100 flex items-center justify-center transition-all hover:scale-105">
                 {avatar ? <img src={avatar} alt="预览" className="h-full w-full object-cover" /> : <span className="text-zinc-400 text-3xl font-medium">{nickname ? nickname.charAt(0).toUpperCase() : "?"}</span>}
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </div>
               </div>
-              <p className="mt-3 text-[12px] text-zinc-400 font-medium">点击修改头像</p>
+              <p className="mt-4 text-[12px] text-indigo-500 font-medium bg-indigo-50 px-3 py-1 rounded-full cursor-pointer hover:bg-indigo-100 transition-colors" onClick={() => fileInputRef.current?.click()}>更换专属头像</p>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
             </div>
             <div>
-              <label className="block text-[13px] font-medium text-zinc-700 mb-1.5 ml-1">昵称</label>
-              <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all" required />
+              <label className="block text-[13px] font-medium text-zinc-700 mb-2 ml-1">AI 实验室代号 (昵称)</label>
+              <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200/80 rounded-[18px] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all shadow-inner" required />
             </div>
-            <button type="submit" disabled={isLoading} className="w-full py-3.5 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98] shadow-md shadow-zinc-900/10">
-              {isLoading ? "保存中..." : "保存修改"}
+            <button type="submit" disabled={isLoading} className="w-full py-4 bg-gradient-to-r from-zinc-900 to-zinc-800 text-white rounded-[18px] text-[14px] font-semibold hover:shadow-[0_8px_20px_rgba(24,24,27,0.2)] disabled:opacity-50 transition-all active:scale-[0.98]">
+              {isLoading ? "同步数据中..." : "保存资料档案"}
             </button>
           </form>
         )}
 
         {activeTab === "history" && (
           <div className="min-h-[300px] max-h-[380px] overflow-y-auto pr-1 -mr-2 animate-in fade-in slide-in-from-bottom-2 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full">
-            {isLoadingHistory ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px]"><div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-3" />加载中...</div> : 
-             historyItems.length === 0 ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px] italic">暂无生成历史</div> : (
+            {isLoadingHistory ? (
+               <div className="flex flex-col items-center justify-center h-[260px] text-indigo-400 text-[13px]"><div className="w-6 h-6 border-2 border-indigo-100 border-t-indigo-500 rounded-full animate-spin mb-3" />调用数据库中...</div> 
+            ) : historyItems.length === 0 ? (
+               // ✨ 升级版全息呼吸空状态 (历史) ✨
+               <div className="flex flex-col items-center justify-center h-[260px] relative overflow-hidden rounded-[24px] border border-dashed border-zinc-200 bg-zinc-50/50">
+                  <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-purple-500/5 blur-xl pointer-events-none" />
+                  <div className="w-14 h-14 bg-white rounded-2xl shadow-sm border border-zinc-100 flex items-center justify-center mb-4 relative">
+                    <svg className="w-7 h-7 text-indigo-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                  </div>
+                  <p className="text-[14px] font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500">记忆区空空如也</p>
+                  <p className="text-[12px] text-zinc-400 mt-1.5 font-medium">去使用 AI 工具，留下第一串代码印记吧</p>
+               </div>
+            ) : (
               <div className="space-y-3 pb-4">
                 {historyItems.map((item) => (
-                  <Link key={item.id} href={`/reverse-prompt?task=${item.id}`} onClick={onClose} className="group block border border-zinc-100 bg-white shadow-sm p-4 rounded-2xl hover:border-zinc-300 hover:shadow-md transition-all">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-0.5 bg-zinc-100 text-zinc-600 text-[10px] font-bold rounded-md uppercase tracking-wider">{item.targetPlatform || "通用"}</span>
-                      <span className="text-zinc-400 text-[11px] font-medium">{new Date(item.createdAt).toLocaleDateString()}</span>
+                  // ✨ 升级版神经元列表卡片 (历史) ✨
+                  <Link key={item.id} href={`/reverse-prompt?task=${item.id}`} onClick={onClose} className="group relative block overflow-hidden rounded-[20px] bg-white p-4 border border-zinc-100 shadow-sm hover:border-indigo-200 hover:shadow-[0_8px_24px_rgba(99,102,241,0.08)] transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-purple-500/0 to-cyan-500/0 group-hover:from-indigo-500/5 group-hover:via-purple-500/5 group-hover:to-cyan-500/5 transition-all duration-500 pointer-events-none" />
+                    <div className="relative flex items-center justify-between mb-3">
+                      <span className="px-2.5 py-1 bg-zinc-900 text-white text-[10px] font-bold rounded-lg uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                         <svg className="w-3 h-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                         {item.targetPlatform || "通用引擎"}
+                      </span>
+                      <span className="text-zinc-400 text-[11px] font-medium font-mono">{new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex items-center justify-between"><p className="text-[13px] text-zinc-800 font-medium">{item.status === "completed" ? "✅ 生成成功" : "⏳ 处理中"}</p><svg className="w-4 h-4 text-zinc-300 group-hover:text-zinc-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" strokeWidth={2} /></svg></div>
+                    <div className="relative flex items-center justify-between">
+                      <p className={`text-[13px] font-semibold flex items-center gap-2 ${item.status === "completed" ? "text-emerald-600" : "text-amber-600"}`}>
+                        {item.status === "completed" ? (
+                           <><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span> 推理完成</>
+                        ) : (
+                           <><span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> 引擎处理中</>
+                        )}
+                      </p>
+                      <svg className="w-4 h-4 text-zinc-300 group-hover:text-indigo-500 transition-colors group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" strokeWidth={2} /></svg>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -644,17 +672,32 @@ function ProfileModal({ open, onClose }: ModalProps) {
 
         {activeTab === "collections" && (
           <div className="min-h-[300px] max-h-[380px] overflow-y-auto pr-1 -mr-2 animate-in fade-in slide-in-from-bottom-2 duration-300 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-200 [&::-webkit-scrollbar-thumb]:rounded-full">
-            {isLoadingCollection ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px]"><div className="w-5 h-5 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin mb-3" />加载中...</div> : 
-             collectionItems.length === 0 ? <div className="flex flex-col items-center justify-center h-[260px] text-zinc-400 text-[13px] italic">收藏夹空空如也</div> : (
+            {isLoadingCollection ? (
+               <div className="flex flex-col items-center justify-center h-[260px] text-cyan-400 text-[13px]"><div className="w-6 h-6 border-2 border-cyan-100 border-t-cyan-500 rounded-full animate-spin mb-3" />同步灵感库中...</div>
+            ) : collectionItems.length === 0 ? (
+               // ✨ 升级版全息呼吸空状态 (收藏) ✨
+               <div className="flex flex-col items-center justify-center h-[260px] relative overflow-hidden rounded-[24px] border border-dashed border-zinc-200 bg-zinc-50/50">
+                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-blue-500/5 blur-xl pointer-events-none" />
+                  <div className="w-14 h-14 bg-white rounded-2xl shadow-sm border border-zinc-100 flex items-center justify-center mb-4 relative">
+                    <svg className="w-7 h-7 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                  </div>
+                  <p className="text-[14px] font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-blue-500">灵感库尚未激活</p>
+                  <p className="text-[12px] text-zinc-400 mt-1.5 font-medium">遇到喜欢的 AI 神器，记得点击收藏哦</p>
+               </div>
+            ) : (
               <div className="space-y-3 pb-4">
                 {collectionItems.map((item) => (
-                  <a key={item.id} href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="group block border border-zinc-100 bg-white shadow-sm p-4 rounded-2xl hover:border-indigo-100 hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-md uppercase tracking-wider">{item.platform}</span>
-                      <svg className="w-3.5 h-3.5 text-zinc-300 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  // ✨ 升级版神经元列表卡片 (收藏) ✨
+                  <a key={item.id} href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="group relative block overflow-hidden rounded-[20px] bg-white p-4 border border-zinc-100 shadow-sm hover:border-cyan-200 hover:shadow-[0_8px_24px_rgba(6,182,212,0.08)] transition-all duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-blue-500/0 to-indigo-500/0 group-hover:from-cyan-500/5 group-hover:via-blue-500/5 group-hover:to-indigo-500/5 transition-all duration-500 pointer-events-none" />
+                    <div className="relative flex items-center justify-between mb-2">
+                      <span className="px-2.5 py-1 bg-cyan-50 text-cyan-700 text-[10px] font-bold rounded-lg uppercase tracking-wider shadow-sm border border-cyan-100/50">{item.platform}</span>
+                      <div className="w-6 h-6 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-cyan-500 group-hover:text-white text-zinc-400 transition-colors">
+                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      </div>
                     </div>
-                    <h4 className="text-[14px] font-semibold text-zinc-800 line-clamp-1">{item.title}</h4>
-                    {item.description && <p className="text-[12px] text-zinc-500 line-clamp-2 mt-1 leading-relaxed">{item.description}</p>}
+                    <h4 className="relative text-[15px] font-bold text-zinc-800 line-clamp-1 group-hover:text-cyan-700 transition-colors">{item.title}</h4>
+                    {item.description && <p className="relative text-[12px] text-zinc-500 line-clamp-2 mt-1.5 leading-relaxed font-medium">{item.description}</p>}
                   </a>
                 ))}
               </div>
