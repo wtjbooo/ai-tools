@@ -3,9 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
-import NavLinks from "./NavLinks";
-import { AuthButton, AuthProvider } from "../components/auth/auth-provider";
-// ✨ 1. 在这里引入了 Analytics 组件 ✨
+import NavLinks from "@/app/NavLinks";
+import { AuthButton, AuthProvider } from "@/components/auth/auth-provider";// ✨ 1. 在这里引入了 Analytics 组件 ✨
 import { Analytics } from '@vercel/analytics/react';
 // 🚀 引入我们刚写的全局弹窗 Provider
 import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext";
