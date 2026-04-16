@@ -2,17 +2,35 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { Sparkles, Zap, Image as ImageIcon, Video, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { 
+  Sparkles, 
+  Zap, 
+  Image as ImageIcon, 
+  Video, 
+  ArrowRight,
+  Clock,
+  Activity,
+  Cpu,
+  ArrowUpRight
+} from "lucide-react";
+
+// 模拟近期的生成数据
+const RECENT_ACTIVITIES = [
+  { id: "task-001", title: "赛博朋克雨夜街道", type: "video", time: "2 小时前", platform: "Sora" },
+  { id: "task-002", title: "超现实主义梦境", type: "prompt", time: "5 小时前", platform: "Midjourney" },
+  { id: "task-003", title: "极简科技风 Logo", type: "image", time: "昨天", platform: "DALL-E 3" },
+];
 
 export default function DashboardOverview() {
   const { user } = useAuth();
 
-  // 模拟一些数据，后续我们将对接真实的 API
+  // 模拟算力数据
   const mockQuota = { used: 420, total: 1000 };
   const percent = Math.min((mockQuota.used / mockQuota.total) * 100, 100);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       
       {/* 头部欢迎区 */}
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -29,6 +47,7 @@ export default function DashboardOverview() {
         </button>
       </header>
 
+      {/* 上半部分：核心数据与快捷入口 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* ✨ 核心算力额度卡片 ✨ */}
@@ -38,7 +57,7 @@ export default function DashboardOverview() {
           </div>
           <h3 className="text-[16px] font-bold text-zinc-900 mb-6 flex items-center gap-2">
             本月算力配额
-            <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[11px] font-bold uppercase">Pro</span>
+            <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[11px] font-bold uppercase tracking-wider">Pro</span>
           </h3>
           
           <div className="space-y-4">
@@ -83,6 +102,89 @@ export default function DashboardOverview() {
               </div>
               <ArrowRight className="w-4 h-4 text-zinc-400 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 下半部分：生成记录与系统状态 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* ✨ 近期轨迹列表 ✨ */}
+        <div className="md:col-span-2 rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-zinc-100 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-[16px] font-bold text-zinc-900 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-zinc-400" />
+              近期轨迹
+            </h3>
+            <Link href="/dashboard/history" className="text-[13px] font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 group/link">
+              查看全部 <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+
+          <div className="space-y-3 flex-1">
+            {RECENT_ACTIVITIES.map((activity) => (
+              <div key={activity.id} className="group flex items-center justify-between p-3 sm:p-4 rounded-[20px] hover:bg-zinc-50 border border-transparent hover:border-zinc-100 transition-all duration-300">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-500 group-hover:bg-white group-hover:text-indigo-500 group-hover:shadow-sm transition-all border border-zinc-200/50">
+                    {activity.type === 'video' ? <Video className="w-4 h-4" /> : activity.type === 'image' ? <ImageIcon className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <h4 className="text-[14px] font-semibold text-zinc-900">{activity.title}</h4>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[11px] font-medium text-zinc-500">{activity.platform}</span>
+                      <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
+                      <span className="text-[11px] text-zinc-400">{activity.time}</span>
+                    </div>
+                  </div>
+                </div>
+                <button className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0">
+                  <ArrowUpRight className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ✨ 网络节点与系统公告 ✨ */}
+        <div className="rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-zinc-100 flex flex-col relative overflow-hidden">
+          <div className="absolute -right-6 -top-6 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+          
+          <h3 className="text-[16px] font-bold text-zinc-900 mb-6 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-zinc-400" />
+            节点状态
+          </h3>
+
+          <div className="space-y-5 flex-1">
+            {/* 状态灯 */}
+            <div className="flex items-center justify-between p-4 rounded-[20px] bg-zinc-50 border border-zinc-100">
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </div>
+                <span className="text-[13px] font-semibold text-zinc-900">核心引擎联机中</span>
+              </div>
+              <span className="text-[11px] font-mono text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-md">99.9%</span>
+            </div>
+
+            {/* 负载条 */}
+            <div className="px-1 space-y-2">
+              <div className="flex justify-between text-[12px] font-medium">
+                <span className="text-zinc-500 flex items-center gap-1.5"><Cpu className="w-3.5 h-3.5" /> N1N Gateway</span>
+                <span className="text-zinc-900 font-mono">24ms</span>
+              </div>
+              <div className="w-full bg-zinc-100 rounded-full h-1.5">
+                <div className="bg-zinc-900 h-1.5 rounded-full" style={{ width: '28%' }}></div>
+              </div>
+            </div>
+
+            {/* 公告 */}
+            <div className="mt-auto pt-4 border-t border-zinc-100">
+               <span className="inline-block px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md mb-2">UPDATE</span>
+               <p className="text-[13px] text-zinc-600 leading-relaxed font-medium">
+                 全新 <strong className="text-zinc-900">Sora-Pro</strong> 反推模型已接入节点。生成速度提升 40%。
+               </p>
+            </div>
           </div>
         </div>
 
