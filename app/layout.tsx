@@ -229,15 +229,16 @@ export default function RootLayout({
         className={`${inter.className} min-h-screen bg-[linear-gradient(180deg,#fafafa_0%,#f7f7f8_100%)] text-gray-900 antialiased`}
       >
         <AuthProvider>
-          {/* 🚀 2. 在这里用 Provider 包裹全局，提供跨页面的充值弹窗能力 */}
           <UpgradeModalProvider>
             <DevDatabaseWarning />
-            <Header />
-            <main>{children}</main>
-            <Footer />
+            
+            {/* 🚀 关键修复：用 SiteShell 包裹 Header、Footer 和内容！ */}
+            <SiteShell header={<Header />} footer={<Footer />}>
+              <main>{children}</main>
+            </SiteShell>
+            
           </UpgradeModalProvider>
         </AuthProvider>
-        {/* ✨ 在 body 闭合前，安放探针 ✨ */}
         <Analytics />
       </body>
     </html>
