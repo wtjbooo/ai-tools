@@ -1,13 +1,14 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
-import NavLinks from "@/app/NavLinks";
-import { AuthButton, AuthProvider } from "@/components/auth/auth-provider";// ✨ 1. 在这里引入了 Analytics 组件 ✨
+// 👈 致命修复 1：使用新文件名 + 绝对路径
+import NavLinks from "@/app/NavbarLinks"; 
+// 👈 致命修复 2：把上级目录点点点改成绝对路径，彻底杜绝找不到文件
+import { AuthButton, AuthProvider } from "@/components/auth/auth-provider"; 
 import { Analytics } from '@vercel/analytics/react';
-// 🚀 引入我们刚写的全局弹窗 Provider
 import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext";
+import SiteShell from "@/components/SiteShell";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
