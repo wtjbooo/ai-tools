@@ -1,7 +1,7 @@
 // app/api/user/dashboard/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma"; // 确保这里的路径与你的实际 prisma 实例路径一致
 
 export const dynamic = "force-dynamic";
 
@@ -34,22 +34,34 @@ export async function GET() {
         targetPlatform: true,
         status: true,
         createdAt: true,
-        // 这里可以根据你具体的模型定义，加入你想展示的标题/提示词摘要
-        promptText: true, 
+        // 👈 完美修复 1：将幽灵字段 promptText 替换为真实的 rawResponseText
+        rawResponseText: true, 
       },
     });
 
-    // 2. 获取算力配额 (你的 User 表里应该有类似 credits 或 tokens 的字段)
-    // 这里我假设你有一个 credits 字段代表当前剩余积分，如果你的字段名不同，请自行修改
-    const currentCredits = user.credits ?? 0; 
-    const maxCredits = user.isPro ? 1000 : 100; // Pro 1000 额度，普通 100 额度（可根据你的业务调整）
-    
-    // 如果剩余积分大于最大积分（比如充值叠加了），计算使用量时需要处理一下
-    const usedCredits = Math.max(0, maxCredits - currentCredits);
+    // 2. 完美修复 2：彻底接入新版积分制逻辑！避免 user.credits 引发崩溃
+    const DAILY_FREE_POINTS = 100; // 与 lib/quota.ts 保持一致
+    const now = new Date();
+    const lastUsed = user.lastUsedDate;
+    let usedCredits = user.freeUsesToday;
 
-    // 构造友好的时间显示
+    // 跨天判断：如果最后一次使用时间不是今天，说明今天是全新的，已用积分为 0
+    const isToday =
+      lastUsed &&
+      lastUsed.getDate() === now.getDate() &&
+      lastUsed.getMonth() === now.getMonth() &&
+      lastUsed.getFullYear() === now.getFullYear();
+
+    if (!isToday) {
+      usedCredits = 0; 
+    }
+
+    // Pro 用户展示无限额度，普通用户计算剩余积分
+    const maxCredits = user.isPro ? 99999 : DAILY_FREE_POINTS;
+    const remainingCredits = user.isPro ? 99999 : Math.max(0, maxCredits - usedCredits);
+
+    // 3. 构造友好的时间与数据展示
     const formattedTasks = recentTasks.map(task => {
-      const now = new Date();
       const taskDate = new Date(task.createdAt);
       const diffMs = now.getTime() - taskDate.getTime();
       const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
@@ -62,19 +74,19 @@ export async function GET() {
 
       return {
         id: task.id,
-        // 如果没有生成结果摘要，就显示默认名称
-        title: task.promptText ? task.promptText.slice(0, 20) + "..." : "AI 推理任务", 
-        type: "video", // 假设默认都是视频相关的反推
+        // 👈 配合上面的修改：读取 rawResponseText 作为摘要展示
+        title: task.rawResponseText ? task.rawResponseText.slice(0, 20) + "..." : "AI 视觉分析任务", 
+        type: "video", 
         time: timeStr,
-        platform: task.targetPlatform || "Sora",
+        platform: task.targetPlatform || "通用",
       };
     });
 
     return NextResponse.json({
       quota: {
-        used: usedCredits,
+        used: user.isPro ? 0 : usedCredits, // Pro 用户显示已用 0
         total: maxCredits,
-        remaining: currentCredits
+        remaining: remainingCredits
       },
       recentActivities: formattedTasks,
     });
