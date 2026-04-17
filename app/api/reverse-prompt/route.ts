@@ -202,5 +202,5 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
 
 export const POST = withProtection(reversePromptHandler, {
   rateLimiter: analyzeRateLimit, 
-  deductQuota: true              
+  cost: 1 // 👈 完美修复：消耗高级 AI 算力，扣除 1 个积分！          
 });
