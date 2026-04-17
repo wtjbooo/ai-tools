@@ -1,8 +1,8 @@
 // lib/api-wrapper.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-// 注意：你接下来需要在 lib/quota.ts 里修改这个函数，让它接收 cost 参数
-import { checkAndDeductQuota } from "@/lib/quota";
+// 👈 引入扣费和退款的核心逻辑
+import { checkAndDeductQuota, refundQuota } from "@/lib/quota";
 
 interface ProtectionOptions {
   rateLimiter?: any;       
@@ -58,13 +58,9 @@ export function withProtection(
       } catch (handlerError: any) {
         console.error(`[回滚拦截] 业务逻辑执行失败，准备触发积分回滚。用户 ID: ${userId}, 退还积分: ${options.cost}`, handlerError.message);
         
-        // 🚨 动态退款：把扣除的真实积分精准加回去
+        // 🚨 动态退款：使用专门的退款函数，避免直接操作数据库字段引发错误
         if (options.cost && options.cost > 0) {
-          await prisma.user.update({
-            where: { id: userId },
-            // 假设你的 User 表里积分字段叫 credits。如果是别的名字请替换
-            data: { credits: { increment: options.cost } } 
-          });
+          await refundQuota(userId, options.cost);
         }
         throw handlerError; 
       }
