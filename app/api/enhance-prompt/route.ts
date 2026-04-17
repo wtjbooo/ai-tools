@@ -147,6 +147,6 @@ export const POST = withProtection(
   // ⚙️ 万能包装器的配置项：
   {
     rateLimiter: enhanceRateLimit, // 启用防刷限流
-    deductQuota: true              // 启用计费扣除！
+    cost: 1                        // 👈 完美修复：改为 cost 扣除积分！
   }
 );
