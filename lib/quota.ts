@@ -1,29 +1,34 @@
-import prisma from "./prisma"; // 确保这里的路径能正确引入你 lib/prisma.ts 中的 prisma 实例
+import prisma from "./prisma"; 
 
-// 💡 这里设置每天的免费限制次数，后续如果想修改可以在这里统一改
-const DAILY_FREE_LIMIT = 5; 
+// 💡 每天免费派发的总积分额度（你可以根据需要调大）
+const DAILY_FREE_POINTS = 100; 
 
-export async function checkAndDeductQuota(userId: string) {
+/**
+ * 检查并扣除积分
+ * @param userId 用户 ID
+ * @param cost 本次 API 调用的积分花费（默认 1）
+ */
+export async function checkAndDeductQuota(userId: string, cost: number = 1) {
   try {
     // 1. 获取当前用户的信息
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { freeUsesToday: true, lastUsedDate: true, isPro: true } // 为了性能，只查询需要的字段
+      select: { freeUsesToday: true, lastUsedDate: true, isPro: true } 
     });
 
     if (!user) {
       return { allowed: false, error: "未找到用户，请先登录。" };
     }
 
-    // 2. 如果是高级会员（Pro），直接放行，不扣除次数
+    // 2. 如果是高级会员（Pro），直接放行，不扣除积分
     if (user.isPro) {
       return { allowed: true, remaining: "unlimited" };
     }
 
-    // 3. 处理跨天逻辑（判断今天和最后一次使用的时间是否是同一天）
+    // 3. 处理跨天逻辑（判断今天和最后一次扣费的时间是否是同一天）
     const now = new Date();
     const lastUsed = user.lastUsedDate;
-    let currentUses = user.freeUsesToday;
+    let currentUsedPoints = user.freeUsesToday;
 
     const isToday =
       lastUsed &&
@@ -32,35 +37,66 @@ export async function checkAndDeductQuota(userId: string) {
       lastUsed.getFullYear() === now.getFullYear();
 
     if (!isToday) {
-      // 如果上次使用不是今天（比如昨天），或者是第一次使用（null），则重置为 0
-      currentUses = 0;
+      // 如果上次使用不是今天，重置已用积分为 0
+      currentUsedPoints = 0;
     }
 
-    // 4. 检查额度是否超限
-    if (currentUses >= DAILY_FREE_LIMIT) {
+    // 4. 检查加上本次花费后，积分是否超限
+    if (currentUsedPoints + cost > DAILY_FREE_POINTS) {
       return { 
         allowed: false, 
-        error: `您今天的免费次数（${DAILY_FREE_LIMIT}次）已用完，请明天再来哦！` 
+        error: `您的免费积分不足（需要 ${cost} 分，今日仅剩 ${DAILY_FREE_POINTS - currentUsedPoints} 分）。请升级 Pro 解锁更多额度！` 
       };
     }
 
-    // 5. 扣除次数（实际是已使用次数 +1），并更新最后使用时间
+    // 5. 扣除积分（累加已用积分），并更新最后使用时间
     await prisma.user.update({
       where: { id: userId },
       data: {
-        freeUsesToday: currentUses + 1,
+        freeUsesToday: currentUsedPoints + cost,
         lastUsedDate: now,
       },
     });
 
-    // 返回成功，顺便可以告诉前端还剩几次
+    // 返回成功，计算剩余积分
     return { 
       allowed: true, 
-      remaining: DAILY_FREE_LIMIT - (currentUses + 1) 
+      remaining: DAILY_FREE_POINTS - (currentUsedPoints + cost) 
     };
 
   } catch (error) {
     console.error("检查额度时发生错误:", error);
-    return { allowed: false, error: "系统繁忙，请稍后再试" };
+    return { allowed: false, error: "系统繁忙，积分校验失败" };
+  }
+}
+
+/**
+ * 任务失败时退还积分（精准退款）
+ * @param userId 用户 ID
+ * @param cost 需要退回的积分数量
+ */
+export async function refundQuota(userId: string, cost: number = 1) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { freeUsesToday: true, isPro: true }
+    });
+
+    // 如果找不到用户或者是 Pro 用户，无需退款
+    if (!user || user.isPro) return;
+
+    // 确保退款后，已用积分不会变成负数
+    const newUsedPoints = Math.max(0, user.freeUsesToday - cost);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        freeUsesToday: newUsedPoints,
+      },
+    });
+    
+    console.log(`✅ 已成功为用户 ${userId} 退还 ${cost} 积分`);
+  } catch (error) {
+    console.error("退款积分时发生错误:", error);
   }
 }

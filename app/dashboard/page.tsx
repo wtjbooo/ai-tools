@@ -3,6 +3,7 @@
 
 import { useAuth } from "@/components/auth/auth-provider";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { 
   Sparkles, 
   Zap, 
@@ -12,22 +13,71 @@ import {
   Clock,
   Activity,
   Cpu,
-  ArrowUpRight
+  ArrowUpRight,
+  Loader2
 } from "lucide-react";
 
-// 模拟近期的生成数据
-const RECENT_ACTIVITIES = [
-  { id: "task-001", title: "赛博朋克雨夜街道", type: "video", time: "2 小时前", platform: "Sora" },
-  { id: "task-002", title: "超现实主义梦境", type: "prompt", time: "5 小时前", platform: "Midjourney" },
-  { id: "task-003", title: "极简科技风 Logo", type: "image", time: "昨天", platform: "DALL-E 3" },
-];
+// 定义数据类型
+interface DashboardData {
+  quota: { used: number; total: number; remaining: number };
+  recentActivities: Array<{
+    id: string;
+    title: string;
+    type: string;
+    time: string;
+    platform: string;
+  }>;
+}
 
 export default function DashboardOverview() {
   const { user } = useAuth();
+  
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // 模拟算力数据
-  const mockQuota = { used: 420, total: 1000 };
-  const percent = Math.min((mockQuota.used / mockQuota.total) * 100, 100);
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        const res = await fetch("/api/user/dashboard");
+        if (!res.ok) {
+           throw new Error("无法加载工作台数据");
+        }
+        const json = await res.json();
+        setData(json);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    // 只要有用户，就开始拉取数据
+    if (user) {
+       fetchDashboardData();
+    }
+  }, [user]);
+
+  // 如果正在加载，显示高科技感的骨架屏
+  if (isLoading || !data) {
+    return (
+       <div className="flex flex-col items-center justify-center min-h-[60vh] text-zinc-400">
+         <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-4" />
+         <p className="text-sm font-medium">正在同步节点数据...</p>
+       </div>
+    );
+  }
+
+  if (error) {
+    return (
+       <div className="p-6 bg-red-50 text-red-600 rounded-2xl text-sm font-medium border border-red-100">
+         节点连接失败: {error}
+       </div>
+    );
+  }
+
+  const { quota, recentActivities } = data;
+  const percent = Math.min((quota.used / quota.total) * 100, 100);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
@@ -50,30 +100,30 @@ export default function DashboardOverview() {
       {/* 上半部分：核心数据与快捷入口 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* ✨ 核心算力额度卡片 ✨ */}
+        {/* ✨ 核心算力额度卡片 (真实数据驱动!) ✨ */}
         <div className="md:col-span-2 relative overflow-hidden rounded-[32px] bg-white p-8 shadow-[0_12px_40px_rgba(0,0,0,0.04)] border border-zinc-100">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
              <Zap className="w-32 h-32 text-indigo-600" />
           </div>
           <h3 className="text-[16px] font-bold text-zinc-900 mb-6 flex items-center gap-2">
             本月算力配额
-            <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[11px] font-bold uppercase tracking-wider">Pro</span>
+            {user?.isPro && <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 text-[11px] font-bold uppercase tracking-wider">Pro</span>}
           </h3>
           
           <div className="space-y-4">
             <div className="flex justify-between items-end">
               <div className="text-[36px] font-black tracking-tight text-zinc-900 leading-none">
-                {mockQuota.used} <span className="text-[16px] text-zinc-400 font-medium">/ {mockQuota.total} 积分</span>
+                {quota.used} <span className="text-[16px] text-zinc-400 font-medium">/ {quota.total} 积分</span>
               </div>
               <div className="text-[14px] font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-                剩余 {mockQuota.total - mockQuota.used}
+                剩余 {quota.remaining}
               </div>
             </div>
             
             {/* 充满科技感的进度条 */}
             <div className="h-3 w-full bg-zinc-100 rounded-full overflow-hidden shadow-inner">
               <div 
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 relative"
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 relative transition-all duration-1000 ease-out"
                 style={{ width: `${percent}%` }}
               >
                 <div className="absolute top-0 right-0 bottom-0 left-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] animate-[progress_1s_linear_infinite]" />
@@ -88,20 +138,20 @@ export default function DashboardOverview() {
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay" />
           <h3 className="text-[16px] font-bold mb-6 text-zinc-100">快速启动</h3>
           <div className="space-y-3 relative z-10">
-            <button className="w-full flex items-center justify-between p-3.5 rounded-[16px] bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md border border-white/5 group/btn">
+            <Link href="/reverse-prompt" className="w-full flex items-center justify-between p-3.5 rounded-[16px] bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md border border-white/5 group/btn">
               <div className="flex items-center gap-3">
                 <ImageIcon className="w-5 h-5 text-cyan-400" />
                 <span className="text-[14px] font-medium">图像提示词反推</span>
               </div>
               <ArrowRight className="w-4 h-4 text-zinc-400 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
-            </button>
-            <button className="w-full flex items-center justify-between p-3.5 rounded-[16px] bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md border border-white/5 group/btn">
+            </Link>
+            <Link href="/enhance-prompt" className="w-full flex items-center justify-between p-3.5 rounded-[16px] bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md border border-white/5 group/btn">
               <div className="flex items-center gap-3">
                 <Video className="w-5 h-5 text-purple-400" />
                 <span className="text-[14px] font-medium">魔法视频扩写</span>
               </div>
               <ArrowRight className="w-4 h-4 text-zinc-400 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -109,7 +159,7 @@ export default function DashboardOverview() {
       {/* 下半部分：生成记录与系统状态 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* ✨ 近期轨迹列表 ✨ */}
+        {/* ✨ 近期轨迹列表 (真实数据驱动!) ✨ */}
         <div className="md:col-span-2 rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-zinc-100 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[16px] font-bold text-zinc-900 flex items-center gap-2">
@@ -122,8 +172,12 @@ export default function DashboardOverview() {
           </div>
 
           <div className="space-y-3 flex-1">
-            {RECENT_ACTIVITIES.map((activity) => (
-              <div key={activity.id} className="group flex items-center justify-between p-3 sm:p-4 rounded-[20px] hover:bg-zinc-50 border border-transparent hover:border-zinc-100 transition-all duration-300">
+            {recentActivities.length === 0 ? (
+               <div className="flex flex-col items-center justify-center h-full text-zinc-400 opacity-60 min-h-[120px]">
+                 <span className="text-sm font-medium">暂无生成记录，快去开启灵感吧</span>
+               </div>
+            ) : recentActivities.map((activity) => (
+              <Link href={`/reverse-prompt?task=${activity.id}`} key={activity.id} className="group flex items-center justify-between p-3 sm:p-4 rounded-[20px] hover:bg-zinc-50 border border-transparent hover:border-zinc-100 transition-all duration-300">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-500 group-hover:bg-white group-hover:text-indigo-500 group-hover:shadow-sm transition-all border border-zinc-200/50">
                     {activity.type === 'video' ? <Video className="w-4 h-4" /> : activity.type === 'image' ? <ImageIcon className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
@@ -137,10 +191,10 @@ export default function DashboardOverview() {
                     </div>
                   </div>
                 </div>
-                <button className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0">
                   <ArrowUpRight className="w-4 h-4" />
-                </button>
-              </div>
+                </div>
+              </Link>
             ))}
           </div>
         </div>

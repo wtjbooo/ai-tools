@@ -1,137 +1,123 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // 1) Categories
-  const categories = [
-    { name: "聊天助手", slug: "chat", order: 1 },
-    { name: "图像生成", slug: "image", order: 2 },
-    { name: "写作工具", slug: "writing", order: 3 },
-    { name: "效率工具", slug: "productivity", order: 4 },
-  ];
+  console.log('🌱 开始向 XAira 数据库填充真实 AI 工具数据...');
 
-  for (const c of categories) {
-    await prisma.category.upsert({
-      where: { slug: c.slug },
-      update: { name: c.name, order: c.order },
-      create: c,
-    });
-  }
+  // ==========================================
+  // 1. 创建核心分类 (Categories)
+  // ==========================================
+  const textCategory = await prisma.category.upsert({
+    where: { slug: 'text-generation' },
+    update: {},
+    create: { name: '文本写作', slug: 'text-generation', order: 1, icon: 'FileText' },
+  });
 
-  // 2) Tags
-  const tags = ["免费", "中文", "API", "开源", "热门"];
-  for (const name of tags) {
-    const slug = name.toLowerCase().replace(/\s+/g, "-");
-    await prisma.tag.upsert({
-      where: { slug },
-      update: { name },
-      create: { name, slug },
-    });
-  }
+  const imageCategory = await prisma.category.upsert({
+    where: { slug: 'image-generation' },
+    update: {},
+    create: { name: '图像生成', slug: 'image-generation', order: 2, icon: 'Image' },
+  });
 
-  const chat = await prisma.category.findUnique({ where: { slug: "chat" } });
-  const image = await prisma.category.findUnique({ where: { slug: "image" } });
-  if (!chat || !image) throw new Error("Missing categories after upsert");
+  const codeCategory = await prisma.category.upsert({
+    where: { slug: 'coding-assistant' },
+    update: {},
+    create: { name: '开发编程', slug: 'coding-assistant', order: 3, icon: 'Code' },
+  });
 
-  // helper
-  const toSlug = (s: string) =>
-    s
-      .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s-]/gu, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
+  // ==========================================
+  // 2. 创建核心标签 (Tags)
+  // ==========================================
+  const tagFree = await prisma.tag.upsert({
+    where: { slug: 'free' },
+    update: {},
+    create: { name: '完全免费', slug: 'free' },
+  });
 
-  const ensureTag = async (name: string) => {
-    const slug = toSlug(name);
-    return prisma.tag.upsert({
-      where: { slug },
-      update: { name },
-      create: { name, slug },
-    });
-  };
+  const tagFreemium = await prisma.tag.upsert({
+    where: { slug: 'freemium' },
+    update: {},
+    create: { name: '免费增值', slug: 'freemium' },
+  });
 
-  // 3) Tools demo data
-  const toolData = [
-    {
-      name: "示例：Chat 工具",
-      slug: "demo-chat-tool",
-      description: "一个示例 AI 聊天工具，用于演示列表、详情、搜索与 SEO。",
-      content: "这里是更详细的介绍内容（支持纯文本/Markdown）。",
-      website: "https://example.com",
-      pricing: "freemium",
+  // ==========================================
+  // 3. 创建 AI 工具集合 (Tools) 
+  // ==========================================
+  
+  // 工具 1: ChatGPT
+  await prisma.tool.upsert({
+    where: { slug: 'chatgpt' },
+    update: {},
+    create: {
+      name: 'ChatGPT',
+      slug: 'chatgpt',
+      description: 'OpenAI 提供的强大对话式 AI 模型，支持文本生成、翻译、问答等多种任务。',
+      website: 'https://chat.openai.com',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg',
+      pricing: 'Freemium',
+      featured: true,        // 设为推荐工具
+      featuredOrder: 1,
+      categoryId: textCategory.id,
+      isPublished: true,     // 发布状态，确保前端能展示
+      reviewStatus: 'approved',
+      classificationStatus: 'completed',
+      tags: {
+        create: [{ tagId: tagFreemium.id }] // 关联标签
+      }
+    },
+  });
+
+  // 工具 2: Midjourney
+  await prisma.tool.upsert({
+    where: { slug: 'midjourney' },
+    update: {},
+    create: {
+      name: 'Midjourney',
+      slug: 'midjourney',
+      description: '业界领先的 AI 绘图工具，能够根据文本提示生成极具艺术感的图像。',
+      website: 'https://www.midjourney.com',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e6/Midjourney_Emblem.png',
+      pricing: 'Paid',
       featured: true,
-      logoUrl: "https://dummyimage.com/128x128/000/fff.png&text=AI",
-      screenshots: [
-        "https://dummyimage.com/1200x700/111/fff.png&text=Screenshot+1",
-        "https://dummyimage.com/1200x700/222/fff.png&text=Screenshot+2",
-      ],
-      categoryId: chat.id,
-      tagNames: ["热门", "中文"],
+      featuredOrder: 2,
+      categoryId: imageCategory.id,
+      isPublished: true,
+      reviewStatus: 'approved',
+      classificationStatus: 'completed',
+      tags: {}
     },
-    {
-      name: "示例：Image 工具",
-      slug: "demo-image-tool",
-      description: "一个示例 AI 图像生成工具。",
-      content: "支持文生图，适合做演示。",
-      website: "https://example.com",
-      pricing: "paid",
-      featured: false,
-      logoUrl: "https://dummyimage.com/128x128/333/fff.png&text=IMG",
-      screenshots: ["https://dummyimage.com/1200x700/333/fff.png&text=Screenshot"],
-      categoryId: image.id,
-      tagNames: ["API"],
+  });
+
+  // 工具 3: Cursor
+  await prisma.tool.upsert({
+    where: { slug: 'cursor' },
+    update: {},
+    create: {
+      name: 'Cursor',
+      slug: 'cursor',
+      description: '专为 AI 编程设计的代码编辑器，内置强大的代码生成和问答能力。',
+      website: 'https://cursor.sh',
+      logoUrl: 'https://mintlify.s3-us-west-1.amazonaws.com/cursor/images/logo/cursor-mark.svg', 
+      pricing: 'Freemium',
+      featured: true,
+      featuredOrder: 3,
+      categoryId: codeCategory.id,
+      isPublished: true,
+      reviewStatus: 'approved',
+      classificationStatus: 'completed',
+      tags: {
+        create: [{ tagId: tagFree.id }, { tagId: tagFreemium.id }]
+      }
     },
-  ] as const;
+  });
 
-  for (const t of toolData) {
-    const searchText = [t.name, t.description, t.content, t.tagNames.join(" ")].join(" ");
-
-    const tool = await prisma.tool.upsert({
-      where: { slug: t.slug },
-      update: {
-        name: t.name,
-        description: t.description,
-        content: t.content,
-        website: t.website,
-        pricing: t.pricing,
-        featured: t.featured,
-        logoUrl: t.logoUrl,
-        screenshots: JSON.stringify(t.screenshots),
-        searchText,
-        categoryId: t.categoryId,
-      },
-      create: {
-        name: t.name,
-        slug: t.slug,
-        description: t.description,
-        content: t.content,
-        website: t.website,
-        pricing: t.pricing,
-        featured: t.featured,
-        logoUrl: t.logoUrl,
-        screenshots: JSON.stringify(t.screenshots),
-        searchText,
-        categoryId: t.categoryId,
-      },
-    });
-
-    // sync tool tags
-    await prisma.toolTag.deleteMany({ where: { toolId: tool.id } });
-    for (const tagName of t.tagNames) {
-      const tag = await ensureTag(tagName);
-      await prisma.toolTag.create({ data: { toolId: tool.id, tagId: tag.id } }).catch(() => {});
-    }
-  }
-
-  console.log("Seed done.");
+  console.log('✨ 数据库填充完毕！快去刷新主页看看吧！');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('填充失败:', e);
     process.exit(1);
   })
   .finally(async () => {
