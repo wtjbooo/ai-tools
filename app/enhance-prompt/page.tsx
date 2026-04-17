@@ -4,8 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import TypewriterEffect from "@/components/TypewriterEffect";
 import CustomDropdown from "@/components/CustomDropdown";
 import { useAiTool } from "@/hooks/useAiTool";
-// 🚀 1. 引入全局遥控器
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
+
+// 🚀 引入我们刚刚写的全局物价局
+import { getModelCost } from "@/lib/pricing";
 
 const STYLE_PILLS = ["通用", "🎬 电影质感", "📸 拍立得复古", "🤖 赛博朋克", "🌸 吉卜力动画", "🏛️ 史诗奇幻"];
 
@@ -42,12 +44,13 @@ export default function EnhancePromptPage() {
   const [copied, setCopied] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // 🚀 2. 拿到全局弹窗的钥匙
   const { openModal } = useUpgradeModal();
-
   const { loading: isLoading, results: result, error: apiError, execute } = useAiTool<{ promptZh?: string; promptEn?: string; negativeEn?: string }>();
 
-  // 🚀 3. 神奇的拦截器：只要 Hook 抛出了额度不足的错误，瞬间唤起弹窗！
+  // 🚀 实时计算当前所选模型需要消耗的积分
+  // 注意：扩写是文本任务，所以传 'text'
+  const currentCost = getModelCost(activeModel, 'text');
+
   useEffect(() => {
     if (apiError && (apiError.includes("次数") || apiError.includes("已用完") || apiError.includes("额度"))) {
       openModal();
@@ -125,7 +128,15 @@ export default function EnhancePromptPage() {
           </div>
 
           <div className="flex items-center justify-between border-t border-black/5 px-5 py-4 relative z-10">
-            <span className="text-xs font-medium text-zinc-400">{input.length} / 500</span>
+            {/* 🚀 这里是新增的动态提示区 */}
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-medium text-zinc-400">{input.length} / 500</span>
+              <span className="flex items-center gap-1.5 rounded-full bg-blue-50/80 px-2.5 py-1 text-[11px] font-medium text-blue-600 border border-blue-100/50 transition-all duration-300">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
+                本次文本任务将消耗 {currentCost} 积分
+              </span>
+            </div>
+
             <button
               onClick={handleEnhance}
               disabled={isLoading || !input.trim()}
@@ -136,7 +147,6 @@ export default function EnhancePromptPage() {
           </div>
         </div>
 
-        {/* 如果没触发弹窗，但有其他报错（比如断网），依然正常显示在这里 */}
         {(validationError || (apiError && !apiError.includes("次数"))) && (
           <p className="mt-6 text-center text-sm font-medium text-red-500 animate-in fade-in zoom-in-95">
             {validationError || apiError}
