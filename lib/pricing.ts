@@ -3,12 +3,29 @@
 /**
  * XAira 全局 AI 算力计费中心 (中央物价局)
  * @param modelName 前端传来的模型名称 (如 "gemini-flash", "claude-4.6-sonnet")
- * @param taskType 任务类型：'text' (扩写/搜索) | 'vision' (图片反推)
+ * @param taskType 任务类型：'text' (纯文本) | 'vision' (视觉反推) | 'image_gen' (AI绘图) | 'video_gen' (AI视频)
  * @returns 需要扣除的积分数量
  */
-export function getModelCost(modelName: string, taskType: 'text' | 'vision' = 'text'): number {
+export function getModelCost(
+  modelName: string, 
+  taskType: 'text' | 'vision' | 'image_gen' | 'video_gen' = 'text'
+): number {
   // 转小写，方便统一匹配
   const name = (modelName || "").toLowerCase();
+
+  // ==========================================
+  // 🎬 视频生成任务 (终极吞金兽) - 极其烧钱
+  // ==========================================
+  if (taskType === 'video_gen') {
+    return 20; // 视频生成动辄几块钱人民币，暂定扣除 20 分（未来可根据 Sora/Kling 再细分）
+  }
+
+  // ==========================================
+  // 🎨 图像生成任务 (Midjourney/Flux 等)
+  // ==========================================
+  if (taskType === 'image_gen') {
+    return 10; // AI 绘画单张成本较高，暂定扣除 10 分
+  }
 
   // ==========================================
   // 👁️ 视觉任务 (反推提示词) - 统一溢价
