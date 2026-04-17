@@ -1,12 +1,14 @@
 // lib/api-wrapper.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-// 👈 引入扣费和退款的核心逻辑
 import { checkAndDeductQuota, refundQuota } from "@/lib/quota";
+// 👈 引入我们刚刚新建的中央物价局
+import { getModelCost } from "@/lib/pricing";
 
 interface ProtectionOptions {
   rateLimiter?: any;       
-  cost?: number;   // 👈 核心升级：引入动态定价（积分为单位）
+  cost?: number;      // 静态定价（适合完全不扣费的接口，比如 cost: 0）
+  taskType?: 'text' | 'vision' | 'image_gen' | 'video_gen'; // 👈 新增：动态定价（告诉包装器这是什么任务，它会自动去查价！）
 }
 
 type BusinessLogicHandler = (
@@ -20,6 +22,7 @@ export function withProtection(
 ) {
   return async (req: NextRequest) => {
     try {
+      // --- 1. 登录与身份校验 ---
       const token = req.cookies.get("session_token")?.value;
       if (!token) return NextResponse.json({ error: "您还没有登录，请先登录。" }, { status: 401 });
 
@@ -32,7 +35,7 @@ export function withProtection(
       
       const userId = session.userId;
 
-      // 1. 接口限流保护
+      // --- 2. 接口限流保护 ---
       if (options.rateLimiter) {
         const { success, limit } = await options.rateLimiter.limit(userId);
         if (!success) {
@@ -43,31 +46,52 @@ export function withProtection(
         }
       }
 
-      // 2. 动态积分扣除
+      // --- 3. 🧠 核心升级：智能动态算价 ---
+      let finalCost = options.cost ?? 0; // 默认使用静态配置的价格
+
+      // 如果配置了 taskType（说明开启了动态计费），且是 POST 请求
+      if (options.taskType && req.method === "POST") {
+        try {
+          // 💡 神奇魔法：克隆一份请求体，偷偷看一眼模型名字，不影响后续业务！
+          const clonedReq = req.clone();
+          const body = await clonedReq.json();
+          
+          // 兼容你不同接口里对模型的命名习惯
+          const modelName = body.targetModel || body.analyzerModel || body.model || "";
+          
+          // 找物价局查真实价格！
+          finalCost = getModelCost(modelName, options.taskType);
+          console.log(`[计费网关] 任务: ${options.taskType}, 模型: ${modelName}, 本次需扣除: ${finalCost} 积分`);
+
+        } catch (e) {
+          console.error("[计费网关] 提取模型名称失败，触发安全兜底计费", e);
+          finalCost = 3; // 如果解析失败，为了防止被白嫖，兜底扣除 3 分
+        }
+      }
+
+      // --- 4. 积分校验与扣除 ---
       let remainingQuota: number | undefined = undefined;
-      if (options.cost && options.cost > 0) {
-        // 将花费的分数传给扣费函数
-        const quotaResult = await checkAndDeductQuota(userId, options.cost);
+      if (finalCost > 0) {
+        const quotaResult = await checkAndDeductQuota(userId, finalCost);
         if (!quotaResult.allowed) return NextResponse.json({ error: quotaResult.error }, { status: 403 }); 
         remainingQuota = quotaResult.remaining !== undefined ? Number(quotaResult.remaining) : undefined;
       }
 
-      // 3. 执行核心业务与失败回滚
+      // --- 5. 执行核心业务与失败回滚 ---
       try {
         return await handler(req, { userId, remainingQuota });
       } catch (handlerError: any) {
-        console.error(`[回滚拦截] 业务逻辑执行失败，准备触发积分回滚。用户 ID: ${userId}, 退还积分: ${options.cost}`, handlerError.message);
+        console.error(`[回滚拦截] 业务失败，准备退款。用户 ID: ${userId}, 退还积分: ${finalCost}`, handlerError.message);
         
-        // 🚨 动态退款：使用专门的退款函数，避免直接操作数据库字段引发错误
-        if (options.cost && options.cost > 0) {
-          await refundQuota(userId, options.cost);
+        // 🚨 精准退款：业务报错了，把刚刚算好的动态积分退给用户
+        if (finalCost > 0) {
+          await refundQuota(userId, finalCost);
         }
         throw handlerError; 
       }
 
     } catch (error: any) {
       console.error("API 包装器捕获到异常:", error.message);
-      // 把大模型抛出的真实报错原封不动传给前端
       const errorMsg = error.message || "服务器异常，请稍后再试。";
       return NextResponse.json({ error: errorMsg }, { status: 500 });
     }

@@ -126,7 +126,7 @@ export const POST = withProtection(
   },
   // ⚙️ 4. 包装器配置项：启用全网搜索限流与计费扣除！
   {
-    rateLimiter: searchRateLimit,
-    cost: 1 // 👈 完美解决报错！从 deductQuota 改为 cost 扣除 1 个积分
+    rateLimiter: enhanceRateLimit,
+    taskType: 'text' // 👈 纯文本扩写
   }
 );
