@@ -126,7 +126,7 @@ export const POST = withProtection(
   },
   // ⚙️ 4. 包装器配置项：启用全网搜索限流与计费扣除！
   {
-    rateLimiter: enhanceRateLimit,
-    taskType: 'text' // 👈 纯文本扩写
+    rateLimiter: searchRateLimit, // 👈 完美修复：改回当前文件专属的搜索限流器
+    taskType: 'text'              // 👈 告诉计费网关这是纯文本任务
   }
 );
