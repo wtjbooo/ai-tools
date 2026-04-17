@@ -57,6 +57,6 @@ export const POST = withProtection(
   // ⚙️ 万能包装器配置：
   {
     rateLimiter: createOrderRateLimit, // 开启防刷单限流
-    deductQuota: false                 // ⚠️ 创建订单绝对不能扣除用户的 AI 算力额度！
+    cost: 0                            // 👈 完美修复：创建订单绝对不能扣除用户的 AI 算力额度，所以 cost 设为 0！
   }
 );
