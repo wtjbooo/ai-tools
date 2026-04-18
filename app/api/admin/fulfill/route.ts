@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const { outTradeNo, adminPassword } = await req.json();
 
     // 🔒 极简安全校验：只有你自己知道这个密码才能发货
-    if (adminPassword !== "你的站长专属密码123") {
+    if (adminPassword !== "XAiraYbq0708..") {
       return NextResponse.json({ error: "权限不足，请联系开发者" }, { status: 403 });
     }
 
