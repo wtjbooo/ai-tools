@@ -140,6 +140,8 @@ model User {
   lastUsedDate  DateTime?             // 最后一次扣除次数的日期（用于跨天重置）
   isPro         Boolean   @default(false) // 预留：判断是否为高级/付费用户，高级用户可以无限制或有更高额度
 
+bonusCredits  Int       @default(0) // 用户购买的额外永久积分（如加油包）
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
