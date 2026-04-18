@@ -9,6 +9,10 @@ import { AuthButton, AuthProvider } from "@/components/auth/auth-provider";
 import { Analytics } from '@vercel/analytics/react';
 import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext";
 import SiteShell from "@/components/SiteShell";
+
+// 🚀 引入我们刚刚抽离的独立升级按钮组件！
+import UpgradeProButton from "@/components/UpgradeProButton";
+
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -122,7 +126,9 @@ function Header() {
             </div>
           </div>
 
-          <div className="shrink-0">
+          {/* 🚀 把我们的购买大门和用户头像并排放在最右边！ */}
+          <div className="shrink-0 flex items-center gap-2 sm:gap-3">
+            <UpgradeProButton />
             <AuthButton />
           </div>
         </div>

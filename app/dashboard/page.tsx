@@ -17,6 +17,9 @@ import {
   Loader2
 } from "lucide-react";
 
+// 🚀 1. 引入弹窗全局遥控器
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
+
 // 定义数据类型
 interface DashboardData {
   quota: { used: number; total: number; remaining: number };
@@ -31,6 +34,9 @@ interface DashboardData {
 
 export default function DashboardOverview() {
   const { user } = useAuth();
+  
+  // 🚀 2. 拿到遥控器上的开门按钮
+  const { openModal } = useUpgradeModal();
   
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,7 +97,12 @@ export default function DashboardOverview() {
           </h1>
           <p className="mt-2 text-[14px] text-zinc-500">这里是你的专属 AI 灵感控制中心。</p>
         </div>
-        <button className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-zinc-900/20 hover:bg-zinc-800 transition-all active:scale-95">
+        
+        {/* 🚀 3. 给按钮绑上 onClick={openModal} 事件 */}
+        <button 
+          onClick={openModal}
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-zinc-900/20 hover:bg-zinc-800 transition-all active:scale-95"
+        >
           <Zap className="w-4 h-4 text-indigo-400" />
           升级引擎算力
         </button>

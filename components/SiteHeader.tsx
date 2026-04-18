@@ -1,4 +1,8 @@
+"use client"; // 👈 核心：声明为客户端组件，因为我们要用 onClick 和 Hook
+
 import Link from "next/link";
+// 🚀 1. 引入弹窗全局遥控器
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
 
 type NavItem = {
   label: string;
@@ -33,6 +37,9 @@ export default function SiteHeader({
   currentPath?: string;
   items?: NavItem[];
 }) {
+  // 🚀 2. 拿到遥控器上的开门按钮
+  const { openModal } = useUpgradeModal();
+
   return (
     <header className="sticky top-0 z-40 mb-5 sm:mb-7">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -95,6 +102,16 @@ export default function SiteHeader({
                   </Link>
                 );
               })}
+
+              {/* 🚀 3. 新增的主动购买/升级入口大门！ */}
+              <button
+                onClick={openModal}
+                className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(79,70,229,0.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(79,70,229,0.4)] active:scale-95"
+              >
+                <span className="text-[14px]">💎</span>
+                升级 Pro
+              </button>
+
             </nav>
           </div>
         </div>
