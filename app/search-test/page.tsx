@@ -6,8 +6,10 @@ import TypewriterEffect from "@/components/TypewriterEffect";
 import SkeletonLoader from "@/components/SkeletonLoader";
 import CustomDropdown from "@/components/CustomDropdown";
 import { useAiTool } from "@/hooks/useAiTool";
-// 🚀 1. 引入全局遥控器
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
+
+// 🚀 引入我们刚刚写的全局物价局
+import { getModelCost } from "@/lib/pricing";
 
 const MODELS = [
   { id: "gemini-free", name: "Gemini Flash", badge: "完全免费", logo: "/logos/gemini.png", desc: "全网情报侦察兵：极速响应，适合处理全网通用型、基础资料类的搜索规划。" },
@@ -58,12 +60,12 @@ export default function SearchTestPage() {
   const [activeModel, setActiveModel] = useState("gemini-free");
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
-  // 🚀 2. 拿到全局弹窗的钥匙
   const { openModal } = useUpgradeModal();
-
   const { loading, results, error, execute } = useAiTool<any[]>();
 
-  // 🚀 3. 神奇的拦截器：只要全网搜索抛出了没额度，直接唤出！
+  // 🚀 实时计算当前所选模型需要消耗的积分 (搜索属于文本任务 'text')
+  const currentCost = getModelCost(activeModel, 'text');
+
   useEffect(() => {
     if (error && (error.includes("次数") || error.includes("已用完") || error.includes("额度"))) {
       openModal();
@@ -125,9 +127,15 @@ export default function SearchTestPage() {
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-black/5 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="max-w-6xl mx-auto flex flex-col gap-3">
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center flex-wrap gap-3">
              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">🧠 AI 驱动引擎</span>
              <CustomDropdown options={MODELS} value={activeModel} onChange={setActiveModel} />
+             
+             {/* 🚀 动态计费闪电标识 */}
+             <span className="flex items-center gap-1.5 rounded-full bg-blue-50/80 px-2.5 py-1 text-[11px] font-medium text-blue-600 border border-blue-100/50 transition-all duration-300">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
+                本次全网搜索将消耗 {currentCost} 积分
+             </span>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -156,7 +164,6 @@ export default function SearchTestPage() {
               {loading ? <span className="animate-pulse">✨ 规划中...</span> : "全网搜"}
             </button>
           </div>
-          {/* 其他错误照常显示，如果是额度错误则会隐藏（因为弹窗出来了） */}
           {error && !error.includes("次数") && <div className="text-red-500 text-sm mt-1">⚠️ {error}</div>}
         </div>
       </div>

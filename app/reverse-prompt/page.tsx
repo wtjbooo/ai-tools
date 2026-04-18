@@ -5,6 +5,9 @@ import Link from "next/link";
 import { type ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
 
+// 🚀 引入我们刚刚写的全局物价局
+import { getModelCost } from "@/lib/pricing";
+
 type AnalyzerModel = "gemini-free" | "moonshot-v1-8k" | "doubao-seed-2-0-lite" | "gemini-3.1-pro-preview" | "claude-sonnet-4-6" | "gpt-5.4-mini";
 type OutputLanguage = "zh" | "en" | "bilingual";
 type OutputStyle = "simple" | "standard" | "pro";
@@ -186,6 +189,9 @@ export default function ReversePromptPage() {
     return [];
   }, [files, restoredFiles]);
 
+  // 🚀 实时计算当前所选视觉模型需要消耗的积分
+  const currentCost = getModelCost(analyzerModel, 'vision');
+
   useEffect(() => { return () => { previewItems.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url); }); }; }, [previewItems]);
 
   useEffect(() => {
@@ -285,7 +291,6 @@ export default function ReversePromptPage() {
       
       let response;
       try {
-        // 🚨 核心修复：捕获恶心的 Failed to fetch 超时报错！
         response = await fetch("/api/reverse-prompt", { 
             method: "POST", 
             headers: { "Content-Type": "application/json" }, 
@@ -313,7 +318,7 @@ export default function ReversePromptPage() {
       if (finalData._remainingQuota !== undefined) {
         setQuotaNotice({ 
           type: 'success', 
-          msg: `✅ 导演级长镜头解析成功！本次消耗 1 次高级算力，今日还剩 ${finalData._remainingQuota === 'unlimited' ? '无限' : finalData._remainingQuota} 次。` 
+          msg: `✅ 导演级长镜头解析成功！本次消耗了积分，今日还剩 ${finalData._remainingQuota === 'unlimited' ? '无限' : finalData._remainingQuota} 次。` 
         });
       }
 
@@ -334,7 +339,6 @@ export default function ReversePromptPage() {
           setQuotaNotice({ type: 'refund', msg: errMsg });
           setError(""); 
         } else if (errMsg.includes("Failed to fetch")) {
-          // 💡 针对超时的专属红色警告
           setQuotaNotice({ type: 'timeout', msg: errMsg });
           setError(""); 
         } else {
@@ -381,9 +385,7 @@ export default function ReversePromptPage() {
                   <CustomDropdown options={LANGUAGES} value={outputLanguage} onChange={(val) => setOutputLanguage(val as OutputLanguage)} />
                 </div>
               </div>
-              {analyzerModel !== 'gemini-free' && (
-                <div className="rounded-[18px] border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-xs leading-6 text-amber-800">👑 你当前选择的是 PRO 级模型，将消耗高级算力。</div>
-              )}
+              {/* ⚠️ 旧版的警告代码已经被移除，因为我们下方统一加了计费徽章 */}
             </div>
 
             <div className="space-y-4">
@@ -416,11 +418,19 @@ export default function ReversePromptPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 pt-2">
-                <button type="button" onClick={handleAnalyze} disabled={isLoading || isRestoring} className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0">
-                  {isLoading ? (uploadStatus || "解析计算中...") : isRestoring ? "恢复中..." : "开始导演级反推"}
-                </button>
-                <button type="button" onClick={resetForm} disabled={isLoading || isRestoring} className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:bg-gray-50 disabled:opacity-60">清空</button>
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button type="button" onClick={handleAnalyze} disabled={isLoading || isRestoring} className="inline-flex items-center rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0">
+                    {isLoading ? (uploadStatus || "解析计算中...") : isRestoring ? "恢复中..." : "开始导演级反推"}
+                  </button>
+                  <button type="button" onClick={resetForm} disabled={isLoading || isRestoring} className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:bg-gray-50 disabled:opacity-60">清空</button>
+                </div>
+                
+                {/* 🚀 动态计费闪电标识 */}
+                <span className="flex items-center gap-1.5 rounded-full bg-blue-50/80 px-3 py-1.5 text-[12px] font-medium text-blue-600 border border-blue-100/50 transition-all duration-300">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
+                  本次视觉解析将消耗 {currentCost} 积分
+                </span>
               </div>
 
               {quotaNotice && (
