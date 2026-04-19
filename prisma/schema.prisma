@@ -47,6 +47,7 @@ model Tool {
   slug                 String  @unique
   description          String
   content              String  @default("")
+  tutorial        String @default("")
   website              String?
   normalizedWebsite    String?
   sourceUrl            String?
