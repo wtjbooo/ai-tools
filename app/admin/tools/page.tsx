@@ -10,6 +10,7 @@ type ToolItem = {
   slug: string;
   description: string;
   content: string;
+  tutorial?: string; // 👈 新增：兼容后端传来的教程字段
   website: string | null;
   logoUrl: string | null;
   isPublished: boolean;
@@ -40,6 +41,7 @@ type EditToolForm = {
   logoUrl: string;
   description: string;
   content: string;
+  tutorial: string; // 👈 新增：表单状态里的教程字段
   category: string;
   tags: string;
   featuredOrder: string;
@@ -141,7 +143,8 @@ function EditRuleBox() {
       <div className="font-medium">编辑规范提醒</div>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-6 sm:text-sm">
         <li>description = 前台一句话简介，只写清楚“这是什么工具”。</li>
-        <li>content = 前台详细介绍，可写功能、适合人群、典型场景。</li>
+        <li>content = 前台产品简介，展示在详情页第一个 Tab。支持 Markdown。</li>
+        <li>tutorial = 保姆级教程，展示在详情页第二个 Tab。支持 Markdown。</li>
         <li>不要把后台审核备注写进前台文案，reason 不应出现在这里。</li>
         <li>分类优先只保留一个主分类，标签控制在少而准。</li>
       </ul>
@@ -179,33 +182,22 @@ export default function AdminToolsPage() {
 
   async function logout() {
     setMsg(null);
-
-    const res = await fetch("/api/admin/logout", {
-      method: "POST",
-    });
-
+    const res = await fetch("/api/admin/logout", { method: "POST" });
     const data = await res.json().catch(() => ({}));
-
     if (!res.ok) {
       setMsg(data.error ?? "退出失败");
       return;
     }
-
     router.replace("/admin");
   }
 
   async function load(nextRange = range, clearMsg = false) {
     setLoading(true);
-
-    if (clearMsg) {
-      setMsg(null);
-    }
+    if (clearMsg) setMsg(null);
 
     const res = await fetch(
       `/api/admin/tools?range=${nextRange}&_t=${Date.now()}`,
-      {
-        cache: "no-store",
-      }
+      { cache: "no-store" }
     );
 
     const data: ToolsResponse = await res.json().catch(() => ({}));
@@ -239,12 +231,9 @@ export default function AdminToolsPage() {
 
   async function toggleTool(id: string, isPublished: boolean) {
     setMsg(null);
-
     const res = await fetch("/api/admin/toggle-tool", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, isPublished }),
     });
 
@@ -266,12 +255,9 @@ export default function AdminToolsPage() {
 
   async function toggleFeatured(id: string, featured: boolean) {
     setMsg(null);
-
     const res = await fetch("/api/admin/toggle-featured", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, featured }),
     });
 
@@ -301,6 +287,7 @@ export default function AdminToolsPage() {
       logoUrl: tool.logoUrl ?? "",
       description: tool.description ?? "",
       content: tool.content ?? "",
+      tutorial: tool.tutorial ?? "", // 👈 新增：把老数据装载进表单
       category: tool.category?.name ?? "",
       tags: tool.tags.map((item) => item.tag.name).join(", "),
       featuredOrder: String(tool.featuredOrder ?? 0),
@@ -321,9 +308,7 @@ export default function AdminToolsPage() {
 
     const res = await fetch("/api/admin/update-tool", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...editForm,
         featuredOrder: Number(editForm.featuredOrder || "0"),
@@ -366,9 +351,7 @@ export default function AdminToolsPage() {
 
     const res = await fetch("/api/admin/delete-tool", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: tool.id }),
     });
 
@@ -396,9 +379,7 @@ export default function AdminToolsPage() {
 
     const res = await fetch("/api/admin/backfill-logos", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ limit, force }),
     });
 
@@ -462,80 +443,42 @@ export default function AdminToolsPage() {
     });
 
     const sorted = [...filtered].sort((a, b) => {
-      if (sortMode === "rangeOutClicks") {
-        return (b.rangeOutClicks ?? 0) - (a.rangeOutClicks ?? 0);
-      }
+      if (sortMode === "rangeOutClicks") return (b.rangeOutClicks ?? 0) - (a.rangeOutClicks ?? 0);
+      if (sortMode === "rangeViews") return (b.rangeViews ?? 0) - (a.rangeViews ?? 0);
+      if (sortMode === "outClicks") return (b.outClicks ?? 0) - (a.outClicks ?? 0);
+      if (sortMode === "views") return (b.views ?? 0) - (a.views ?? 0);
+      if (sortMode === "clicks") return (b.clicks ?? 0) - (a.clicks ?? 0);
+      if (sortMode === "createdAt") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (sortMode === "name") return a.name.localeCompare(b.name, "zh-CN");
 
-      if (sortMode === "rangeViews") {
-        return (b.rangeViews ?? 0) - (a.rangeViews ?? 0);
-      }
+      if (a.featured !== b.featured) return a.featured ? -1 : 1;
 
-      if (sortMode === "outClicks") {
-        return (b.outClicks ?? 0) - (a.outClicks ?? 0);
-      }
-
-      if (sortMode === "views") {
-        return (b.views ?? 0) - (a.views ?? 0);
-      }
-
-      if (sortMode === "clicks") {
-        return (b.clicks ?? 0) - (a.clicks ?? 0);
-      }
-
-      if (sortMode === "createdAt") {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-
-      if (sortMode === "name") {
-        return a.name.localeCompare(b.name, "zh-CN");
-      }
-
-      if (a.featured !== b.featured) {
-        return a.featured ? -1 : 1;
-      }
-
-      const aFeaturedOrder =
-        typeof a.featuredOrder === "number" ? a.featuredOrder : 0;
-      const bFeaturedOrder =
-        typeof b.featuredOrder === "number" ? b.featuredOrder : 0;
+      const aFeaturedOrder = typeof a.featuredOrder === "number" ? a.featuredOrder : 0;
+      const bFeaturedOrder = typeof b.featuredOrder === "number" ? b.featuredOrder : 0;
 
       if (a.featured && b.featured && aFeaturedOrder !== bFeaturedOrder) {
         return aFeaturedOrder - bFeaturedOrder;
       }
 
-      const aRangeOutClicks =
-        typeof a.rangeOutClicks === "number" ? a.rangeOutClicks : 0;
-      const bRangeOutClicks =
-        typeof b.rangeOutClicks === "number" ? b.rangeOutClicks : 0;
-      if (aRangeOutClicks !== bRangeOutClicks) {
-        return bRangeOutClicks - aRangeOutClicks;
-      }
+      const aRangeOutClicks = typeof a.rangeOutClicks === "number" ? a.rangeOutClicks : 0;
+      const bRangeOutClicks = typeof b.rangeOutClicks === "number" ? b.rangeOutClicks : 0;
+      if (aRangeOutClicks !== bRangeOutClicks) return bRangeOutClicks - aRangeOutClicks;
 
-      const aRangeViews =
-        typeof a.rangeViews === "number" ? a.rangeViews : 0;
-      const bRangeViews =
-        typeof b.rangeViews === "number" ? b.rangeViews : 0;
-      if (aRangeViews !== bRangeViews) {
-        return bRangeViews - aRangeViews;
-      }
+      const aRangeViews = typeof a.rangeViews === "number" ? a.rangeViews : 0;
+      const bRangeViews = typeof b.rangeViews === "number" ? b.rangeViews : 0;
+      if (aRangeViews !== bRangeViews) return bRangeViews - aRangeViews;
 
       const aOutClicks = typeof a.outClicks === "number" ? a.outClicks : 0;
       const bOutClicks = typeof b.outClicks === "number" ? b.outClicks : 0;
-      if (aOutClicks !== bOutClicks) {
-        return bOutClicks - aOutClicks;
-      }
+      if (aOutClicks !== bOutClicks) return bOutClicks - aOutClicks;
 
       const aViews = typeof a.views === "number" ? a.views : 0;
       const bViews = typeof b.views === "number" ? b.views : 0;
-      if (aViews !== bViews) {
-        return bViews - aViews;
-      }
+      if (aViews !== bViews) return bViews - aViews;
 
       const aClicks = typeof a.clicks === "number" ? a.clicks : 0;
       const bClicks = typeof b.clicks === "number" ? b.clicks : 0;
-      if (aClicks !== bClicks) {
-        return bClicks - aClicks;
-      }
+      if (aClicks !== bClicks) return bClicks - aClicks;
 
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
@@ -545,20 +488,10 @@ export default function AdminToolsPage() {
 
   const summary = useMemo(() => {
     const totalTools = filteredAndSortedList.length;
-    const totalRangeViews = filteredAndSortedList.reduce(
-      (sum, item) => sum + (item.rangeViews ?? 0),
-      0
-    );
-    const totalRangeOutClicks = filteredAndSortedList.reduce(
-      (sum, item) => sum + (item.rangeOutClicks ?? 0),
-      0
-    );
+    const totalRangeViews = filteredAndSortedList.reduce((sum, item) => sum + (item.rangeViews ?? 0), 0);
+    const totalRangeOutClicks = filteredAndSortedList.reduce((sum, item) => sum + (item.rangeOutClicks ?? 0), 0);
 
-    return {
-      totalTools,
-      totalRangeViews,
-      totalRangeOutClicks,
-    };
+    return { totalTools, totalRangeViews, totalRangeOutClicks };
   }, [filteredAndSortedList]);
 
   const hasActiveFilters =
@@ -588,10 +521,7 @@ export default function AdminToolsPage() {
           <Link className="text-sm underline" href="/">
             返回首页
           </Link>
-          <button
-            onClick={logout}
-            className="rounded border px-3 py-1 text-sm"
-          >
+          <button onClick={logout} className="rounded border px-3 py-1 text-sm">
             退出登录
           </button>
         </div>
@@ -606,44 +536,21 @@ export default function AdminToolsPage() {
             </div>
           </div>
 
-          <RangeTabs
-            value={range}
-            onChange={handleRangeChange}
-            disabled={loading}
-          />
+          <RangeTabs value={range} onChange={handleRangeChange} disabled={loading} />
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => load(range, true)}
-          className="rounded border px-3 py-1 text-sm disabled:opacity-60"
-          disabled={loading}
-        >
+        <button onClick={() => load(range, true)} className="rounded border px-3 py-1 text-sm disabled:opacity-60" disabled={loading}>
           {loading ? "刷新中..." : "刷新"}
         </button>
-
-        <button
-          onClick={() => backfillLogos(5)}
-          disabled={backfilling}
-          className="rounded border px-3 py-1 text-sm disabled:opacity-60"
-        >
+        <button onClick={() => backfillLogos(5)} disabled={backfilling} className="rounded border px-3 py-1 text-sm disabled:opacity-60">
           {backfilling ? "处理中..." : "批量补 logo（5 条）"}
         </button>
-
-        <button
-          onClick={() => backfillLogos(20)}
-          disabled={backfilling}
-          className="rounded border px-3 py-1 text-sm disabled:opacity-60"
-        >
+        <button onClick={() => backfillLogos(20)} disabled={backfilling} className="rounded border px-3 py-1 text-sm disabled:opacity-60">
           {backfilling ? "处理中..." : "批量补 logo（20 条）"}
         </button>
-
-        <button
-          onClick={() => backfillLogos(5, true)}
-          disabled={backfilling}
-          className="rounded border px-3 py-1 text-sm disabled:opacity-60"
-        >
+        <button onClick={() => backfillLogos(5, true)} disabled={backfilling} className="rounded border px-3 py-1 text-sm disabled:opacity-60">
           {backfilling ? "处理中..." : "强制重补坏 logo（5 条）"}
         </button>
       </div>
@@ -654,21 +561,12 @@ export default function AdminToolsPage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-1">
             <label className="block text-sm text-gray-600">关键词搜索</label>
-            <input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="搜索名称 / slug / 分类 / 标签"
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-            />
+            <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="搜索名称 / slug / 分类 / 标签" className="w-full rounded-lg border px-3 py-2 text-sm" />
           </div>
 
           <div className="space-y-1">
             <label className="block text-sm text-gray-600">发布状态</label>
-            <select
-              value={publishFilter}
-              onChange={(e) => setPublishFilter(e.target.value as PublishFilter)}
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-            >
+            <select value={publishFilter} onChange={(e) => setPublishFilter(e.target.value as PublishFilter)} className="w-full rounded-lg border px-3 py-2 text-sm">
               <option value="all">全部</option>
               <option value="published">已发布</option>
               <option value="hidden">已下线</option>
@@ -677,11 +575,7 @@ export default function AdminToolsPage() {
 
           <div className="space-y-1">
             <label className="block text-sm text-gray-600">推荐状态</label>
-            <select
-              value={featuredFilter}
-              onChange={(e) => setFeaturedFilter(e.target.value as FeaturedFilter)}
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-            >
+            <select value={featuredFilter} onChange={(e) => setFeaturedFilter(e.target.value as FeaturedFilter)} className="w-full rounded-lg border px-3 py-2 text-sm">
               <option value="all">全部</option>
               <option value="featured">推荐</option>
               <option value="normal">非推荐</option>
@@ -690,11 +584,7 @@ export default function AdminToolsPage() {
 
           <div className="space-y-1">
             <label className="block text-sm text-gray-600">区间活跃</label>
-            <select
-              value={activityFilter}
-              onChange={(e) => setActivityFilter(e.target.value as ActivityFilter)}
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-            >
+            <select value={activityFilter} onChange={(e) => setActivityFilter(e.target.value as ActivityFilter)} className="w-full rounded-lg border px-3 py-2 text-sm">
               <option value="all">全部工具</option>
               <option value="activeOnly">只看当前区间有数据</option>
               <option value="rangeOutClicksOnly">只看当前区间官网点击 &gt; 0</option>
@@ -704,11 +594,7 @@ export default function AdminToolsPage() {
 
           <div className="space-y-1">
             <label className="block text-sm text-gray-600">排序方式</label>
-            <select
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value as SortMode)}
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-            >
+            <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)} className="w-full rounded-lg border px-3 py-2 text-sm">
               <option value="default">默认排序</option>
               <option value="rangeOutClicks">{rangeLabel}官网点击最高</option>
               <option value="rangeViews">{rangeLabel}浏览最高</option>
@@ -745,24 +631,15 @@ export default function AdminToolsPage() {
       <div className="grid gap-3 sm:grid-cols-3">
         <StatPill label="当前结果工具数" value={summary.totalTools} />
         <StatPill label={`${rangeLabel}总浏览`} value={summary.totalRangeViews} />
-        <StatPill
-          label={`${rangeLabel}总官网点击`}
-          value={summary.totalRangeOutClicks}
-        />
+        <StatPill label={`${rangeLabel}总官网点击`} value={summary.totalRangeOutClicks} />
       </div>
 
-      {msg ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-3 text-sm">
-          {msg}
-        </div>
-      ) : null}
+      {msg ? <div className="rounded-xl border border-gray-200 bg-white p-3 text-sm">{msg}</div> : null}
 
       {backfillLogs.length > 0 ? (
         <div className="space-y-1 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm">
           <div className="font-medium">本次批量补 logo 日志</div>
-          {backfillLogs.map((log, index) => (
-            <div key={`${log}-${index}`}>{log}</div>
-          ))}
+          {backfillLogs.map((log, index) => <div key={`${log}-${index}`}>{log}</div>)}
         </div>
       ) : null}
 
@@ -782,199 +659,60 @@ export default function AdminToolsPage() {
             const isDeleting = deletingId === tool.id;
 
             return (
-              <div
-                key={tool.id}
-                className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4"
-              >
+              <div key={tool.id} className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
                 {isEditing ? (
                   <div className="space-y-3">
                     <EditRuleBox />
 
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-sm font-medium">
-                          工具名称
-                        </label>
-                        <input
-                          value={editForm.name}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, name: e.target.value })
-                          }
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                        <p className="mt-1 text-xs text-gray-500">
-                          建议统一使用官方主名称，不要混入宣传语或副标题。
-                        </p>
+                        <label className="mb-1 block text-sm font-medium">工具名称</label>
+                        <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
                       </div>
-
                       <div>
-                        <label className="mb-1 block text-sm font-medium">
-                          slug
-                        </label>
-                        <input
-                          value={editForm.slug}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              slug: e.target.value.toLowerCase(),
-                            })
-                          }
-                          placeholder="例如：kimi / doubao / tencent-yuanbao"
-                          className="w-full rounded-lg border px-3 py-2 text-sm"
-                        />
-                        <p className="mt-1 text-xs text-gray-500">
-                          只建议使用小写字母、数字和连字符 -，保存后会影响详情页链接。
-                        </p>
+                        <label className="mb-1 block text-sm font-medium">slug</label>
+                        <input value={editForm.slug} onChange={(e) => setEditForm({ ...editForm, slug: e.target.value.toLowerCase() })} className="w-full rounded-lg border px-3 py-2 text-sm" />
                       </div>
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        官网链接
-                      </label>
-                      <input
-                        value={editForm.website}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, website: e.target.value })
-                        }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
-                      />
+                      <label className="mb-1 block text-sm font-medium">官网链接</label>
+                      <input value={editForm.website} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        logoUrl
-                      </label>
-                      <input
-                        value={editForm.logoUrl}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, logoUrl: e.target.value })
-                        }
-                        placeholder="https://... 或留空"
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        自动抓得不好时，可以手动填图片地址；留空则前台会走默认图标。
-                      </p>
+                      <label className="mb-1 block text-sm font-medium">一句话简介</label>
+                      <textarea rows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
                     </div>
 
-                    {editForm.logoUrl ? (
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">logo 预览</div>
-                        <img
-                          src={editForm.logoUrl}
-                          alt="logo preview"
-                          width={48}
-                          height={48}
-                          className="h-12 w-12 rounded border object-cover bg-white"
-                        />
+                    <div>
+                      <label className="mb-1 block text-sm font-bold text-blue-600">产品简介 (Content)</label>
+                      <textarea rows={8} value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} className="w-full rounded-lg border border-blue-200 bg-blue-50/30 px-3 py-2 text-sm font-mono" placeholder="支持 Markdown..." />
+                    </div>
+
+                    {/* 👇 新增：保姆级教程的编辑框 👇 */}
+                    <div>
+                      <label className="mb-1 block text-sm font-bold text-purple-600">保姆级教程 (Tutorial)</label>
+                      <textarea rows={8} value={editForm.tutorial} onChange={(e) => setEditForm({ ...editForm, tutorial: e.target.value })} className="w-full rounded-lg border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-mono" placeholder="支持 Markdown，如果没有教程可以留空..." />
+                    </div>
+                    {/* 👆 新增结束 👆 */}
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">分类</label>
+                        <input value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
                       </div>
-                    ) : null}
-
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        一句话简介
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={editForm.description}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            description: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        这里只写前台一句话简介，建议一句话说清工具用途，不要写后台审核备注。
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        详细介绍
-                      </label>
-                      <textarea
-                        rows={8}
-                        value={editForm.content}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, content: e.target.value })
-                        }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        这里是前台工具介绍，适合写功能、适用人群、典型场景。不要把后台审核 reason 写到这里。
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        分类
-                      </label>
-                      <input
-                        value={editForm.category}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, category: e.target.value })
-                        }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        这里只填一个主分类，例如：视频生成。不要填写多个分类组合。
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        标签
-                      </label>
-                      <input
-                        value={editForm.tags}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, tags: e.target.value })
-                        }
-                        placeholder="例如：AI写作, 文案生成, 中文支持"
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        用英文逗号或中文逗号分隔，建议控制在 3 到 8 个，尽量少而准。
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">
-                        推荐顺序
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={editForm.featuredOrder}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            featuredOrder: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        数字越小越靠前，通常填 1、2、3、4…… 不改推荐位时也可以保持当前值不动。
-                      </p>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">标签</label>
+                        <input value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                      </div>
                     </div>
 
                     <div className="flex gap-2 pt-2">
-                      <button
-                        onClick={saveEdit}
-                        disabled={saving}
-                        className="rounded border px-3 py-1 text-sm disabled:opacity-60"
-                      >
-                        {saving ? "保存中..." : "保存"}
+                      <button onClick={saveEdit} disabled={saving} className="rounded border bg-black text-white px-6 py-2 text-sm font-medium disabled:opacity-60">
+                        {saving ? "保存中..." : "保存修改"}
                       </button>
-                      <button
-                        onClick={cancelEdit}
-                        disabled={saving}
-                        className="rounded border px-3 py-1 text-sm disabled:opacity-60"
-                      >
+                      <button onClick={cancelEdit} disabled={saving} className="rounded border px-6 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-60">
                         取消
                       </button>
                     </div>
@@ -984,149 +722,27 @@ export default function AdminToolsPage() {
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="truncate text-lg font-semibold text-gray-950">
-                            {tool.name}
-                          </div>
-
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-xs ${
-                              tool.isPublished ? "bg-gray-100" : "bg-white"
-                            }`}
-                          >
-                            {tool.isPublished ? "已发布" : "已下线"}
-                          </span>
-
-                          {tool.featured ? (
-                            <span className="rounded-full border bg-yellow-100 px-2 py-0.5 text-xs">
-                              推荐
-                            </span>
-                          ) : null}
+                          <div className="truncate text-lg font-semibold text-gray-950">{tool.name}</div>
+                          <span className={`rounded-full border px-2 py-0.5 text-xs ${tool.isPublished ? "bg-gray-100" : "bg-white"}`}>{tool.isPublished ? "已发布" : "已下线"}</span>
+                          {tool.featured ? <span className="rounded-full border bg-yellow-100 px-2 py-0.5 text-xs">推荐</span> : null}
                         </div>
-
-                        <div className="mt-1 text-sm text-gray-600">
-                          slug：{tool.slug} · 分类：{tool.category?.name || "未分类"}
-                        </div>
-
-                        <div className="mt-2 line-clamp-2 text-sm text-gray-700">
-                          {tool.description || "暂无简介"}
-                        </div>
+                        <div className="mt-1 text-sm text-gray-600">slug：{tool.slug} · 分类：{tool.category?.name || "未分类"}</div>
+                        <div className="mt-2 line-clamp-2 text-sm text-gray-700">{tool.description || "暂无简介"}</div>
                       </div>
-
-                      <div className="flex shrink-0 flex-wrap gap-2 lg:max-w-[320px] lg:justify-end">
-                        <StatPill
-                          label={`${rangeLabel}官网点击`}
-                          value={tool.rangeOutClicks ?? 0}
-                          muted={!showRangeOutClicks}
-                        />
-                        <StatPill
-                          label={`${rangeLabel}浏览`}
-                          value={tool.rangeViews ?? 0}
-                          muted={!showRangeViews}
-                        />
-                        <StatPill
-                          label="累计官网点击"
-                          value={tool.outClicks ?? 0}
-                          muted={!showOutClicks}
-                        />
-                        <StatPill
-                          label="累计浏览"
-                          value={tool.views ?? 0}
-                          muted={!showViews}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full border px-2 py-1 text-xs text-gray-600">
-                        推荐顺序：{tool.featuredOrder ?? 0}
-                      </span>
-
-                      {showClicks ? (
-                        <span className="rounded-full border px-2 py-1 text-xs text-gray-600">
-                          历史点击：{tool.clicks}
-                        </span>
-                      ) : null}
-
-                      {tool.tags.map((item) => (
-                        <span
-                          key={item.tag.id}
-                          className="rounded-full border px-2 py-1 text-xs"
-                        >
-                          {item.tag.name}
-                        </span>
-                      ))}
-                    </div>
-
-                    {tool.logoUrl ? (
-                      <div className="break-all text-xs text-gray-500">
-                        logoUrl：{tool.logoUrl}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-gray-400">logoUrl：未设置</div>
-                    )}
-
-                    {tool.website ? (
-                      <a
-                        className="block break-all text-sm underline"
-                        href={tool.website}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {tool.website}
-                      </a>
-                    ) : null}
-
-                    <div className="text-xs text-gray-500">
-                      创建时间：{new Date(tool.createdAt).toLocaleString("zh-CN")}
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-1">
-                      <button
-                        onClick={() => startEdit(tool)}
-                        className="rounded border px-3 py-1 text-sm"
-                      >
-                        编辑
-                      </button>
-
-                      <button
-                        onClick={() => toggleFeatured(tool.id, !tool.featured)}
-                        className="rounded border px-3 py-1 text-sm"
-                      >
-                        {tool.featured ? "取消推荐" : "设为推荐"}
-                      </button>
-
+                      <button onClick={() => startEdit(tool)} className="rounded border px-3 py-1 text-sm bg-gray-50 font-medium">编辑</button>
+                      <button onClick={() => toggleFeatured(tool.id, !tool.featured)} className="rounded border px-3 py-1 text-sm">{tool.featured ? "取消推荐" : "设为推荐"}</button>
                       {tool.isPublished ? (
-                        <button
-                          onClick={() => toggleTool(tool.id, false)}
-                          className="rounded border px-3 py-1 text-sm"
-                        >
-                          下线
-                        </button>
+                        <button onClick={() => toggleTool(tool.id, false)} className="rounded border px-3 py-1 text-sm">下线</button>
                       ) : (
-                        <button
-                          onClick={() => toggleTool(tool.id, true)}
-                          className="rounded border px-3 py-1 text-sm"
-                        >
-                          重新发布
-                        </button>
+                        <button onClick={() => toggleTool(tool.id, true)} className="rounded border px-3 py-1 text-sm">重新发布</button>
                       )}
-
                       {!tool.isPublished ? (
-                        <button
-                          onClick={() => deleteTool(tool)}
-                          disabled={isDeleting}
-                          className="rounded border border-red-200 px-3 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
-                        >
-                          {isDeleting ? "删除中..." : "删除"}
-                        </button>
+                        <button onClick={() => deleteTool(tool)} disabled={isDeleting} className="rounded border border-red-200 px-3 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60">{isDeleting ? "删除中..." : "删除"}</button>
                       ) : null}
-
-                      <Link
-                        href={`/tool/${tool.slug}`}
-                        className="rounded border px-3 py-1 text-sm"
-                      >
-                        查看详情
-                      </Link>
+                      <Link href={`/tool/${tool.slug}`} className="rounded border px-3 py-1 text-sm">查看前台详情</Link>
                     </div>
                   </>
                 )}

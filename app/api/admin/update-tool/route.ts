@@ -70,20 +70,13 @@ async function findOrCreateCategoryByName(categoryName: string) {
   const trimmedName = normalizeSingleLineText(categoryName);
 
   const existingByName = await prisma.category.findFirst({
-    where: {
-      name: trimmedName,
-    },
-    orderBy: {
-      createdAt: "asc",
-    },
+    where: { name: trimmedName },
+    orderBy: { createdAt: "asc" },
   });
 
-  if (existingByName) {
-    return existingByName;
-  }
+  if (existingByName) return existingByName;
 
   const baseSlug = buildSafeCategorySlug(trimmedName);
-
   let finalSlug = baseSlug;
   let counter = 1;
 
@@ -93,10 +86,7 @@ async function findOrCreateCategoryByName(categoryName: string) {
       select: { id: true },
     });
 
-    if (!exists) {
-      break;
-    }
-
+    if (!exists) break;
     finalSlug = `${baseSlug}-${counter}`;
     counter += 1;
   }
@@ -115,10 +105,7 @@ export async function POST(req: Request) {
     const ok = await isAdminAuthenticated();
 
     if (!ok) {
-      return NextResponse.json(
-        { ok: false, error: "UNAUTHORIZED" },
-        { status: 401 }
-      );
+      return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
     }
 
     const body = await req.json().catch(() => null);
@@ -130,6 +117,10 @@ export async function POST(req: Request) {
     const logoUrl = String(body?.logoUrl ?? "").trim();
     const description = normalizeSingleLineText(String(body?.description ?? ""));
     const content = normalizeContent(String(body?.content ?? ""));
+    
+    // 👇 新增：接收 tutorial 字段
+    const tutorial = normalizeContent(String(body?.tutorial ?? ""));
+    
     const categoryName = normalizeSingleLineText(String(body?.category ?? ""));
     const tagsInput = String(body?.tags ?? "").trim();
 
@@ -140,65 +131,22 @@ export async function POST(req: Request) {
       String(featuredOrderRaw).trim() !== "";
     const featuredOrderNumber = Number(featuredOrderRaw);
 
-    if (!id) {
-      return NextResponse.json(
-        { ok: false, error: "缺少工具 id" },
-        { status: 400 }
-      );
-    }
-
-    if (!name) {
-      return NextResponse.json(
-        { ok: false, error: "工具名称不能为空" },
-        { status: 400 }
-      );
-    }
-
-    if (!rawSlug) {
-      return NextResponse.json(
-        { ok: false, error: "slug 不能为空" },
-        { status: 400 }
-      );
-    }
+    if (!id) return NextResponse.json({ ok: false, error: "缺少工具 id" }, { status: 400 });
+    if (!name) return NextResponse.json({ ok: false, error: "工具名称不能为空" }, { status: 400 });
+    if (!rawSlug) return NextResponse.json({ ok: false, error: "slug 不能为空" }, { status: 400 });
 
     const slug = rawSlug.toLowerCase();
 
     if (!/^[a-z0-9-]+$/.test(slug)) {
-      return NextResponse.json(
-        { ok: false, error: "slug 只能包含小写字母、数字和连字符 -" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "slug 只能包含小写字母、数字和连字符 -" }, { status: 400 });
     }
 
-    if (!website) {
-      return NextResponse.json(
-        { ok: false, error: "官网链接不能为空" },
-        { status: 400 }
-      );
-    }
+    if (!website) return NextResponse.json({ ok: false, error: "官网链接不能为空" }, { status: 400 });
+    if (!description) return NextResponse.json({ ok: false, error: "一句话简介不能为空" }, { status: 400 });
+    if (!categoryName) return NextResponse.json({ ok: false, error: "分类不能为空" }, { status: 400 });
 
-    if (!description) {
-      return NextResponse.json(
-        { ok: false, error: "一句话简介不能为空" },
-        { status: 400 }
-      );
-    }
-
-    if (!categoryName) {
-      return NextResponse.json(
-        { ok: false, error: "分类不能为空" },
-        { status: 400 }
-      );
-    }
-
-    if (
-      hasFeaturedOrder &&
-      (!Number.isFinite(featuredOrderNumber) || featuredOrderNumber < 0)
-    ) {
-      return NextResponse.json(
-        { ok: false, error: "推荐排序必须是大于等于 0 的数字" },
-        { status: 400 }
-      );
+    if (hasFeaturedOrder && (!Number.isFinite(featuredOrderNumber) || featuredOrderNumber < 0)) {
+      return NextResponse.json({ ok: false, error: "推荐排序必须是大于等于 0 的数字" }, { status: 400 });
     }
 
     let normalizedWebsite = "";
@@ -206,42 +154,32 @@ export async function POST(req: Request) {
       normalizedWebsite = normalizeWebsite(website);
       new URL(normalizedWebsite);
     } catch {
-      return NextResponse.json(
-        { ok: false, error: "官网链接格式不正确" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "官网链接格式不正确" }, { status: 400 });
     }
 
     if (logoUrl) {
       try {
         new URL(logoUrl);
       } catch {
-        return NextResponse.json(
-          { ok: false, error: "logoUrl 格式不正确" },
-          { status: 400 }
-        );
+        return NextResponse.json({ ok: false, error: "logoUrl 格式不正确" }, { status: 400 });
       }
     }
 
     if (description.length > 300) {
-      return NextResponse.json(
-        { ok: false, error: "一句话简介不能超过 300 字" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "一句话简介不能超过 300 字" }, { status: 400 });
     }
 
     if (content.length > 20000) {
-      return NextResponse.json(
-        { ok: false, error: "详细介绍不能超过 20000 字" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "详细介绍不能超过 20000 字" }, { status: 400 });
+    }
+
+    // 👇 新增：验证 tutorial 长度
+    if (tutorial.length > 20000) {
+      return NextResponse.json({ ok: false, error: "教程内容不能超过 20000 字" }, { status: 400 });
     }
 
     if (tagsInput.length > 500) {
-      return NextResponse.json(
-        { ok: false, error: "标签内容过长" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "标签内容过长" }, { status: 400 });
     }
 
     const tool = await prisma.tool.findUnique({
@@ -250,49 +188,32 @@ export async function POST(req: Request) {
     });
 
     if (!tool) {
-      return NextResponse.json(
-        { ok: false, error: "工具不存在" },
-        { status: 404 }
-      );
+      return NextResponse.json({ ok: false, error: "工具不存在" }, { status: 404 });
     }
 
     const existingBySlug = await prisma.tool.findFirst({
-      where: {
-        slug,
-        NOT: { id },
-      },
+      where: { slug, NOT: { id } },
       select: { id: true },
     });
 
     if (existingBySlug) {
-      return NextResponse.json(
-        { ok: false, error: "slug 已被其他工具占用" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "slug 已被其他工具占用" }, { status: 400 });
     }
 
     const category = await findOrCreateCategoryByName(categoryName);
     const parsedTags = parseTags(tagsInput);
 
-    const updateData: {
-      name: string;
-      slug: string;
-      website: string;
-      logoUrl: string;
-      description: string;
-      content: string;
-      categoryId: string;
-      searchText: string;
-      featuredOrder?: number;
-    } = {
+    // 👇 新增：把 tutorial 加入更新数据，并合并到 searchText 中让后台可以搜索
+    const updateData: any = {
       name,
       slug,
       website: normalizedWebsite,
       logoUrl,
       description,
       content,
+      tutorial, // 👈 存入数据库
       categoryId: category.id,
-      searchText: `${name} ${slug} ${description} ${categoryName} ${parsedTags.join(" ")} ${content}`.trim(),
+      searchText: `${name} ${slug} ${description} ${categoryName} ${parsedTags.join(" ")} ${content} ${tutorial}`.trim(),
     };
 
     if (hasFeaturedOrder) {
@@ -334,34 +255,22 @@ export async function POST(req: Request) {
               select: { id: true },
             });
 
-            if (!exists) {
-              break;
-            }
-
+            if (!exists) break;
             finalTagSlug = `${safeTagSlug}-${counter}`;
             counter += 1;
           }
 
           tag = await tx.tag.create({
-            data: {
-              name: tagName,
-              slug: finalTagSlug,
-            },
+            data: { name: tagName, slug: finalTagSlug },
           });
         }
 
         await tx.toolTag.upsert({
           where: {
-            toolId_tagId: {
-              toolId: id,
-              tagId: tag.id,
-            },
+            toolId_tagId: { toolId: id, tagId: tag.id },
           },
           update: {},
-          create: {
-            toolId: id,
-            tagId: tag.id,
-          },
+          create: { toolId: id, tagId: tag.id },
         });
       }
     });
