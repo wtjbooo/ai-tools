@@ -27,6 +27,15 @@ export default function TabsLayout({
     strong: ({node, ...props}: any) => <strong className="font-semibold text-zinc-900" {...props} />,
     a: ({node, ...props}: any) => <a className="text-blue-600 hover:text-blue-700 hover:underline underline-offset-4" {...props} />,
     blockquote: ({node, ...props}: any) => <blockquote className="border-l-4 border-zinc-200 pl-4 py-1 my-4 italic text-zinc-500 bg-zinc-50/50 rounded-r-lg" {...props} />,
+    // 👇 新增：Markdown 里的图片自动变成带大圆角和阴影的高级卡片，鼠标悬浮还会微微放大 👇
+    img: ({ node, ...props }: any) => (
+      <img
+        {...props}
+        className="my-8 max-w-full rounded-[20px] border border-black/[0.04] shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-transform duration-500 hover:scale-[1.02]"
+        loading="lazy"
+      />
+    ),
+    // 👆 新增结束 👆
   };
 
   return (

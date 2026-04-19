@@ -221,9 +221,22 @@ export default async function ToolPage({ params }: { params: { slug: string } })
 
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr),320px]">
             <div className="space-y-8">
-              <DetailCard title="产品介绍">
-                <TabsLayout contentParagraphs={finalParagraphs} tutorialContent={tool.tutorial} toolId={tool.id} />
-              </DetailCard>
+              {/* 👇 高级 Apple & AI 风发光卡片容器（直接替换掉原本的 DetailCard） 👇 */}
+<div className="relative overflow-hidden rounded-[32px] border border-black/[0.04] bg-white p-6 shadow-[0_12px_48px_rgba(0,0,0,0.04)] sm:p-10 transition-all duration-500 hover:shadow-[0_16px_60px_rgba(0,0,0,0.06)] group">
+  
+  {/* 极其微弱的 AI 氛围光（左上角蓝光，右下角紫光），只有在高级显示器上才能察觉的优雅细节 */}
+  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.03),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.03),transparent_40%)] opacity-50 transition-opacity duration-500 group-hover:opacity-100" />
+  
+  <div className="relative z-10">
+    <TabsLayout 
+      contentParagraphs={finalParagraphs} 
+      tutorialContent={tool.tutorial} 
+      toolId={tool.id} 
+    />
+  </div>
+
+</div>
+{/* 👆 容器结束 👆 */}
 
               <DetailCard title="适合人群与场景" description="看看这款产品是否契合你的日常工作流。"><SoftList items={useCases} /></DetailCard>
               {tagList.length > 0 ? <DetailCard title="功能标签" description="通过标签快速掌握产品的亮点。"><div className="flex flex-wrap gap-2.5">{tagList.map((tag) => <span key={tag} className="inline-flex items-center rounded-full bg-zinc-50 px-3.5 py-1.5 text-[13px] font-medium text-zinc-600">{tag}</span>)}</div></DetailCard> : null}
