@@ -56,6 +56,11 @@ export async function POST(req: Request) {
     const tags = String(body.tags ?? "").trim();
     const contact = String(body.contact ?? "").trim();
     const reason = String(body.reason ?? "").trim();
+    
+    // 👇 新增：接收前端传来的 Markdown 长文本
+    const content = String(body.content ?? "").trim();
+    const tutorial = String(body.tutorial ?? "").trim();
+    // 👆
 
     let category = "";
 
@@ -178,6 +183,10 @@ export async function POST(req: Request) {
         tags,
         contact,
         reason,
+        // 👇 新增：将接收到的 Markdown 数据存入数据库！
+        content,
+        tutorial,
+        // 👆
         status: "pending",
       },
     });
