@@ -6,75 +6,13 @@ import type { ReactNode } from "react";
 import { prisma } from "@/lib/db";
 import ToolViewTracker from "@/components/ToolViewTracker";
 import CopyLinkButton from "@/components/CopyLinkButton";
-import ReactMarkdown from "react-markdown";
+import TabsLayout from "@/components/TabsLayout";
 
-"use client";
-import { useState } from "react";
-
-// --- 精美的 Tabs 选项卡组件 ---
-function TabsLayout({
-  contentParagraphs,
-  tutorialContent,
-  toolId,
-}: {
-  contentParagraphs: string[];
-  tutorialContent?: string | null;
-  toolId: string;
-}) {
-  const [activeTab, setActiveTab] = useState<"intro" | "tutorial">("intro");
-  const hasTutorial = tutorialContent && tutorialContent.trim() !== "";
-
-  return (
-    <div className="space-y-6">
-      {hasTutorial && (
-        <div className="flex items-center gap-2 border-b border-black/[0.04] pb-px">
-          <button
-            onClick={() => setActiveTab("intro")}
-            className={`relative pb-3 px-1 text-[16px] font-medium transition-colors ${
-              activeTab === "intro" ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-700"
-            }`}
-          >
-            产品简介
-            {activeTab === "intro" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 rounded-t-full" />
-            )}
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("tutorial")}
-            className={`relative pb-3 px-4 text-[16px] font-medium transition-colors ${
-              activeTab === "tutorial" ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-700"
-            }`}
-          >
-            保姆级教程 ✨
-            {activeTab === "tutorial" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 rounded-t-full" />
-            )}
-          </button>
-        </div>
-      )}
-
-      <div className="min-h-[200px]">
-        {/* 产品简介面板（也加上了 Markdown 翻译官） */}
-        {activeTab === "intro" && (
-          <div className="prose prose-zinc max-w-none text-[15px] leading-loose animate-in fade-in duration-500 prose-headings:font-semibold prose-a:text-blue-600 hover:prose-a:text-blue-500">
-            <ReactMarkdown>{contentParagraphs.join('\n\n')}</ReactMarkdown>
-          </div>
-        )}
-
-        {/* 使用教程面板 */}
-        {activeTab === "tutorial" && hasTutorial && (
-          <div className="prose prose-zinc max-w-none text-[15px] leading-loose animate-in fade-in duration-500 prose-headings:font-semibold prose-a:text-blue-600 hover:prose-a:text-blue-500">
-            <ReactMarkdown>{tutorialContent}</ReactMarkdown>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+// 👇 就是加在这里！彻底解决网页缓存，让它每次都去拿最新数据
+export const revalidate = 0;
 
 const SITE_NAME = "AI 工具目录";
-const SITE_URL = process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
+const SITE_URL = process.env.SITE_URL?.replace(/\/+$/, "") || "https://www.xaira.top";
 
 async function getPublishedToolBySlug(slug: string) {
   return prisma.tool.findFirst({
@@ -283,7 +221,6 @@ export default async function ToolPage({ params }: { params: { slug: string } })
 
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr),320px]">
             <div className="space-y-8">
-              {/* 这里调用 TabsLayout，标题也改为了产品介绍 */}
               <DetailCard title="产品介绍">
                 <TabsLayout contentParagraphs={finalParagraphs} tutorialContent={tool.tutorial} toolId={tool.id} />
               </DetailCard>
