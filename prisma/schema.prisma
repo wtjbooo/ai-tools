@@ -217,6 +217,9 @@ model Submission {
   tags              String  @default("")
   contact           String  @default("")
 
+  content           String  @default("")
+  tutorial          String  @default("")
+
   sourceType        String  @default("submission")
   status            String  @default("pending")
   qualityScore      Int     @default(0)
