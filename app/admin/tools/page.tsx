@@ -685,6 +685,21 @@ export default function AdminToolsPage() {
                       <textarea rows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
                     </div>
 
+                    {/* 👇 Logo 链接手动补救框 👇 */}
+<div className="mb-4">
+  <label className="mb-1.5 block text-[13px] font-medium text-zinc-700">
+    Logo 链接 (自动抓取失败时手动填写)
+  </label>
+  <input
+    type="text"
+    value={editForm.logoUrl || ""}
+    onChange={(e) => setEditForm({ ...editForm, logoUrl: e.target.value })}
+    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[14px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-800 focus:ring-1 focus:ring-zinc-800"
+    placeholder="填入图片直链，例如：https://你的图床.com/logo.png"
+  />
+</div>
+{/* 👆 Logo 框结束 👆 */}
+
                     <div>
                       <label className="mb-1 block text-sm font-bold text-blue-600">产品简介 (Content)</label>
                       <textarea rows={8} value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} className="w-full rounded-lg border border-blue-200 bg-blue-50/30 px-3 py-2 text-sm font-mono" placeholder="支持 Markdown..." />
