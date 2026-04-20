@@ -98,6 +98,7 @@ export async function GET(request: Request) {
       slug: true,
       description: true,
       content: true,
+      tutorial: true,
       website: true,
       logoUrl: true,
       isPublished: true,
