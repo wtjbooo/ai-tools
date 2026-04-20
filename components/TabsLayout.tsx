@@ -60,7 +60,7 @@ export default function TabsLayout({
               activeTab === "tutorial" ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-700"
             }`}
           >
-            保姆级教程 ✨
+            使用指南 💡
             {activeTab === "tutorial" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-900 rounded-t-full" />
             )}

@@ -144,7 +144,7 @@ function EditRuleBox() {
       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-6 sm:text-sm">
         <li>description = 前台一句话简介，只写清楚“这是什么工具”。</li>
         <li>content = 前台产品简介，展示在详情页第一个 Tab。支持 Markdown。</li>
-        <li>tutorial = 保姆级教程，展示在详情页第二个 Tab。支持 Markdown。</li>
+        <li>tutorial = 使用指南，展示在详情页第二个 Tab。支持 Markdown。</li>
         <li>不要把后台审核备注写进前台文案，reason 不应出现在这里。</li>
         <li>分类优先只保留一个主分类，标签控制在少而准。</li>
       </ul>
@@ -692,7 +692,7 @@ export default function AdminToolsPage() {
 
                     {/* 👇 新增：保姆级教程的编辑框 👇 */}
                     <div>
-                      <label className="mb-1 block text-sm font-bold text-purple-600">保姆级教程 (Tutorial)</label>
+                      <label className="mb-1 block text-sm font-bold text-purple-600">使用指南 (Tutorial)</label>
                       <textarea rows={8} value={editForm.tutorial} onChange={(e) => setEditForm({ ...editForm, tutorial: e.target.value })} className="w-full rounded-lg border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-mono" placeholder="支持 Markdown，如果没有教程可以留空..." />
                     </div>
                     {/* 👆 新增结束 👆 */}

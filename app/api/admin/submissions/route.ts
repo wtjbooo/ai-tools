@@ -113,6 +113,10 @@ export async function GET(req: Request) {
       name: true,
       website: true,
       description: true,
+      // 👇👇👇 补上这两个极其关键的长文本字段 👇👇👇
+      content: true,
+      tutorial: true,
+      // 👆👆👆 补上这两个极其关键的长文本字段 👆👆👆
       category: true,
       tags: true,
       contact: true,

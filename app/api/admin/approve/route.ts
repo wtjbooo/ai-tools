@@ -444,7 +444,8 @@ export async function POST(req: Request) {
         slug = `${base}-${i + 2}`;
       }
 
-      const toolContent = buildToolContentFromSubmission({
+      // 尝试使用自动生成的兜底内容，但如果用户填了真正的 Markdown，就优先用真正的！
+      const fallbackContent = buildToolContentFromSubmission({
         name: sub.name,
         description: normalizedDescription,
         reason: normalizedReason,
@@ -452,12 +453,18 @@ export async function POST(req: Request) {
         tags: sub.tags,
       });
 
+      // 👇 核心修复：提取前台真正提交的 Markdown 数据 👇
+      // 如果 sub.content 有值就用它，没有就用上面生成的兜底内容
+      const finalContent = sub.content ? String(sub.content).trim() : fallbackContent;
+      const finalTutorial = sub.tutorial ? String(sub.tutorial).trim() : "";
+
       const tool = await tx.tool.create({
         data: {
           name: normalizeSpaces(sub.name),
           slug,
           description: normalizedDescription,
-          content: toolContent,
+          content: finalContent,       // 👈 正式将前台的“产品简介”搬运到工具表
+          tutorial: finalTutorial,     // 👈 正式将前台的“使用指南”搬运到工具表
           website: normalizedWebsite,
           pricing: "unknown",
           featured: false,
@@ -471,7 +478,8 @@ export async function POST(req: Request) {
             normalizedDescription,
             normalizeSingleCategoryName(sub.category),
             parsedTags.join(" "),
-            toolContent,
+            finalContent,              // 👈 让用户能在后台搜索到 Markdown 里的词
+            finalTutorial,
           ]
             .join(" ")
             .trim(),
