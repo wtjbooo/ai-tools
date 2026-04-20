@@ -296,26 +296,39 @@ async function tryDownloadIcon(iconUrl: string) {
   };
 }
 
+// 找到你 route.ts 里面的 fetchWebsiteIcon 函数，修改成这样：
 async function fetchWebsiteIcon(website: string) {
   try {
+    // 1. 原本的 HTML 抓取逻辑
     const html = await fetchHtml(website);
     const iconHref = extractIconHrefFromHtml(html);
-
     if (iconHref) {
       const iconUrl = resolveIconUrl(iconHref, website);
       const iconFile = await tryDownloadIcon(iconUrl);
       if (iconFile) return iconFile;
     }
   } catch {
-    // ignore html parse failure, fallback below
+    // 忽略报错
   }
 
   try {
+    // 2. 原本的 /favicon.ico 兜底逻辑
     const faviconUrl = new URL("/favicon.ico", website).toString();
     const iconFile = await tryDownloadIcon(faviconUrl);
     if (iconFile) return iconFile;
   } catch {
-    // ignore fallback failure
+    // 忽略报错
+  }
+
+  // 🌟 3. 新增：终极兜底，借助 Google API 获取缓存图标
+  try {
+    const url = new URL(website);
+    // sz=128 代表请求 128x128 像素的高清图标
+    const googleApiUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
+    const iconFile = await tryDownloadIcon(googleApiUrl);
+    if (iconFile) return iconFile;
+  } catch {
+    console.error(`Google API 也未能获取到 ${website} 的图标`);
   }
 
   return null;
