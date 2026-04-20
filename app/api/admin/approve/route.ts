@@ -1,11 +1,21 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { put } from "@vercel/blob";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"; // 引入 S3 客户端
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/auth";
+
+// 初始化 Cloudflare R2 客户端
+const s3Client = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
 
 const INVALID_CATEGORY_SLUGS = new Set([
   "category",
@@ -222,7 +232,7 @@ async function fetchHtml(url: string) {
 function extractIconHrefFromHtml(html: string) {
   const patterns = [
     /<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>/i,
-    /<link[^>]+rel=["'][^"']*shortcut icon[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>/i,
+    /<link[^>]+rel=["'][^"']*shortcut icon[^"']*["'][^>]+href=["']([^"']+)["'][^>]+>/i,
     /<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>/i,
     /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]*>/i,
     /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*shortcut icon[^"']*["'][^>]*>/i,
@@ -311,26 +321,31 @@ async function fetchWebsiteIcon(website: string) {
   return null;
 }
 
-async function uploadLogoToBlob(website: string, toolName: string) {
+// 核心逻辑修改：将 Vercel Blob 替换为 Cloudflare R2
+async function uploadLogoToR2(website: string, toolName: string) {
   try {
     const iconFile = await fetchWebsiteIcon(website);
     if (!iconFile) return "";
 
     const ext = getFileExtensionFromContentType(iconFile.contentType);
-    const baseName =
-      slugFromWebsite(website) || slugify(toolName) || `tool-${Date.now()}`;
+    const baseSlug = slugFromWebsite(website) || slugify(toolName) || "tool";
+    // 增加时间戳，确保同工具多次上传不会产生缓存冲突，且放入 logos 文件夹
+    const fileName = `logos/${baseSlug}-${Date.now()}.${ext}`;
 
-    const path = `tool-logos/${baseName}.${ext}`;
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: fileName,
+        Body: iconFile.buffer,
+        ContentType: iconFile.contentType || "image/png",
+      })
+    );
 
-    const blob = await put(path, iconFile.buffer, {
-      access: "public",
-      contentType: iconFile.contentType || "image/png",
-      addRandomSuffix: true,
-    });
-
-    return blob.url;
+    // 获取公开访问域名
+    const publicDomain = process.env.R2_PUBLIC_DOMAIN || "";
+    return `${publicDomain}/${fileName}`;
   } catch (error) {
-    console.error("upload logo to blob failed:", error);
+    console.error("upload logo to R2 failed:", error);
     return "";
   }
 }
@@ -421,145 +436,146 @@ export async function POST(req: Request) {
     }
 
     const parsedTags = parseTags(sub.tags);
-    const logoUrl = await uploadLogoToBlob(normalizedWebsite, sub.name);
+    
+    // 调用新的 R2 上传函数
+    const logoUrl = await uploadLogoToR2(normalizedWebsite, sub.name);
 
     const result = await prisma.$transaction(
-  async (tx) => {
-      const category = await findOrCreateCategory(sub.category, tx);
+      async (tx) => {
+        const category = await findOrCreateCategory(sub.category, tx);
 
-      const base =
-        slugFromWebsite(normalizedWebsite) ||
-        slugify(sub.name) ||
-        `tool-${Date.now()}`;
+        const base =
+          slugFromWebsite(normalizedWebsite) ||
+          slugify(sub.name) ||
+          `tool-${Date.now()}`;
 
-      let slug = base;
+        let slug = base;
 
-      for (let i = 0; i < 20; i++) {
-        const exists = await tx.tool.findUnique({
-          where: { slug },
-          select: { id: true },
-        });
+        for (let i = 0; i < 20; i++) {
+          const exists = await tx.tool.findUnique({
+            where: { slug },
+            select: { id: true },
+          });
 
-        if (!exists) break;
-        slug = `${base}-${i + 2}`;
-      }
+          if (!exists) break;
+          slug = `${base}-${i + 2}`;
+        }
 
-      // 尝试使用自动生成的兜底内容，但如果用户填了真正的 Markdown，就优先用真正的！
-      const fallbackContent = buildToolContentFromSubmission({
-        name: sub.name,
-        description: normalizedDescription,
-        reason: normalizedReason,
-        category: sub.category,
-        tags: sub.tags,
-      });
-
-      // 👇 核心修复：提取前台真正提交的 Markdown 数据 👇
-      // 如果 sub.content 有值就用它，没有就用上面生成的兜底内容
-      const finalContent = sub.content ? String(sub.content).trim() : fallbackContent;
-      const finalTutorial = sub.tutorial ? String(sub.tutorial).trim() : "";
-
-      const tool = await tx.tool.create({
-        data: {
-          name: normalizeSpaces(sub.name),
-          slug,
+        const fallbackContent = buildToolContentFromSubmission({
+          name: sub.name,
           description: normalizedDescription,
-          content: finalContent,       // 👈 正式将前台的“产品简介”搬运到工具表
-          tutorial: finalTutorial,     // 👈 正式将前台的“使用指南”搬运到工具表
-          website: normalizedWebsite,
-          pricing: "unknown",
-          featured: false,
-          clicks: 0,
-          outClicks: 0,
-          views: 0,
-          logoUrl,
-          screenshots: "",
-          searchText: [
-            normalizeSpaces(sub.name),
-            normalizedDescription,
-            normalizeSingleCategoryName(sub.category),
-            parsedTags.join(" "),
-            finalContent,              // 👈 让用户能在后台搜索到 Markdown 里的词
-            finalTutorial,
-          ]
-            .join(" ")
-            .trim(),
-          categoryId: category.id,
-        },
-      });
-
-      for (const tagName of parsedTags) {
-        const tagSlugBase = slugify(tagName);
-        const safeTagSlug =
-          tagSlugBase ||
-          `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-        const existingTagByName = await tx.tag.findFirst({
-          where: { name: tagName },
-          orderBy: { createdAt: "asc" },
+          reason: normalizedReason,
+          category: sub.category,
+          tags: sub.tags,
         });
 
-        let tag;
+        // 优先使用提交的 Markdown 内容
+        const finalContent = sub.content ? String(sub.content).trim() : fallbackContent;
+        const finalTutorial = sub.tutorial ? String(sub.tutorial).trim() : "";
 
-        if (existingTagByName) {
-          tag = existingTagByName;
-        } else {
-          let finalTagSlug = safeTagSlug;
-          let counter = 1;
+        const tool = await tx.tool.create({
+          data: {
+            name: normalizeSpaces(sub.name),
+            slug,
+            description: normalizedDescription,
+            content: finalContent,
+            tutorial: finalTutorial,
+            website: normalizedWebsite,
+            pricing: "unknown",
+            featured: false,
+            isPublished: true, // 审核通过直接发布
+            clicks: 0,
+            outClicks: 0,
+            views: 0,
+            logoUrl,
+            screenshots: "",
+            searchText: [
+              normalizeSpaces(sub.name),
+              normalizedDescription,
+              normalizeSingleCategoryName(sub.category),
+              parsedTags.join(" "),
+              finalContent,
+              finalTutorial,
+            ]
+              .join(" ")
+              .trim(),
+            categoryId: category.id,
+          },
+        });
 
-          while (true) {
-            const exists = await tx.tag.findUnique({
-              where: { slug: finalTagSlug },
-              select: { id: true },
+        for (const tagName of parsedTags) {
+          const tagSlugBase = slugify(tagName);
+          const safeTagSlug =
+            tagSlugBase ||
+            `tag-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+          const existingTagByName = await tx.tag.findFirst({
+            where: { name: tagName },
+            orderBy: { createdAt: "asc" },
+          });
+
+          let tag;
+
+          if (existingTagByName) {
+            tag = existingTagByName;
+          } else {
+            let finalTagSlug = safeTagSlug;
+            let counter = 1;
+
+            while (true) {
+              const exists = await tx.tag.findUnique({
+                where: { slug: finalTagSlug },
+                select: { id: true },
+              });
+
+              if (!exists) break;
+
+              finalTagSlug = `${safeTagSlug}-${counter}`;
+              counter += 1;
+            }
+
+            tag = await tx.tag.create({
+              data: {
+                name: tagName,
+                slug: finalTagSlug,
+              },
             });
-
-            if (!exists) break;
-
-            finalTagSlug = `${safeTagSlug}-${counter}`;
-            counter += 1;
           }
 
-          tag = await tx.tag.create({
-            data: {
-              name: tagName,
-              slug: finalTagSlug,
+          await tx.toolTag.upsert({
+            where: {
+              toolId_tagId: {
+                toolId: tool.id,
+                tagId: tag.id,
+              },
+            },
+            update: {},
+            create: {
+              toolId: tool.id,
+              tagId: tag.id,
             },
           });
         }
 
-        await tx.toolTag.upsert({
-          where: {
-            toolId_tagId: {
-              toolId: tool.id,
-              tagId: tag.id,
-            },
-          },
-          update: {},
-          create: {
-            toolId: tool.id,
-            tagId: tag.id,
-          },
+        await tx.submission.update({
+          where: { id },
+          data: { status: "approved" },
         });
+
+        return tool;
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
       }
-
-      await tx.submission.update({
-        where: { id },
-        data: { status: "approved" },
-      });
-
-          return tool;
-  },
-  {
-    maxWait: 10000,
-    timeout: 30000,
-  }
-);
+    );
 
     return NextResponse.json({
       ok: true,
       toolId: result.id,
       toolSlug: result.slug,
       logoUrl: result.logoUrl,
-      message: "已创建新工具",
+      message: "已创建新工具并上传 Logo 至 R2",
     });
   } catch (error) {
     console.error("approve api error:", error);
