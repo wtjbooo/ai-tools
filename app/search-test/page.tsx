@@ -7,8 +7,6 @@ import SkeletonLoader from "@/components/SkeletonLoader";
 import CustomDropdown from "@/components/CustomDropdown";
 import { useAiTool } from "@/hooks/useAiTool";
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
-
-// 🚀 引入我们刚刚写的全局物价局
 import { getModelCost } from "@/lib/pricing";
 
 const MODELS = [
@@ -21,7 +19,8 @@ const MODELS = [
   { id: "gpt-5.4", name: "GPT-5.4", badge: "全能六边形", logo: "/logos/OpenAI.png", desc: "全能搜索顾问：逻辑严密，直击要害，适合处理跨平台、跨领域的搜索矩阵规划。" },
 ];
 
-const PLATFORMS = ["抖音", "小红书", "快手", "B站", "微博", "知乎"];
+// 💡 扩展为 8 大平台
+const PLATFORMS = ["Google", "百度", "抖音", "小红书", "快手", "B站", "微博", "知乎"];
 
 const getPlatformConfig = (platform: string) => {
   switch (platform) {
@@ -29,6 +28,8 @@ const getPlatformConfig = (platform: string) => {
     case "快手": return { aspect: "aspect-[4/3]", tag: "短视频" };
     case "小红书": return { aspect: "aspect-[4/3]", tag: "图文攻略" };
     case "B站": return { aspect: "aspect-[16/9]", tag: "深度视频" };
+    case "Google": return { aspect: "aspect-[21/9]", tag: "外网深度资讯" };
+    case "百度": return { aspect: "aspect-[21/9]", tag: "国内网页检索" };
     default: return { aspect: "aspect-[21/9]", tag: "热议/问答" };
   }
 };
@@ -50,6 +51,8 @@ const getPlatformSearchUrl = (platform: string, keyword: string) => {
     case "B站": return `https://search.bilibili.com/all?keyword=${encoded}`;
     case "微博": return `https://s.weibo.com/weibo?q=${encoded}`;
     case "知乎": return `https://www.zhihu.com/search?q=${encoded}`;
+    case "百度": return `https://www.baidu.com/s?wd=${encoded}`; 
+    case "Google": return `https://www.google.com/search?q=${encoded}`; 
     default: return `https://www.google.com/search?q=${encoded}`;
   }
 };
@@ -61,9 +64,9 @@ export default function SearchTestPage() {
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
   const { openModal } = useUpgradeModal();
-  const { loading, results, error, execute } = useAiTool<any[]>();
+  // 💡 注意：将泛型设为 any 适配新的 { summary, items } 对象结构
+  const { loading, results, error, execute } = useAiTool<any>();
 
-  // 🚀 实时计算当前所选模型需要消耗的积分 (搜索属于文本任务 'text')
   const currentCost = getModelCost(activeModel, 'text');
 
   useEffect(() => {
@@ -116,9 +119,12 @@ export default function SearchTestPage() {
     window.open(fallbackUrl, "_blank");
   };
 
-  const safeResults = results || [];
+  // 💡 解析出 summary 和 items
+  const summaryText = results?.summary || "";
+  const safeResults = results?.items || [];
+  
   const groupedResults = PLATFORMS.map(platform => ({
-    platform, items: safeResults.filter(r => r.platform === platform)
+    platform, items: safeResults.filter((r: any) => r.platform === platform)
   })).filter(group => group.items.length > 0);
 
   return (
@@ -131,7 +137,6 @@ export default function SearchTestPage() {
              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">🧠 AI 驱动引擎</span>
              <CustomDropdown options={MODELS} value={activeModel} onChange={setActiveModel} />
              
-             {/* 🚀 动态计费闪电标识 */}
              <span className="flex items-center gap-1.5 rounded-full bg-blue-50/80 px-2.5 py-1 text-[11px] font-medium text-blue-600 border border-blue-100/50 transition-all duration-300">
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
                 本次全网搜索将消耗 {currentCost} 积分
@@ -144,7 +149,7 @@ export default function SearchTestPage() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="输入想了解的产品或话题，AI 将为你规划搜索矩阵..."
+                placeholder="输入想了解的产品或话题，AI 将为你规划全网检索矩阵..."
                 className="w-full h-12 pl-11 pr-4 rounded-[16px] bg-black/[0.03] hover:bg-black/[0.05] focus:bg-white focus:ring-2 focus:ring-black/10 transition-all outline-none text-[15px] font-medium border border-transparent focus:border-black/5"
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
@@ -161,7 +166,7 @@ export default function SearchTestPage() {
             </div>
             
             <button onClick={handleSearch} disabled={loading || !query.trim()} className="h-12 px-8 bg-zinc-900 text-white rounded-[14px] text-[15px] font-semibold hover:bg-zinc-800 hover:shadow-md disabled:opacity-50 transition-all active:scale-[0.98] shrink-0">
-              {loading ? <span className="animate-pulse">✨ 规划中...</span> : "全网搜"}
+              {loading ? <span className="animate-pulse">✨ 规划中...</span> : "全域搜"}
             </button>
           </div>
           {error && !error.includes("次数") && <div className="text-red-500 text-sm mt-1">⚠️ {error}</div>}
@@ -172,73 +177,108 @@ export default function SearchTestPage() {
         {loading ? (
           <SkeletonLoader />
         ) : groupedResults.length > 0 ? (
-          groupedResults.map((group, groupIdx) => {
-            const config = getPlatformConfig(group.platform);
-            const combinedItems = [
-              { isRaw: true, title: "直接搜索原词，获取全量结果", searchQuery: query, reason: "探索该平台下关于此词条的基础内容", url: getPlatformSearchUrl(group.platform, query) },
-              ...group.items
-            ];
-
-            return (
-              <div key={groupIdx} className="space-y-5 animate-in fade-in slide-in-from-bottom-6 duration-700">
-                <div className="flex items-center justify-between pb-3 border-b border-black/5">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold tracking-tight text-gray-900">{group.platform}</h2>
-                    <span className="text-[11px] font-bold bg-black/[0.04] text-gray-600 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                      {combinedItems.length} 个搜索矩阵
-                    </span>
+          <div className="space-y-12">
+            
+            {/* 🍎 核心亮点：80% Apple + 20% AI 的全局洞察卡片 */}
+            {summaryText && (
+              <div className="relative overflow-hidden bg-white/80 backdrop-blur-xl border border-black/[0.04] rounded-[32px] p-8 md:p-10 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                {/* 顶部的极细 AI 炫彩流光 */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 opacity-80" />
+                
+                <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+                  {/* 左侧发光 Icon */}
+                  <div className="shrink-0 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-50 to-blue-50/30 border border-indigo-100/50 flex items-center justify-center shadow-inner relative mt-1">
+                    <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full animate-pulse" />
+                    <Sparkles className="w-6 h-6 text-indigo-500 relative z-10" />
+                  </div>
+                  
+                  {/* 右侧排版优雅的文字 */}
+                  <div className="flex-1 space-y-3.5">
+                    <h3 className="text-[19px] font-bold text-gray-900 tracking-tight flex items-center gap-2.5">
+                      AI 智能洞察
+                      <span className="px-2.5 py-0.5 rounded-full bg-black/[0.04] text-[11px] font-bold text-gray-500 tracking-wider uppercase border border-black/[0.02]">
+                        Expert Overview
+                      </span>
+                    </h3>
+                    <div className="text-[15px] leading-[1.8] text-gray-600 font-medium tracking-[0.01em]">
+                      <TypewriterEffect text={summaryText} speed={15} />
+                    </div>
                   </div>
                 </div>
-
-                <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-                  {combinedItems.map((item, index) => (
-                    <a 
-                      key={index} href={item.url} onClick={(e) => handleCardClick(e, group.platform, item.searchQuery, item.url)}
-                      className="group flex flex-col bg-white rounded-[24px] border border-black/[0.04] shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_14px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
-                    >
-                      <div className={`relative w-full flex flex-col justify-center items-center p-6 bg-gradient-to-br ${getGradient(index)} ${config.aspect} border-b border-black/[0.03]`}>
-                        {item.isRaw ? <Target className="absolute top-4 left-4 text-black/10" size={24} /> : <Sparkles className="absolute top-4 left-4 text-black/10" size={24} />}
-                        <span className={`text-[11px] font-bold tracking-[0.2em] mb-2 uppercase ${item.isRaw ? 'text-gray-600' : 'text-gray-400'}`}>
-                          {item.isRaw ? "🎯 原词直达" : "✨ 灵感词"}
-                        </span>
-                        <h3 className="text-[18px] sm:text-[20px] font-bold text-gray-900 text-center leading-snug group-hover:scale-105 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]">
-                          "{item.searchQuery}"
-                        </h3>
-                      </div>
-
-                      <div className="p-5 flex flex-col flex-grow">
-                        <h4 className="font-semibold text-[14px] text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1 mb-1.5">
-                          {item.isRaw ? item.title : <TypewriterEffect text={item.title} speed={10} />}
-                        </h4>
-                        <p className="text-[12px] text-gray-500 line-clamp-2 leading-relaxed flex-grow">
-                          {item.isRaw ? item.reason : <TypewriterEffect text={item.reason} speed={25} />}
-                        </p>
-                        
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-black/5">
-                          <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1">
-                            <Search size={12} /> App 内唤醒
-                          </span>
-                          <div className="flex items-center gap-1">
-                             <button onClick={(e) => handleSave(e, item, groupIdx * 100 + index)} className="p-1.5 hover:bg-red-50 rounded-full transition-colors z-10">
-                                <Heart size={16} className={`transition-all ${savingIndex === (groupIdx * 100 + index) ? 'fill-red-500 text-red-500 scale-110' : 'text-gray-300 hover:text-red-500'}`} />
-                             </button>
-                             <div className="p-1.5 text-gray-300 group-hover:text-gray-900 transition-colors"><ChevronRight size={16} /></div>
-                          </div>
-                        </div>
-                      </div>
-                    </a>
-                  ))}
-                </div>
               </div>
-            );
-          })
+            )}
+
+            {/* 下方搜索矩阵卡片保持原样即可 */}
+            <div className="space-y-16">
+              {groupedResults.map((group, groupIdx) => {
+                const config = getPlatformConfig(group.platform);
+                const combinedItems = [
+                  { isRaw: true, title: "直接搜索原词，获取全量结果", searchQuery: query, reason: "探索该平台下关于此话题的基础内容", url: getPlatformSearchUrl(group.platform, query) },
+                  ...group.items
+                ];
+
+                return (
+                  <div key={groupIdx} className="space-y-5 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                    <div className="flex items-center justify-between pb-3 border-b border-black/5">
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-xl font-bold tracking-tight text-gray-900">{group.platform}</h2>
+                        <span className="text-[11px] font-bold bg-black/[0.04] text-gray-600 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                          {combinedItems.length} 个检索策略
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                      {combinedItems.map((item, index) => (
+                        <a 
+                          key={index} href={item.url} onClick={(e) => handleCardClick(e, group.platform, item.searchQuery, item.url)}
+                          className="group flex flex-col bg-white rounded-[24px] border border-black/[0.04] shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_14px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
+                        >
+                          <div className={`relative w-full flex flex-col justify-center items-center p-6 bg-gradient-to-br ${getGradient(index)} ${config.aspect} border-b border-black/[0.03]`}>
+                            {item.isRaw ? <Target className="absolute top-4 left-4 text-black/10" size={24} /> : <Sparkles className="absolute top-4 left-4 text-black/10" size={24} />}
+                            <span className={`text-[11px] font-bold tracking-[0.2em] mb-2 uppercase ${item.isRaw ? 'text-gray-600' : 'text-gray-400'}`}>
+                              {item.isRaw ? "🎯 原词直达" : "✨ 灵感扩展"}
+                            </span>
+                            <h3 className="text-[18px] sm:text-[20px] font-bold text-gray-900 text-center leading-snug group-hover:scale-105 transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]">
+                              "{item.searchQuery}"
+                            </h3>
+                          </div>
+
+                          <div className="p-5 flex flex-col flex-grow">
+                            <h4 className="font-semibold text-[14px] text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1 mb-1.5">
+                              {item.isRaw ? item.title : <TypewriterEffect text={item.title} speed={10} />}
+                            </h4>
+                            <p className="text-[12px] text-gray-500 line-clamp-2 leading-relaxed flex-grow">
+                              {item.isRaw ? item.reason : <TypewriterEffect text={item.reason} speed={25} />}
+                            </p>
+                            
+                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-black/5">
+                              <span className="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1">
+                                <Search size={12} /> 一键检索
+                              </span>
+                              <div className="flex items-center gap-1">
+                                 <button onClick={(e) => handleSave(e, item, groupIdx * 100 + index)} className="p-1.5 hover:bg-red-50 rounded-full transition-colors z-10">
+                                    <Heart size={16} className={`transition-all ${savingIndex === (groupIdx * 100 + index) ? 'fill-red-500 text-red-500 scale-110' : 'text-gray-300 hover:text-red-500'}`} />
+                                 </button>
+                                 <div className="p-1.5 text-gray-300 group-hover:text-gray-900 transition-colors"><ChevronRight size={16} /></div>
+                              </div>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center pt-32 pb-20 text-gray-400">
             <div className="w-20 h-20 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[24px] flex items-center justify-center mb-6">
               <Wand2 size={28} className="text-gray-300" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">全网灵感搜索矩阵</h3>
-            <p className="text-sm font-medium">输入想了解的事物，AI 将为你打通全域高效搜索策略</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">全域灵感检索矩阵</h3>
+            <p className="text-sm font-medium">输入想了解的事物，AI 将为你打通全网高级搜索策略</p>
           </div>
         )}
       </div>
