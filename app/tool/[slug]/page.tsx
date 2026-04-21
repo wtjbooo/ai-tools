@@ -43,6 +43,17 @@ function isWeakText(text?: string | null) {
   return weakPatterns.some((pattern) => pattern.test(value));
 }
 
+// 👇 新增的 SEO 清洗魔法：专门用来剔除 Markdown 里的符号和图片
+function extractTextFromMarkdown(markdown?: string | null) {
+  if (!markdown) return "";
+  return markdown
+    .replace(/!\[.*?\]\(.*?\)/g, "") // 移除图片语法 ![xxx](url)
+    .replace(/\[([^\]]+)\]\(.*?\)/g, "$1") // 保留链接文字 [文字](url) -> 文字
+    .replace(/[#*`~_>-]/g, "") // 移除 Markdown 特殊格式符号
+    .replace(/\s+/g, " ") // 合并多余的换行和空格，变成一句通顺的话
+    .trim();
+}
+
 function normalizeDescription(toolName: string, categoryName: string, description?: string | null) {
   const fallback = `${toolName} 是一款归类在「${categoryName}」方向的 AI 工具，这里整理了它的定位、基础信息、标签与官网入口，方便你快速判断是否值得继续体验。`;
   const value = isWeakText(description) ? fallback : description!.trim();
@@ -144,14 +155,29 @@ function buildFallbackParagraphs(name: string, categoryName: string, tagList: st
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const tool = await getPublishedToolBySlug(params.slug);
   if (!tool) return { title: "工具不存在", description: "页面不存在", robots: { index: false, follow: false } };
+  
   const tagNames = tool.tags.map((item) => item.tag.name).filter(Boolean);
   const categoryName = tool.category?.name || "AI 工具";
   const url = `${SITE_URL}/tool/${tool.slug}`;
-  const description = normalizeDescription(tool.name, categoryName, tool.description);
+  
+  // 👇 SEO 核心逻辑 👇
+  // 先把用户写在后台的详细 Markdown 转换成纯净文字
+  const pureContent = extractTextFromMarkdown(tool.content);
+  
+  // 如果提取到了有效内容（大于20个字），就截取前 120 个字作为超级摘要
+  // 如果没写内容，就使用原来的一句话简介兜底
+  const seoDescription = pureContent.length > 20 
+    ? truncateText(pureContent, 120) 
+    : normalizeDescription(tool.name, categoryName, tool.description);
+
   return {
-    title: `${tool.name} - ${categoryName}`, description, keywords: buildKeywords(tool.name, categoryName, tagNames), alternates: { canonical: url },
-    openGraph: { title: `${tool.name} - ${categoryName}`, description, url, siteName: SITE_NAME, type: "article", locale: "zh_CN" },
-    twitter: { card: "summary_large_image", title: `${tool.name} - ${categoryName}`, description }, robots: { index: true, follow: true }
+    title: `${tool.name} - ${categoryName}`, 
+    description: seoDescription, // 塞入清理好的摘要
+    keywords: buildKeywords(tool.name, categoryName, tagNames), 
+    alternates: { canonical: url },
+    openGraph: { title: `${tool.name} - ${categoryName}`, description: seoDescription, url, siteName: SITE_NAME, type: "article", locale: "zh_CN" },
+    twitter: { card: "summary_large_image", title: `${tool.name} - ${categoryName}`, description: seoDescription }, 
+    robots: { index: true, follow: true }
   };
 }
 
@@ -221,22 +247,12 @@ export default async function ToolPage({ params }: { params: { slug: string } })
 
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr),320px]">
             <div className="space-y-8">
-              {/* 👇 高级 Apple & AI 风发光卡片容器（直接替换掉原本的 DetailCard） 👇 */}
-<div className="relative overflow-hidden rounded-[32px] border border-black/[0.04] bg-white p-6 shadow-[0_12px_48px_rgba(0,0,0,0.04)] sm:p-10 transition-all duration-500 hover:shadow-[0_16px_60px_rgba(0,0,0,0.06)] group">
-  
-  {/* 极其微弱的 AI 氛围光（左上角蓝光，右下角紫光），只有在高级显示器上才能察觉的优雅细节 */}
-  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.03),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.03),transparent_40%)] opacity-50 transition-opacity duration-500 group-hover:opacity-100" />
-  
-  <div className="relative z-10">
-    <TabsLayout 
-      contentParagraphs={finalParagraphs} 
-      tutorialContent={tool.tutorial} 
-      toolId={tool.id} 
-    />
-  </div>
-
-</div>
-{/* 👆 容器结束 👆 */}
+              <div className="relative overflow-hidden rounded-[32px] border border-black/[0.04] bg-white p-6 shadow-[0_12px_48px_rgba(0,0,0,0.04)] sm:p-10 transition-all duration-500 hover:shadow-[0_16px_60px_rgba(0,0,0,0.06)] group">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.03),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.03),transparent_40%)] opacity-50 transition-opacity duration-500 group-hover:opacity-100" />
+                <div className="relative z-10">
+                  <TabsLayout contentParagraphs={finalParagraphs} tutorialContent={tool.tutorial} toolId={tool.id} />
+                </div>
+              </div>
 
               <DetailCard title="适合人群与场景" description="看看这款产品是否契合你的日常工作流。"><SoftList items={useCases} /></DetailCard>
               {tagList.length > 0 ? <DetailCard title="功能标签" description="通过标签快速掌握产品的亮点。"><div className="flex flex-wrap gap-2.5">{tagList.map((tag) => <span key={tag} className="inline-flex items-center rounded-full bg-zinc-50 px-3.5 py-1.5 text-[13px] font-medium text-zinc-600">{tag}</span>)}</div></DetailCard> : null}
