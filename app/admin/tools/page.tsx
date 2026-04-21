@@ -10,7 +10,7 @@ type ToolItem = {
   slug: string;
   description: string;
   content: string;
-  tutorial?: string; // 👈 新增：兼容后端传来的教程字段
+  tutorial?: string;
   website: string | null;
   logoUrl: string | null;
   isPublished: boolean;
@@ -41,7 +41,7 @@ type EditToolForm = {
   logoUrl: string;
   description: string;
   content: string;
-  tutorial: string; // 👈 新增：表单状态里的教程字段
+  tutorial: string;
   category: string;
   tags: string;
   featuredOrder: string;
@@ -287,7 +287,7 @@ export default function AdminToolsPage() {
       logoUrl: tool.logoUrl ?? "",
       description: tool.description ?? "",
       content: tool.content ?? "",
-      tutorial: tool.tutorial ?? "", // 👈 新增：把老数据装载进表单
+      tutorial: tool.tutorial ?? "",
       category: tool.category?.name ?? "",
       tags: tool.tags.map((item) => item.tag.name).join(", "),
       featuredOrder: String(tool.featuredOrder ?? 0),
@@ -298,6 +298,43 @@ export default function AdminToolsPage() {
   function cancelEdit() {
     setEditingId(null);
     setEditForm(null);
+  }
+
+  // 👇 新增的上传图片函数 👇
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, field: "content" | "tutorial") {
+    const file = e.target.files?.[0];
+    if (!file || !editForm) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("只能上传图片文件");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "上传失败");
+
+      const markdownImage = `\n![${file.name}](${data.url})\n`;
+      setEditForm({
+        ...editForm,
+        [field]: editForm[field] + markdownImage
+      });
+      setMsg("图片上传成功并已插入");
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setSaving(false);
+      e.target.value = "";
+    }
   }
 
   async function saveEdit() {
@@ -651,11 +688,6 @@ export default function AdminToolsPage() {
         <div className="space-y-3">
           {filteredAndSortedList.map((tool) => {
             const isEditing = editingId === tool.id && editForm;
-            const showOutClicks = (tool.outClicks ?? 0) > 0;
-            const showViews = (tool.views ?? 0) > 0;
-            const showClicks = (tool.clicks ?? 0) > 0;
-            const showRangeViews = (tool.rangeViews ?? 0) > 0;
-            const showRangeOutClicks = (tool.rangeOutClicks ?? 0) > 0;
             const isDeleting = deletingId === tool.id;
 
             return (
@@ -685,32 +717,52 @@ export default function AdminToolsPage() {
                       <textarea rows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
                     </div>
 
-                    {/* 👇 Logo 链接手动补救框 👇 */}
-<div className="mb-4">
-  <label className="mb-1.5 block text-[13px] font-medium text-zinc-700">
-    Logo 链接 (自动抓取失败时手动填写)
-  </label>
-  <input
-    type="text"
-    value={editForm.logoUrl || ""}
-    onChange={(e) => setEditForm({ ...editForm, logoUrl: e.target.value })}
-    className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[14px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-800 focus:ring-1 focus:ring-zinc-800"
-    placeholder="填入图片直链，例如：https://你的图床.com/logo.png"
-  />
-</div>
-{/* 👆 Logo 框结束 👆 */}
+                    <div className="mb-4">
+                      <label className="mb-1.5 block text-[13px] font-medium text-zinc-700">
+                        Logo 链接 (自动抓取失败时手动填写)
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.logoUrl || ""}
+                        onChange={(e) => setEditForm({ ...editForm, logoUrl: e.target.value })}
+                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[14px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-800 focus:ring-1 focus:ring-zinc-800"
+                        placeholder="填入图片直链，例如：https://你的图床.com/logo.png"
+                      />
+                    </div>
 
+                    {/* 👇 产品简介上传按钮区 👇 */}
                     <div>
-                      <label className="mb-1 block text-sm font-bold text-blue-600">产品简介 (Content)</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-bold text-blue-600">产品简介 (Content)</label>
+                        <label className="cursor-pointer text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition">
+                          <span>📷 上传图片到 R2</span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => handleFileUpload(e, "content")}
+                          />
+                        </label>
+                      </div>
                       <textarea rows={8} value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} className="w-full rounded-lg border border-blue-200 bg-blue-50/30 px-3 py-2 text-sm font-mono" placeholder="支持 Markdown..." />
                     </div>
 
-                    {/* 👇 新增：保姆级教程的编辑框 👇 */}
+                    {/* 👇 使用指南上传按钮区 👇 */}
                     <div>
-                      <label className="mb-1 block text-sm font-bold text-purple-600">使用指南 (Tutorial)</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-bold text-purple-600">使用指南 (Tutorial)</label>
+                        <label className="cursor-pointer text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition">
+                          <span>📷 上传图片到 R2</span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => handleFileUpload(e, "tutorial")}
+                          />
+                        </label>
+                      </div>
                       <textarea rows={8} value={editForm.tutorial} onChange={(e) => setEditForm({ ...editForm, tutorial: e.target.value })} className="w-full rounded-lg border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-mono" placeholder="支持 Markdown，如果没有教程可以留空..." />
                     </div>
-                    {/* 👆 新增结束 👆 */}
 
                     <div className="grid gap-3 md:grid-cols-2">
                       <div>
