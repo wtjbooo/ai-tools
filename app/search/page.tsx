@@ -5,13 +5,14 @@ import SearchBar from "@/components/SearchBar";
 import ToolCard from "@/components/ToolCard";
 import PageHero from "@/components/PageHero";
 import SiteHeader from "@/components/SiteHeader";
+import Fuse from "fuse.js"; // 💡 新增：引入模糊搜索库
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SITE_NAME = "AI 工具目录";
 const SITE_URL =
-  process.env.SITE_URL?.replace(/\/+$/, "") || "https://y78bq.dpdns.org";
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://xaira.top";
 
 const SEARCH_SUGGESTIONS = [
   "聊天助手",
@@ -22,6 +23,7 @@ const SEARCH_SUGGESTIONS = [
   "翻译",
 ];
 
+// 完美保留你原有的 SEO 逻辑
 export async function generateMetadata({
   searchParams,
 }: {
@@ -86,6 +88,7 @@ export async function generateMetadata({
   };
 }
 
+// 完美保留你原有的 SuggestionPill 组件
 function SuggestionPill({ keyword }: { keyword: string }) {
   return (
     <Link
@@ -97,6 +100,7 @@ function SuggestionPill({ keyword }: { keyword: string }) {
   );
 }
 
+// 完美保留你原有的 EmptySearchState 组件布局和按钮
 function EmptySearchState({
   title,
   description,
@@ -156,6 +160,7 @@ export default async function SearchPage({
 }) {
   const q = (searchParams.q ?? "").trim();
 
+  // 完美保留你原有的无关键词初始页面
   if (!q) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
@@ -185,28 +190,44 @@ export default async function SearchPage({
     );
   }
 
-  const tools = await prisma.tool.findMany({
-    where: {
-      isPublished: true,
-      OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { content: { contains: q, mode: "insensitive" } },
-        { searchText: { contains: q, mode: "insensitive" } },
-        { category: { name: { contains: q, mode: "insensitive" } } },
-      ],
-    },
+  // ==========================================
+  // 💡 核心升级点：替换原有的 Prisma contains 查询
+  // ==========================================
+  
+  // 1. 获取所有已发布的工具数据
+  const allTools = await prisma.tool.findMany({
+    where: { isPublished: true },
     include: { category: true, tags: { include: { tag: true } } },
-    orderBy: [
-      { featured: "desc" },
-      { outClicks: "desc" },
-      { views: "desc" },
-      { clicks: "desc" },
-      { createdAt: "desc" },
-    ],
-    take: 100,
   });
 
+  // 2. 配置 Fuse.js 模糊引擎
+  const fuse = new Fuse(allTools, {
+    keys: [
+      { name: "name", weight: 1.0 },
+      { name: "description", weight: 0.6 },
+      { name: "content", weight: 0.4 },
+      { name: "searchText", weight: 0.5 },
+      { name: "category.name", weight: 0.3 }
+    ],
+    threshold: 0.35, // 容错率
+    ignoreLocation: true,
+  });
+
+  // 3. 执行搜索并提取结果，保留你的降级排序逻辑（点击量、权重等）
+  const fuseResults = fuse.search(q);
+  
+  const tools = fuseResults
+    .map(result => result.item)
+    .sort((a, b) => {
+      // 在模糊搜索的基础上，依然尊重你原有的精选和点击量排序
+      if (a.featured !== b.featured) return a.featured ? -1 : 1;
+      if (b.outClicks !== a.outClicks) return b.outClicks - a.outClicks;
+      if (b.views !== a.views) return b.views - a.views;
+      return 0;
+    })
+    .slice(0, 100); // 截取前 100 条
+
+  // 完美保留你原有的结果展示页面结构
   return (
     <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
       <SiteHeader currentPath="/search" />
