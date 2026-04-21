@@ -4,49 +4,48 @@ import { getSearchSystemPrompt } from "@/app/config/prompts";
 import { withProtection } from "@/lib/api-wrapper";
 import { searchRateLimit } from "@/lib/ratelimit";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+// 💡 1. 像魔法扩写一样，把所有的 Key 都在顶部声明好
+const N1N_API_KEY = process.env.N1N_API_KEY;
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const DEEPSEEK_BASE_URL = "https://api.deepseek.com/chat/completions";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
+
+function safeParseJSON(text: string) {
+  try { return JSON.parse(text); } 
+  catch (e) {
+    const match = text.match(/```json\n([\s\S]*?)\n```/);
+    if (match && match[1]) {
+      try { return JSON.parse(match[1]); } catch (err) { throw new Error("JSON 解析失败"); }
+    }
+    throw new Error("无法从模型输出提取有效 JSON");
+  }
+}
 
 function translateError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase();
-  if (msg.includes("503") || msg.includes("high demand")) return "😴 官方服务器当前排队人数过多被挤爆了，请稍后重试。";
-  if (msg.includes("invalid token") || msg.includes("401")) return "🔑 API 密钥无效或未配置，请检查服务端环境变量。";
-  if (msg.includes("insufficient quota") || msg.includes("balance")) return "💰 模型渠道账号余额不足。";
-  if (msg.includes("not found")) return "🔍 找不到该模型，请检查模型 ID 是否填写正确。";
-  if (msg.includes("timeout")) return "🌐 网络请求超时，请检查服务器网络连通性。";
-  return `⚠️ 搜索规划失败: ${errorMsg}`;
-}
-
-function safeParseJSON(text: string) {
-  try { return JSON.parse(text); } catch (e) {
-    const match = text.match(/```json\n([\s\S]*?)\n```/);
-    if (match && match[1]) {
-      try { return JSON.parse(match[1]); } catch (err) { throw new Error("去除 Markdown 后仍无法解析 JSON"); }
-    }
-    throw new Error("模型未返回标准 JSON 格式");
+  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded") || msg.includes("bad gateway")) {
+    return "😴 服务器当前节点拥堵，请更换其他模型或稍后重试。";
   }
+  if (msg.includes("invalid token") || msg.includes("401")) {
+    return "🔑 API 密钥无效！请检查服务端的环境变量配置。";
+  }
+  if (msg.includes("insufficient quota") || msg.includes("balance")) {
+    return "💰 该模型渠道的账号余额不足。";
+  }
+  return `⚠️ 搜索规划失败: ${errorMsg}`; 
 }
 
 export const POST = withProtection(
   async (req: NextRequest, { userId, remainingQuota }) => {
     try {
       const { query, mode, targetModel = "gemini-free" } = await req.json();
-      
-      // 💡 智能匹配 API KEY：根据前端传来的 targetModel，匹配你 .env 中的分组 Key
-      let currentApiKey = "";
-      if (targetModel.includes("gpt") || targetModel.includes("moonshot") || targetModel.includes("doubao")) {
-        currentApiKey = process.env.OPENAI_GROUP_KEY || "";
-      } else if (targetModel.includes("claude")) {
-        currentApiKey = process.env.CLAUDE_GROUP_KEY || "";
-      } else if (targetModel.includes("deepseek")) {
-        currentApiKey = process.env.DEEPSEEK_API_KEY || "";
-      } else if (targetModel.includes("gemini") && targetModel !== "gemini-free") {
-        currentApiKey = process.env.GEMINI_GROUP_KEY || "";
-      }
-
       const systemPrompt = getSearchSystemPrompt(query, mode, targetModel);
       let data;
 
+      // 🚦 轨道一：Gemini
       if (targetModel === "gemini-free") {
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent({
@@ -54,30 +53,56 @@ export const POST = withProtection(
           generationConfig: { responseMimeType: "application/json" }, 
         });
         data = safeParseJSON(result.response.text());
-      } else {
-        if (!currentApiKey) throw new Error(`服务端未配置该模型(${targetModel})所属的 API Key 分组`);
-        
-        const response = await fetch(`${N1N_BASE_URL}/chat/completions`, {
+      } 
+      // 🚦 轨道二：DeepSeek 原生直连 (这正是 enhance-prompt 能跑通的核心秘诀！)
+      else if (targetModel === "deepseek-chat") {
+        if (!DEEPSEEK_API_KEY) throw new Error("未配置 DEEPSEEK_API_KEY");
+        const response = await fetch(DEEPSEEK_BASE_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${currentApiKey}`
-          },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
           body: JSON.stringify({
-            model: targetModel,
-            messages: [{ role: "user", content: systemPrompt }],
-            temperature: 0.7,
-            response_format: { type: "json_object" } 
+            model: "deepseek-chat",
+            messages: [{ role: "system", content: systemPrompt }],
+            temperature: 0.8,
+            stream: false,
+            response_format: { type: "json_object" }
           }),
         });
-
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error?.message || `请求 ${targetModel} 失败`);
-        }
+        const responseText = await response.text(); 
+        if (!response.ok) throw new Error(`DeepSeek 失败: ${responseText.slice(0, 50)}`);
+        data = safeParseJSON(JSON.parse(responseText).choices[0].message.content);
+      } 
+      // 🚦 轨道三：N1N 中转平台 (用于 Claude, GPT, Kimi 等)
+      else {
+        if (!N1N_API_KEY) throw new Error("服务端未配置高级模型 N1N API Key");
         
-        const content = await response.json().then(res => res.choices[0].message.content);
-        data = safeParseJSON(content); 
+        const requestPayload: any = {
+          model: targetModel,
+          messages: [{ role: "user", content: systemPrompt }],
+          temperature: 0.7, 
+          stream: false, 
+        };
+
+        if (targetModel.includes("gpt")) {
+           requestPayload.response_format = { type: "json_object" };
+        }
+
+        const response = await fetch(`${N1N_BASE_URL}/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${N1N_API_KEY}` },
+          body: JSON.stringify(requestPayload),
+        });
+
+        const responseText = await response.text();
+        if (!response.ok) {
+          try {
+            const errObj = JSON.parse(responseText);
+            throw new Error(errObj.error?.message || `请求失败 (${response.status})`);
+          } catch(e) {
+            throw new Error(`HTTP ${response.status} - ${responseText.slice(0, 50)}...`);
+          }
+        }
+        data = safeParseJSON(JSON.parse(responseText).choices[0].message.content);
       }
 
       // 组装最终的真实 URL 链接
