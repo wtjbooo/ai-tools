@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getSearchSystemPrompt } from "@/app/config/prompts";
 import { withProtection } from "@/lib/api-wrapper";
 import { searchRateLimit } from "@/lib/ratelimit";
+import prisma from "@/lib/prisma";
+import { getModelCost } from "@/lib/pricing";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const N1N_API_KEY = process.env.N1N_API_KEY;
@@ -127,9 +129,9 @@ export const POST = withProtection(
       });
       
     } catch (error: any) {
-      console.error(`AI 搜索失败:`, error.message);
-      return NextResponse.json({ error: translateError(error.message) }, { status: 500 });
-    }
-  },
-  { rateLimiter: searchRateLimit, taskType: 'text' }
-);
+    console.error("搜索/扩写接口调用失败:", error);
+    
+    // 🚀 必须用 throw 抛出，绝对不能用 return NextResponse！
+    throw new Error(error.message);
+  }
+}, { rateLimiter: searchRateLimit, taskType: 'text' });

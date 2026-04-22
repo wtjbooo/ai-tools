@@ -2,19 +2,16 @@ import prisma from "./prisma";
 
 // 💡 每天免费派发的总积分额度
 const DAILY_FREE_POINTS = 100; 
-// 🛡️ 尊贵的 Pro 会员每日防刷安全上限（物理极限：一天 2000 分）
+// 🛡️ 尊贵的 Pro 会员每日防刷安全上限
 const DAILY_PRO_POINTS = 2000; 
 
 /**
- * 检查并扣除积分
- * @param userId 用户 ID
- * @param cost 本次 API 调用的积分花费（默认 1）
+ * 检查并扣除积分 (先扣每日免费，不够再扣加油包)
  */
 export async function checkAndDeductQuota(userId: string, cost: number = 1) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      // 🚀 修改 1：必须要在这里把 bonusCredits 查出来，否则下面拿不到！
       select: { freeUsesToday: true, lastUsedDate: true, isPro: true, bonusCredits: true } 
     });
 
@@ -22,50 +19,58 @@ export async function checkAndDeductQuota(userId: string, cost: number = 1) {
       return { allowed: false, error: "未找到用户，请先登录。" };
     }
 
-    // 动态判断当前用户的每日最大基础额度
     const maxAllowedPoints = user.isPro ? DAILY_PRO_POINTS : DAILY_FREE_POINTS;
-    
-    // 🚀 修改 2：用户的真实总额度 = 基础额度 + 购买的永久额外额度
-    const totalAvailable = maxAllowedPoints + user.bonusCredits;
-
     const now = new Date();
     const lastUsed = user.lastUsedDate;
     let currentUsedPoints = user.freeUsesToday;
 
-    const isToday =
-      lastUsed &&
-      lastUsed.getDate() === now.getDate() &&
-      lastUsed.getMonth() === now.getMonth() &&
-      lastUsed.getFullYear() === now.getFullYear();
-
+    // 跨天自动重置免费额度
+    const isToday = lastUsed && lastUsed.getDate() === now.getDate() && 
+                    lastUsed.getMonth() === now.getMonth() && lastUsed.getFullYear() === now.getFullYear();
+    
     if (!isToday) {
-      currentUsedPoints = 0; // 跨天重置已用次数
+      currentUsedPoints = 0; 
     }
 
-    // 🚀 修改 3：统一使用 totalAvailable 进行拦截和报错计算
-    if (currentUsedPoints + cost > totalAvailable) {
-      return { 
-        allowed: false, 
-        error: user.isPro
-          ? "您今日的高频创作已触发系统防疲劳保护，请休息一下，明日 0 点为您重新补满灵感算力！" 
-          : `您的可用积分不足（需要 ${cost} 分，当前仅剩 ${totalAvailable - currentUsedPoints} 分）。请购买加油包或升级 Pro！`
-      };
+    // 1. 计算今日剩下的免费额度
+    const remainingDaily = Math.max(0, maxAllowedPoints - currentUsedPoints);
+
+    if (remainingDaily >= cost) {
+      // 🟢 情况 A：每日免费额度够用 -> 直接扣免费额度
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          freeUsesToday: currentUsedPoints + cost,
+          lastUsedDate: now,
+        },
+      });
+      return { allowed: true, remaining: remainingDaily - cost + user.bonusCredits };
+      
+    } else {
+      // 🟡 情况 B：每日免费不够，需要动用余额加油包
+      const pointsNeededFromBonus = cost - remainingDaily;
+
+      if (user.bonusCredits >= pointsNeededFromBonus) {
+        // 加油包够扣 -> 把免费额度拉满，真实扣除加油包
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            freeUsesToday: maxAllowedPoints, // 免费额度彻底用尽
+            bonusCredits: user.bonusCredits - pointsNeededFromBonus, // 🚨 真实扣除用户买的充值包！
+            lastUsedDate: now,
+          },
+        });
+        return { allowed: true, remaining: user.bonusCredits - pointsNeededFromBonus };
+      } else {
+        // 🔴 情况 C：全都不够了，拒绝请求
+        return { 
+          allowed: false, 
+          error: user.isPro
+            ? "您的防疲劳保护额度及加油包均已耗尽，请稍作休息！" 
+            : `可用积分不足（本次需 ${cost} 分，今日免费剩 ${remainingDaily} 分，加油包剩 ${user.bonusCredits} 分）。请购买加油包！`
+        };
+      }
     }
-
-    // 扣除动态积分，并更新最后使用时间
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        freeUsesToday: currentUsedPoints + cost,
-        lastUsedDate: now,
-      },
-    });
-
-    return { 
-      allowed: true, 
-      // 🚀 修改 4：返回给前端的也是包含加油包的真实剩余额度
-      remaining: totalAvailable - (currentUsedPoints + cost) 
-    };
 
   } catch (error) {
     console.error("检查额度时发生错误:", error);
@@ -78,21 +83,12 @@ export async function checkAndDeductQuota(userId: string, cost: number = 1) {
  */
 export async function refundQuota(userId: string, cost: number = 1) {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { freeUsesToday: true }
-    });
-
-    if (!user) return;
-
-    // 确保退款后，已用积分不会变成负数
-    const newUsedPoints = Math.max(0, user.freeUsesToday - cost);
-
+    // 💡 优雅退款方案：既然业务失败了，为了安抚用户，退还的积分直接进入永久加油包(bonusCredits)
     await prisma.user.update({
       where: { id: userId },
-      data: { freeUsesToday: newUsedPoints },
+      data: { bonusCredits: { increment: cost } }, // 🚨 这里统一用 bonusCredits 退款
     });
-    
+    console.log(`✅ 通用网关回滚成功: 已为用户 ${userId} 退还 ${cost} 分到永久钱包`);
   } catch (error) {
     console.error("退款积分时发生错误:", error);
   }
