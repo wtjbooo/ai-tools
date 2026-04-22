@@ -160,7 +160,7 @@ export default function SearchTestPage() {
                   </div>
                   <h3 className="text-[15px] font-semibold text-zinc-800 tracking-wide">AI 全局洞察</h3>
                 </div>
-                <div className="text-[15px] leading-relaxed text-zinc-600">
+                <div className="text-[15px] leading-relaxed text-zinc-600 whitespace-pre-wrap">
                   <TypewriterEffect text={aiAnalysisText} speed={15} />
                 </div>
               </div>

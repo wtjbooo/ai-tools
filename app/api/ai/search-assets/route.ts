@@ -120,7 +120,7 @@ export const POST = withProtection(
       return NextResponse.json({ 
         success: true, 
         data: {
-          analysis: data.analysis || "AI 思考完成，正在为您生成矩阵...",
+          analysis: data.summary || data.analysis || "AI 思考完成，正在为您生成矩阵...",
           items: enrichedData
         },
         _remainingQuota: remainingQuota 
