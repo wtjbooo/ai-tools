@@ -219,5 +219,5 @@ const systemPrompt = `你现在是全球顶尖的 AI 视觉底层算法工程师
 
 export const POST = withProtection(reversePromptHandler, {
   rateLimiter: analyzeRateLimit, 
-  cost: 1 
+  taskType: 'vision' // 👈 完美通电：包装器会自动去查 getModelCost 并精准扣费！
 });

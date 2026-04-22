@@ -47,13 +47,12 @@ export default function GuideAndShowcase() {
         </h2>
         <div className="grid gap-8 lg:grid-cols-2">
           
-          {/* 案例 1 */}
+          {/* 案例 1：抽象厚涂油画 */}
           <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div className="relative h-56 bg-gray-100">
-              {/* 💡 提示：如果图片加载慢，建议把图片下载下来放到 public 文件夹，然后 src 改成 "/image1.jpg" */}
               <img 
                 src="https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=800&auto=format&fit=crop" 
-                alt="科幻废墟案例" 
+                alt="抽象表现主义画作案例" 
                 className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute top-3 left-3 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-md">原图参考</div>
@@ -61,18 +60,18 @@ export default function GuideAndShowcase() {
             <div className="p-6">
               <h3 className="mb-3 text-sm font-bold text-gray-900">🪄 提取提示词 (片段)</h3>
               <div className="rounded-lg bg-gray-50 p-4 font-mono text-xs text-gray-600 leading-6 space-y-3">
-                <p className="text-gray-800 font-sans font-medium">电影级广角镜头，长满生物发光苔藓的古代废墟，巨大的开裂石雕，雾气弥漫，情绪光影，虚幻引擎5渲染，史诗级构图。</p>
-                <p className="pt-3 border-t border-gray-200 text-gray-500">A cinematic wide shot of ancient ruins overgrown with bioluminescent moss, massive cracked stone statues, foggy atmosphere, moody lighting, Unreal Engine 5 render, epic composition --ar 16:9</p>
+                <p className="text-gray-800 font-sans font-medium">抽象表现主义，厚涂刀画技法，青色与芥末黄的强烈对比，丰富的丙烯肌理，画布纹理细节，现代画廊艺术品，极简而富有张力的构图，高级色彩美学。</p>
+                <p className="pt-3 border-t border-gray-200 text-gray-500">Abstract expressionism, thick impasto palette knife techniques, strong contrast of teal and mustard yellow, rich acrylic textures, canvas weave details, contemporary gallery art, minimalist yet tense composition, premium color aesthetics --ar 16:9 --style raw --v 6.0</p>
               </div>
             </div>
           </div>
 
-          {/* 案例 2 */}
+          {/* 案例 2：星空银河帆船 */}
           <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div className="relative h-56 bg-gray-100">
               <img 
                 src="https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800&auto=format&fit=crop" 
-                alt="治愈风景案例" 
+                alt="深空星轨摄影案例" 
                 className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute top-3 left-3 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-md">原图参考</div>
@@ -80,8 +79,8 @@ export default function GuideAndShowcase() {
             <div className="p-6">
               <h3 className="mb-3 text-sm font-bold text-gray-900">🪄 提取提示词 (片段)</h3>
               <div className="rounded-lg bg-gray-50 p-4 font-mono text-xs text-gray-600 leading-6 space-y-3">
-                <p className="text-gray-800 font-sans font-medium">吉卜力风格，郁郁葱葱山谷中温馨的小木屋，清晨温柔的阳光透过云层，色彩鲜艳，动漫背景艺术，高度细节，宁静的氛围。</p>
-                <p className="pt-3 border-t border-gray-200 text-gray-500">Studio Ghibli style, a cozy wooden cabin in a lush green valley, gentle morning sunlight filtering through clouds, vibrant colors, anime background art, highly detailed, peaceful --ar 4:3</p>
+                <p className="text-gray-800 font-sans font-medium">极致深空摄影，银河星轨悬挂于平静的湖面上空，湖面完美倒影，水天一色，一艘孤独的帆船剪影，地平线远处的雷暴云闪电微光，长曝光摄影，8K分辨率，令人窒息的宁静氛围。</p>
+                <p className="pt-3 border-t border-gray-200 text-gray-500">Astrophotography, Milky Way galaxy over a calm glassy lake, perfect water reflection, a solitary sailboat silhouette, distant thunderstorm lightning glow on the horizon, long exposure photography, 8k resolution, breathtakingly peaceful atmosphere --ar 16:9 --v 6.0</p>
               </div>
             </div>
           </div>

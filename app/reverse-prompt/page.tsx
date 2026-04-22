@@ -182,6 +182,7 @@ export default function ReversePromptPage() {
   const hasTriedRestore = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [streamedRaw, setStreamedRaw] = useState("");
+  const [analyzeProgress, setAnalyzeProgress] = useState(0); // 🚀 新增：解析进度条状态
 
   const previewItems = useMemo<PreviewItem[]>(() => {
     if (files.length > 0) return files.map((file) => ({ key: `${file.name}-${file.lastModified}`, name: file.name, size: file.size, url: URL.createObjectURL(file), type: isVideoFile(file) ? "video" : "image", }));
@@ -233,8 +234,21 @@ export default function ReversePromptPage() {
   function processSelectedFiles(selectedFiles: File[]) {
     if (selectedFiles.length === 0) return;
     const nextError = validateFiles(selectedFiles);
-    const hasVideo = selectedFiles.some(f => f.type.startsWith('video/'));
-    if (hasVideo && analyzerModel === 'gemini-free') setAnalyzerModel('gemini-3.1-pro-preview'); 
+    
+    // 判断是否包含视频
+    const isVideoUpload = selectedFiles.some(f => f.type.startsWith('video/'));
+
+    // 🚀 核心优化 1：自动护航机制
+    if (isVideoUpload && !analyzerModel.includes('gemini')) {
+      // 选了纯图片模型但上传了视频 -> 强切 Gemini Pro
+      setAnalyzerModel('gemini-3.1-pro-preview');
+      setQuotaNotice({ type: 'success', msg: '🎬 检测到视频素材，已为您自动切换至专属多模态引擎：Gemini 3.1 Pro' });
+    } else if (isVideoUpload && analyzerModel === 'gemini-free') {
+      // 选了免费版 Gemini 但上传了视频 -> 考虑到视频解析耗时长易断，强切 Pro
+      setAnalyzerModel('gemini-3.1-pro-preview');
+      setQuotaNotice({ type: 'success', msg: '🎬 视频文件解析难度较高，已自动为您升级至 Gemini 3.1 Pro 保证成功率' });
+    }
+
     if (nextError) {
       setFiles([]); setRestoredFiles([]); setResult(null); setTaskMeta(null); setError(nextError); setPickerKey((value) => value + 1); removeTaskIdFromUrl(); return;
     }
@@ -249,6 +263,7 @@ export default function ReversePromptPage() {
   function resetForm() {
     setFiles([]); setRestoredFiles([]); setResult(null); setTaskMeta(null); setError(""); setQuotaNotice(null);
     setIsLoading(false); setUploadStatus(""); setIsRestoring(false); setStreamedRaw(""); setPickerKey((value) => value + 1); removeTaskIdFromUrl();
+    setAnalyzeProgress(0); // 👈 加上这行
   }
 
   async function handleAnalyze() {
@@ -257,7 +272,8 @@ export default function ReversePromptPage() {
 
     try {
       setIsLoading(true); setError(""); setQuotaNotice(null); setResult(null); setTaskMeta(null); setStreamedRaw(""); setUploadStatus("");
-      let currentProgress = 0; 
+      setAnalyzeProgress(0); // 👈 加上这行
+      let currentProgress = 0;
       
       window.setTimeout(() => { document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" }); }, 100);
 
@@ -286,8 +302,6 @@ export default function ReversePromptPage() {
       }
 
       setUploadStatus("素材已就绪，AI 视觉引擎深度提取中...");
-
-      const requestBody = { inputType: isVideo ? "video" : "images", analyzerModel, outputLanguage, outputStyle, targetPlatform, fileKeys: uploadedFileKeys };
       
       const requestBody = { inputType: isVideo ? "video" : "images", analyzerModel, outputLanguage, outputStyle, targetPlatform, fileKeys: uploadedFileKeys };
       
@@ -316,27 +330,29 @@ export default function ReversePromptPage() {
           const maxAttempts = 40; // 最多轮询 40 次，每次 3 秒（约等待 2 分钟）
           
           while (attempts < maxAttempts) {
-              // 暂停 3 秒
               await new Promise(resolve => setTimeout(resolve, 3000));
               attempts++;
+              
+              // 🚀 新增：模拟平滑进度，假设前 20 次轮询（约60秒）能走到 95%
+              const currentPercent = Math.min(Math.round((attempts / 20) * 95), 95);
+              setAnalyzeProgress(currentPercent); 
               
               setUploadStatus(`正在读取后台解析进度... (${attempts}/${maxAttempts})`);
               
               try {
                   const pollRes = await fetch(`/api/reverse-prompt?taskId=${actualTaskId}`);
-                  if (!pollRes.ok) continue; // 偶发网络波动则跳过本次循环
+                  if (!pollRes.ok) continue; 
                   
                   const pollData = await pollRes.json();
                   
                   if (pollData.status === "success") {
                       finalData = pollData.result;
-                      break; // 成功拿到数据，跳出轮询
+                      setAnalyzeProgress(100); // 🚀 成功时直接拉满到 100%
+                      break; 
                   } else if (pollData.status === "error") {
                       throw new Error(pollData.error);
                   }
-                  // 若状态仍为 processing，循环继续
               } catch (e) {
-                  // 静默处理轮询时的网络异常，不中断整体流程
                   console.warn("轮询状态异常:", e);
               }
           }
@@ -408,19 +424,22 @@ export default function ReversePromptPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 <div className="space-y-1.5 sm:col-span-2 lg:col-span-1 xl:col-span-2 relative z-30">
                   <label className="text-sm font-medium text-gray-900">解析大模型 (Vision Model)</label>
-                  <CustomDropdown options={MODELS} value={analyzerModel} onChange={(val) => setAnalyzerModel(val as AnalyzerModel)} />
+                  <CustomDropdown 
+                    options={MODELS} 
+                    value={analyzerModel} 
+                    onChange={(val) => {
+                      const hasVideo = files.some(f => f.type.startsWith('video/'));
+                      // 🚀 核心优化 2：操作拦截机制
+                      if (hasVideo && !val.includes('gemini')) {
+                        setError("⚠️ 当前已上传视频素材。Kimi/Claude/GPT 等模型暂不支持直接解析短视频，请继续使用 Gemini 系列。");
+                        return; // 拦截切换动作，不改变模型
+                      }
+                      
+                      setError(""); // 切换成功，清空可能存在的报错
+                      setAnalyzerModel(val as AnalyzerModel);
+                    }} 
+                  />
                 </div>
-                <div className="space-y-1.5 relative z-20">
-                  <label className="text-sm font-medium text-gray-900">目标生成平台</label>
-                  <CustomDropdown options={PLATFORMS} value={targetPlatform} onChange={(val) => setTargetPlatform(val as TargetPlatform)} />
-                </div>
-                <div className="space-y-1.5 relative z-10">
-                  <label className="text-sm font-medium text-gray-900">输出语言</label>
-                  <CustomDropdown options={LANGUAGES} value={outputLanguage} onChange={(val) => setOutputLanguage(val as OutputLanguage)} />
-                </div>
-              </div>
-              {/* ⚠️ 旧版的警告代码已经被移除，因为我们下方统一加了计费徽章 */}
-            </div>
 
             <div className="space-y-4">
               <PanelTitle title="上传参考素材" description="支持拖拽，可无缝上传最高 200MB 的图片或超清视频。" />
@@ -486,12 +505,25 @@ export default function ReversePromptPage() {
           </div>
         </SoftCard>
 
-        {(isLoading || isRestoring) && !result && (
+       {(isLoading || isRestoring) && !result && (
           <SoftCard className="scroll-mt-6" >
             <div id="reverse-prompt-loading">
               <PanelTitle title={isRestoring ? "正在恢复结果" : uploadStatus ? uploadStatus : "AI 视觉引擎深度扫描中..."} description="正在拆解像素与光影关系，请不要离开页面" />
+              
+              {/* 👇 把进度条加在这里（PanelTitle 之后，streamedRaw 判断之前） 👇 */}
+              <div className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-gray-100/80 shadow-inner">
+                <div 
+                  className="h-full bg-[linear-gradient(90deg,#3b82f6,#8b5cf6)] transition-all duration-700 ease-out relative" 
+                  style={{ width: `${Math.max(5, analyzeProgress)}%` }}
+                >
+                   <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" style={{ backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }}></div>
+                </div>
+              </div>
+              {/* 👆 进度条结束 👆 */}
+
               {streamedRaw ? (
                 <div className="mt-5 max-h-[300px] overflow-y-auto rounded-[18px] bg-gray-900 px-5 py-4 font-mono text-[13px] text-green-400 shadow-inner custom-scrollbar">
+// ... 保持后面的代码不变 ...
                   <div className="sticky top-0 mb-3 flex items-center gap-2 bg-gray-900/90 py-1 text-xs text-gray-400 backdrop-blur-sm">
                     <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span></span>RECEIVING STREAM DATA...
                   </div>
