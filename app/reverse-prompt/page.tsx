@@ -289,32 +289,67 @@ export default function ReversePromptPage() {
 
       const requestBody = { inputType: isVideo ? "video" : "images", analyzerModel, outputLanguage, outputStyle, targetPlatform, fileKeys: uploadedFileKeys };
       
-      let response;
-      try {
-        response = await fetch("/api/reverse-prompt", { 
-            method: "POST", 
-            headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify(requestBody) 
-        });
-      } catch (networkError) {
-        throw new Error("🚨 网络请求中断 (Failed to fetch)。\n原因可能是大模型解析超时（生成内容极度庞大导致超过60秒），或您的本地服务已崩溃。\n\n⚠️ 注：由于连接是意外断开的，系统可能未能成功执行自动退款，请检查后台记录。");
-      }
-
-      const responseText = await response.text(); 
-      let finalData: any = {};
+      const requestBody = { inputType: isVideo ? "video" : "images", analyzerModel, outputLanguage, outputStyle, targetPlatform, fileKeys: uploadedFileKeys };
       
-      try { 
-        if (responseText) finalData = JSON.parse(responseText); 
-      } catch (parseError) {
-        if (!response.ok) throw new Error(`服务器异常 (${response.status}): 无法处理 AI 的长篇回复，请重试`); 
-        else throw new Error("解析返回数据失败，请稍后重试");
+      // 1. 发起请求，获取任务 ID
+      const response = await fetch("/api/reverse-prompt", { 
+          method: "POST", 
+          headers: { "Content-Type": "application/json" }, 
+          body: JSON.stringify(requestBody) 
+      });
+
+      if (response.status === 403) { openModal(); setError(""); return; }
+      
+      const startData = await response.json();
+      if (!response.ok) throw new Error(startData.error || "分析请求失败，请检查模型名称和额度");
+
+      let finalData: any = {};
+      let actualTaskId = `task_${Date.now()}`; // 默认伪 ID
+      
+      // 2. 如果后端返回的是处理中状态，进入异步轮询
+      if (startData.status === "processing" && startData.taskId) {
+          actualTaskId = startData.taskId;
+          setTaskIdToUrl(actualTaskId);
+          setUploadStatus("任务已分配，后台视觉引擎深度扫描中...");
+          
+          let attempts = 0;
+          const maxAttempts = 40; // 最多轮询 40 次，每次 3 秒（约等待 2 分钟）
+          
+          while (attempts < maxAttempts) {
+              // 暂停 3 秒
+              await new Promise(resolve => setTimeout(resolve, 3000));
+              attempts++;
+              
+              setUploadStatus(`正在读取后台解析进度... (${attempts}/${maxAttempts})`);
+              
+              try {
+                  const pollRes = await fetch(`/api/reverse-prompt?taskId=${actualTaskId}`);
+                  if (!pollRes.ok) continue; // 偶发网络波动则跳过本次循环
+                  
+                  const pollData = await pollRes.json();
+                  
+                  if (pollData.status === "success") {
+                      finalData = pollData.result;
+                      break; // 成功拿到数据，跳出轮询
+                  } else if (pollData.status === "error") {
+                      throw new Error(pollData.error);
+                  }
+                  // 若状态仍为 processing，循环继续
+              } catch (e) {
+                  // 静默处理轮询时的网络异常，不中断整体流程
+                  console.warn("轮询状态异常:", e);
+              }
+          }
+          
+          if (attempts >= maxAttempts) {
+              throw new Error("解析耗时过长，任务仍在后台运行。您可以稍后刷新页面重试。");
+          }
+      } else {
+          // 兼容普通的同步返回情况
+          finalData = startData;
       }
 
-      if (!response.ok) {
-        if (response.status === 403) { openModal(); setError(""); return; }
-        throw new Error(finalData.error || "分析失败，请检查模型名称和额度");
-      }
-
+      // 3. 渲染数据 (接下来的逻辑和你原来一样)
       if (finalData._remainingQuota !== undefined) {
         setQuotaNotice({ 
           type: 'success', 
@@ -322,10 +357,9 @@ export default function ReversePromptPage() {
         });
       }
 
-      const pseudoTaskId = `task_${Date.now()}`;
-      setResult(finalData); setTaskMeta({ taskId: pseudoTaskId, model: analyzerModel, fileCount: files.length, outputLanguage, outputStyle, targetPlatform });
-      setTaskIdToUrl(pseudoTaskId);
-      recordTaskHistory({ taskId: pseudoTaskId, fileCount: files.length, firstFileName: files[0]?.name || "已归档素材", createdAt: Date.now() });
+      setResult(finalData); 
+      setTaskMeta({ taskId: actualTaskId, model: analyzerModel, fileCount: files.length, outputLanguage, outputStyle, targetPlatform });
+      recordTaskHistory({ taskId: actualTaskId, fileCount: files.length, firstFileName: files[0]?.name || "已归档素材", createdAt: Date.now() });
 
       window.setTimeout(() => { document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 80);
 
