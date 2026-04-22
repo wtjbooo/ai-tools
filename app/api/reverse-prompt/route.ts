@@ -3,8 +3,10 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { withProtection } from "@/lib/api-wrapper";
 import { analyzeRateLimit } from "@/lib/ratelimit";
+import prisma from "@/lib/prisma"; // 引入数据库
+import { getModelCost } from "@/lib/pricing"; // 引入物价局
 
-// 【新增】配置内存任务队列，用于存储后台分析状态
+// 配置内存任务队列，用于存储后台分析状态
 const globalForTasks = global as unknown as { aiTasks: Map<string, any> };
 const tasksMap = globalForTasks.aiTasks || new Map();
 if (process.env.NODE_ENV !== "production") globalForTasks.aiTasks = tasksMap;
@@ -29,27 +31,23 @@ const KEYS = {
 
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 
-function translateError(errorMsg: string): string {
+function translateError(errorMsg: string, cost: number = 1): string {
   const msg = errorMsg.toLowerCase();
   let friendlyMsg = `⚠️ 解析失败: ${errorMsg}`;
   if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) friendlyMsg = "😴 服务器排队人数过多，大模型暂无响应。";
   if (msg.includes("401") || msg.includes("api_key_invalid")) friendlyMsg = "🔑 API 密钥无效或配置错误。";
   if (msg.includes("insufficient quota")) friendlyMsg = "💰 账户余额或配额不足。";
-  return `${friendlyMsg}\n\n♻️ 拦截生效：系统已为您自动退还本次消耗的 1 次高级额度！请稍后重试。`;
+  return `${friendlyMsg}\n\n♻️ 拦截生效：系统已为您自动退还本次消耗的 ${cost} 积分！请稍后重试。`;
 }
 
-// 替换原有的 safeParseJSON 函数
 function safeParseJSON(text: string) {
   try { 
-    // 1. 先尝试直接解析
     return JSON.parse(text); 
   } catch (e) {
-    // 2. 暴力去除 Markdown 代码块标记 (```json 和 ```)
     let cleanedText = text.replace(/```json\s*/gi, '').replace(/```\s*$/gi, '').trim();
     try {
         return JSON.parse(cleanedText);
     } catch (e2) {
-        // 3. 终极绝招：用正则表达式强行截取 { 到最后一个 }
         const start = cleanedText.indexOf('{');
         const end = cleanedText.lastIndexOf('}');
         if (start !== -1 && end !== -1 && end > start) {
@@ -64,7 +62,6 @@ function safeParseJSON(text: string) {
   }
 }
 
-// 【新增】GET 方法：用于前端轮询查询任务进度
 export async function GET(req: NextRequest) {
   const taskId = req.nextUrl.searchParams.get("taskId");
   if (!taskId) return NextResponse.json({ error: "缺少 taskId" }, { status: 400 });
@@ -86,11 +83,9 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
         throw new Error("未接收到云端素材");
     }
 
-    // 1. 立即生成任务 ID 并存入队列
     const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     tasksMap.set(taskId, { status: "processing" });
 
-    // 2. 将耗时的大模型逻辑放到后台执行 (去掉 await 阻塞，用自执行异步函数包裹)
     (async () => {
       try {
         let selectedKey = KEYS.openai;
@@ -121,17 +116,14 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
           finalImageUrl = `data:${imgRes.headers.get('content-type') || 'image/jpeg'};base64,${Buffer.from(arrayBuffer).toString('base64')}`;
         }
 
-        // 找到这部分并替换其中的法则描述
-const systemPrompt = `你现在是全球顶尖的 AI 视觉底层算法工程师和机器语言（Prompt）编码专家。
+        // 完美修复的完整 Prompt 模板字符串
+        const systemPrompt = `你现在是全球顶尖的 AI 视觉底层算法工程师和机器语言（Prompt）编码专家。
 我们现在彻底放弃“人类讲故事”的描述方式！你需要将画面直接翻译成最硬核、最底层的【标签云（Tags）和参数咒语】。
 
 【🚨 核心暴击法则】
 1. 严禁写散文和长句！必须使用逗号分隔的【短语/词组/标签】。
 2. 彻底抛弃“美丽、震撼”等废话。直接输出渲染器、物理材质、光学参数、摄影机型号！
 3. 【极其重要】你必须且只能输出纯粹的 JSON 结构！绝对不允许在 JSON 前后添加任何解释性文字（如“好的”、“以下是参数”），严禁使用 markdown 代码块包裹！
-
-// ... (后面的 【🎬 咒语结构公式】和 JSON 格式示例保持你原来的样子不变即可) ...
-`;
 
 【🎬 咒语结构公式（严格用逗号分隔）】
 [主体精确白描], [细微物理运动], [摄影机型号与焦段], [运镜轨迹], [光照角度与类型], [材质纹理], [渲染引擎与画质参数]
@@ -193,25 +185,30 @@ const systemPrompt = `你现在是全球顶尖的 AI 视觉底层算法工程师
         const finalJSON = safeParseJSON(payloadData.choices[0].message.content);
         finalJSON._remainingQuota = context.remainingQuota; 
 
-        // 🟢 成功：更新队列状态
         tasksMap.set(taskId, { status: "success", result: finalJSON, task: { id: taskId, model: targetModel } });
 
       } catch (error: any) {
         console.error("后台异步任务执行失败:", error);
-        tasksMap.set(taskId, { status: "error", error: translateError(error.message) });
+        // 动态计算本次消耗的积分并准备退款
+        const refundCost = getModelCost(analyzerModel, 'vision');
+        tasksMap.set(taskId, { status: "error", error: translateError(error.message, refundCost) });
         
-        // 🚨【非常重要：在这里添加 Prisma 退款代码】🚨
-        // 因为这段代码在后台跑，withProtection 捕获不到这里的报错！
-        // 你需要导入 Prisma，然后手动退还积分。例如：
-        // await prisma.user.update({ where: { id: context.userId }, data: { credits: { increment: 1 } } });
+        // 核心退款逻辑：通过 Prisma 将积分加回给用户
+        try {
+          await prisma.user.update({
+            where: { id: context.userId },
+            data: { bonusCredits: { increment: refundCost } } 
+          });
+          console.log(`✅ 业务回滚成功: 已为用户 ${context.userId} 退还 ${refundCost} 积分`);
+        } catch (dbError) {
+          console.error("🚨 数据库退款执行失败:", dbError);
+        }
       }
     })();
 
-    // 3. 立刻告诉前端任务已开始，彻底绕过 60s 超时
     return NextResponse.json({ status: "processing", taskId });
 
   } catch (error: any) {
-    // 这里的 Catch 处理前期文件校验失败，withProtection 依然会自动退款
     console.error("接口初始校验异常:", error);
     throw new Error(translateError(error.message));
   }
@@ -219,5 +216,5 @@ const systemPrompt = `你现在是全球顶尖的 AI 视觉底层算法工程师
 
 export const POST = withProtection(reversePromptHandler, {
   rateLimiter: analyzeRateLimit, 
-  taskType: 'vision' // 👈 完美通电：包装器会自动去查 getModelCost 并精准扣费！
+  taskType: 'vision' 
 });

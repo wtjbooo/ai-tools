@@ -4,8 +4,6 @@ import GuideAndShowcase from '@/components/GuideAndShowcase';
 import Link from "next/link";
 import { type ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
-
-// 🚀 引入我们刚刚写的全局物价局
 import { getModelCost } from "@/lib/pricing";
 
 type AnalyzerModel = "gemini-free" | "moonshot-v1-8k" | "doubao-seed-2-0-lite" | "gemini-3.1-pro-preview" | "claude-sonnet-4-6" | "gpt-5.4-mini";
@@ -44,12 +42,6 @@ const PLATFORMS = [
   { id: "jimeng", name: "即梦 (Jimeng)", logo: "/logos/jimeng.png" },
   { id: "keling", name: "可灵 (Kling)", logo: "/logos/kling.png" },
   { id: "doubao", name: "豆包 (Doubao)", logo: "/logos/doubao.png" },
-];
-
-const LANGUAGES = [
-  { id: "zh", name: "中文", logo: null },
-  { id: "en", name: "English", logo: null },
-  { id: "bilingual", name: "中英双语", logo: null },
 ];
 
 const ACCEPTED_FILE_TYPES = "image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime";
@@ -182,7 +174,7 @@ export default function ReversePromptPage() {
   const hasTriedRestore = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [streamedRaw, setStreamedRaw] = useState("");
-  const [analyzeProgress, setAnalyzeProgress] = useState(0); // 🚀 新增：解析进度条状态
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
   const previewItems = useMemo<PreviewItem[]>(() => {
     if (files.length > 0) return files.map((file) => ({ key: `${file.name}-${file.lastModified}`, name: file.name, size: file.size, url: URL.createObjectURL(file), type: isVideoFile(file) ? "video" : "image", }));
@@ -190,7 +182,6 @@ export default function ReversePromptPage() {
     return [];
   }, [files, restoredFiles]);
 
-  // 🚀 实时计算当前所选视觉模型需要消耗的积分
   const currentCost = getModelCost(analyzerModel, 'vision');
 
   useEffect(() => { return () => { previewItems.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url); }); }; }, [previewItems]);
@@ -235,16 +226,12 @@ export default function ReversePromptPage() {
     if (selectedFiles.length === 0) return;
     const nextError = validateFiles(selectedFiles);
     
-    // 判断是否包含视频
     const isVideoUpload = selectedFiles.some(f => f.type.startsWith('video/'));
 
-    // 🚀 核心优化 1：自动护航机制
     if (isVideoUpload && !analyzerModel.includes('gemini')) {
-      // 选了纯图片模型但上传了视频 -> 强切 Gemini Pro
       setAnalyzerModel('gemini-3.1-pro-preview');
       setQuotaNotice({ type: 'success', msg: '🎬 检测到视频素材，已为您自动切换至专属多模态引擎：Gemini 3.1 Pro' });
     } else if (isVideoUpload && analyzerModel === 'gemini-free') {
-      // 选了免费版 Gemini 但上传了视频 -> 考虑到视频解析耗时长易断，强切 Pro
       setAnalyzerModel('gemini-3.1-pro-preview');
       setQuotaNotice({ type: 'success', msg: '🎬 视频文件解析难度较高，已自动为您升级至 Gemini 3.1 Pro 保证成功率' });
     }
@@ -263,7 +250,7 @@ export default function ReversePromptPage() {
   function resetForm() {
     setFiles([]); setRestoredFiles([]); setResult(null); setTaskMeta(null); setError(""); setQuotaNotice(null);
     setIsLoading(false); setUploadStatus(""); setIsRestoring(false); setStreamedRaw(""); setPickerKey((value) => value + 1); removeTaskIdFromUrl();
-    setAnalyzeProgress(0); // 👈 加上这行
+    setAnalyzeProgress(0);
   }
 
   async function handleAnalyze() {
@@ -272,7 +259,7 @@ export default function ReversePromptPage() {
 
     try {
       setIsLoading(true); setError(""); setQuotaNotice(null); setResult(null); setTaskMeta(null); setStreamedRaw(""); setUploadStatus("");
-      setAnalyzeProgress(0); // 👈 加上这行
+      setAnalyzeProgress(0);
       let currentProgress = 0;
       
       window.setTimeout(() => { document.getElementById("reverse-prompt-loading")?.scrollIntoView({ behavior: "smooth", block: "center" }); }, 100);
@@ -305,7 +292,6 @@ export default function ReversePromptPage() {
       
       const requestBody = { inputType: isVideo ? "video" : "images", analyzerModel, outputLanguage, outputStyle, targetPlatform, fileKeys: uploadedFileKeys };
       
-      // 1. 发起请求，获取任务 ID
       const response = await fetch("/api/reverse-prompt", { 
           method: "POST", 
           headers: { "Content-Type": "application/json" }, 
@@ -318,22 +304,20 @@ export default function ReversePromptPage() {
       if (!response.ok) throw new Error(startData.error || "分析请求失败，请检查模型名称和额度");
 
       let finalData: any = {};
-      let actualTaskId = `task_${Date.now()}`; // 默认伪 ID
+      let actualTaskId = `task_${Date.now()}`;
       
-      // 2. 如果后端返回的是处理中状态，进入异步轮询
       if (startData.status === "processing" && startData.taskId) {
           actualTaskId = startData.taskId;
           setTaskIdToUrl(actualTaskId);
           setUploadStatus("任务已分配，后台视觉引擎深度扫描中...");
           
           let attempts = 0;
-          const maxAttempts = 40; // 最多轮询 40 次，每次 3 秒（约等待 2 分钟）
+          const maxAttempts = 40;
           
           while (attempts < maxAttempts) {
               await new Promise(resolve => setTimeout(resolve, 3000));
               attempts++;
               
-              // 🚀 新增：模拟平滑进度，假设前 20 次轮询（约60秒）能走到 95%
               const currentPercent = Math.min(Math.round((attempts / 20) * 95), 95);
               setAnalyzeProgress(currentPercent); 
               
@@ -347,7 +331,7 @@ export default function ReversePromptPage() {
                   
                   if (pollData.status === "success") {
                       finalData = pollData.result;
-                      setAnalyzeProgress(100); // 🚀 成功时直接拉满到 100%
+                      setAnalyzeProgress(100); 
                       break; 
                   } else if (pollData.status === "error") {
                       throw new Error(pollData.error);
@@ -361,11 +345,9 @@ export default function ReversePromptPage() {
               throw new Error("解析耗时过长，任务仍在后台运行。您可以稍后刷新页面重试。");
           }
       } else {
-          // 兼容普通的同步返回情况
           finalData = startData;
       }
 
-      // 3. 渲染数据 (接下来的逻辑和你原来一样)
       if (finalData._remainingQuota !== undefined) {
         setQuotaNotice({ 
           type: 'success', 
@@ -381,16 +363,13 @@ export default function ReversePromptPage() {
 
     } catch (err: any) {
       const errMsg = err instanceof Error ? err.message : "分析失败，请稍后再试";
-      
       if (errMsg.includes("次数") && errMsg.includes("已用完")) {
         openModal(); setError("");
       } else {
         if (errMsg.includes("退还")) {
-          setQuotaNotice({ type: 'refund', msg: errMsg });
-          setError(""); 
+          setQuotaNotice({ type: 'refund', msg: errMsg }); setError(""); 
         } else if (errMsg.includes("Failed to fetch")) {
-          setQuotaNotice({ type: 'timeout', msg: errMsg });
-          setError(""); 
+          setQuotaNotice({ type: 'timeout', msg: errMsg }); setError(""); 
         } else {
           setError(errMsg);
         }
@@ -429,17 +408,17 @@ export default function ReversePromptPage() {
                     value={analyzerModel} 
                     onChange={(val) => {
                       const hasVideo = files.some(f => f.type.startsWith('video/'));
-                      // 🚀 核心优化 2：操作拦截机制
                       if (hasVideo && !val.includes('gemini')) {
                         setError("⚠️ 当前已上传视频素材。Kimi/Claude/GPT 等模型暂不支持直接解析短视频，请继续使用 Gemini 系列。");
-                        return; // 拦截切换动作，不改变模型
+                        return; 
                       }
-                      
-                      setError(""); // 切换成功，清空可能存在的报错
+                      setError(""); 
                       setAnalyzerModel(val as AnalyzerModel);
                     }} 
                   />
                 </div>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <PanelTitle title="上传参考素材" description="支持拖拽，可无缝上传最高 200MB 的图片或超清视频。" />
@@ -479,7 +458,6 @@ export default function ReversePromptPage() {
                   <button type="button" onClick={resetForm} disabled={isLoading || isRestoring} className="inline-flex items-center rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-gray-700 transition hover:-translate-y-0.5 hover:bg-gray-50 disabled:opacity-60">清空</button>
                 </div>
                 
-                {/* 🚀 动态计费闪电标识 */}
                 <span className="flex items-center gap-1.5 rounded-full bg-blue-50/80 px-3 py-1.5 text-[12px] font-medium text-blue-600 border border-blue-100/50 transition-all duration-300">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" /></svg>
                   本次视觉解析将消耗 {currentCost} 积分
@@ -510,7 +488,6 @@ export default function ReversePromptPage() {
             <div id="reverse-prompt-loading">
               <PanelTitle title={isRestoring ? "正在恢复结果" : uploadStatus ? uploadStatus : "AI 视觉引擎深度扫描中..."} description="正在拆解像素与光影关系，请不要离开页面" />
               
-              {/* 👇 把进度条加在这里（PanelTitle 之后，streamedRaw 判断之前） 👇 */}
               <div className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-gray-100/80 shadow-inner">
                 <div 
                   className="h-full bg-[linear-gradient(90deg,#3b82f6,#8b5cf6)] transition-all duration-700 ease-out relative" 
@@ -519,11 +496,9 @@ export default function ReversePromptPage() {
                    <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" style={{ backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }}></div>
                 </div>
               </div>
-              {/* 👆 进度条结束 👆 */}
 
               {streamedRaw ? (
                 <div className="mt-5 max-h-[300px] overflow-y-auto rounded-[18px] bg-gray-900 px-5 py-4 font-mono text-[13px] text-green-400 shadow-inner custom-scrollbar">
-// ... 保持后面的代码不变 ...
                   <div className="sticky top-0 mb-3 flex items-center gap-2 bg-gray-900/90 py-1 text-xs text-gray-400 backdrop-blur-sm">
                     <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span></span>RECEIVING STREAM DATA...
                   </div>
