@@ -361,6 +361,9 @@ model AIGenerationRecord {
   // 前端卡片展示的标题/摘要
   title       String   @db.Text
   
+originalInput String?  @db.Text // 用户的原始输入短句
+  resultJson    String?  @db.Text // AI 生成的完整长句/JSON结果
+
   // 任务状态: "success", "failed", "pending"
   status      String   @default("success") 
   

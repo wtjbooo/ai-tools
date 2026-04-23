@@ -146,6 +146,8 @@ export const POST = withProtection(
               userId: userId,
               toolType: "enhance", // 标记为扩写功能
               title: `扩写: ${displayTitle || "未命名任务"}`, 
+              originalInput: userInput,
+              resultJson: JSON.stringify(data),
               cost: 2, // 默认文本任务扣除 2 积分
               status: "success"
             }

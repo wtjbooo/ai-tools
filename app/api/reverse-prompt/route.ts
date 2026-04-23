@@ -202,6 +202,8 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
                 userId: context.userId,
                 toolType: "reverse", // 标记为反推功能
                 title: `反推: ${displayTitle}`, 
+                originalInput: finalImageUrl,
+                resultJson: JSON.stringify(finalJSON),
                 cost: actualCost,
                 status: "success"
               }
