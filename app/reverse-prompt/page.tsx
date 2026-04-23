@@ -390,8 +390,8 @@ export default function ReversePromptPage() {
               <span className="inline-flex items-center rounded-full border border-black/8 bg-white/78 px-3 py-1 text-[11px] font-medium tracking-[0.18em] text-gray-500">AI REVERSE PROMPT</span>
             </div>
             <div className="space-y-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">从关键帧反推专业 Prompt</h1>
-              <p className="max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">上传图像或短视频，多模态视觉模型将精准提取主体、运镜与风格，并自动适配国内外主流平台的专业级 Prompt。</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-[48px] sm:leading-[1.04]">全模态视觉解析引擎</h1>
+              <p className="max-w-2xl text-sm leading-7 text-gray-600 sm:text-[15px]">上传任意图像或短视频，多模态视觉模型将精准提取画面主体、光影参数与运镜风格，自动适配国内外主流平台的专业级 Prompt。</p>
             </div>
           </div>
         </section>

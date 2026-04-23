@@ -47,12 +47,12 @@ export default function GuideAndShowcase() {
         </h2>
         <div className="grid gap-8 lg:grid-cols-2">
           
-          {/* 案例 1：抽象厚涂油画 */}
+          {/* 案例 1：赛博朋克电影级特写 */}
           <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div className="relative h-56 bg-gray-100">
               <img 
-                src="https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=800&auto=format&fit=crop" 
-                alt="抽象表现主义画作案例" 
+                src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&q=80" 
+                alt="赛博朋克摄影案例" 
                 className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute top-3 left-3 rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-md">原图参考</div>
@@ -60,8 +60,8 @@ export default function GuideAndShowcase() {
             <div className="p-6">
               <h3 className="mb-3 text-sm font-bold text-gray-900">🪄 提取提示词 (片段)</h3>
               <div className="rounded-lg bg-gray-50 p-4 font-mono text-xs text-gray-600 leading-6 space-y-3">
-                <p className="text-gray-800 font-sans font-medium">抽象表现主义，厚涂刀画技法，青色与芥末黄的强烈对比，丰富的丙烯肌理，画布纹理细节，现代画廊艺术品，极简而富有张力的构图，高级色彩美学。</p>
-                <p className="pt-3 border-t border-gray-200 text-gray-500">Abstract expressionism, thick impasto palette knife techniques, strong contrast of teal and mustard yellow, rich acrylic textures, canvas weave details, contemporary gallery art, minimalist yet tense composition, premium color aesthetics --ar 16:9 --style raw --v 6.0</p>
+                <p className="text-gray-800 font-sans font-medium">电影级特写摄影，一个佩戴发光全息面罩的赛博朋克女孩，站在雨夜的霓虹东京街头。极浅景深，85mm f/1.2 大光圈镜头，背景散景呈现粉蓝色霓虹灯晕。面部有强烈的高光反射，皮肤纹理极其细腻，辛烷值渲染级别的体积光穿透雨丝，极致的细节，8K分辨率，极具未来科幻张力。</p>
+                <p className="pt-3 border-t border-gray-200 text-gray-500">Cinematic close-up photography, a cyberpunk girl wearing a glowing holographic visor, standing on a rainy neon-lit Tokyo street. Extremely shallow depth of field, 85mm f/1.2 fast lens, background bokeh featuring pink and blue neon halation. Strong sharp specular highlights on the face, hyper-detailed skin texture, Octane render style volumetric light piercing through the rain, insane details, 8k resolution, futuristic sci-fi tension --ar 16:9 --style raw --v 6.0</p>
               </div>
             </div>
           </div>

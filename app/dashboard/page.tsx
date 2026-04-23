@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -47,7 +48,6 @@ export default function DashboardOverview() {
         const json = await res.json();
         setData(json);
       } catch (err: unknown) {
-        // 优化：TypeScript 规范，捕获到的 error 类型推荐设为 unknown
         if (err instanceof Error) {
           setError(err.message);
         } else {
@@ -80,7 +80,6 @@ export default function DashboardOverview() {
     );
   }
 
-  // 🛡️ 优化：防御性编程。即使后端接口暂时没传 recentActivities 字段，也不会导致 .map() 报错崩溃
   const quota = data.quota;
   const recentActivities = data.recentActivities || []; 
   const percent = Math.min((quota.used / quota.total) * 100, 100);
@@ -109,7 +108,6 @@ export default function DashboardOverview() {
 
       {/* 上半部分：核心数据与快捷入口 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 核心算力额度卡片保持不变 */}
         <div className="md:col-span-2 relative overflow-hidden rounded-[32px] bg-white p-8 shadow-[0_12px_40px_rgba(0,0,0,0.04)] border border-zinc-100">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
              <Zap className="w-32 h-32 text-indigo-600" />
@@ -141,7 +139,6 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* 快捷通道保持不变 */}
         <div className="rounded-[32px] bg-gradient-to-br from-zinc-900 to-zinc-800 p-8 shadow-[0_12px_40px_rgba(24,24,27,0.15)] text-white relative overflow-hidden group">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay" />
           <h3 className="text-[16px] font-bold mb-6 text-zinc-100">快速启动</h3>
@@ -167,7 +164,6 @@ export default function DashboardOverview() {
       {/* 下半部分：生成记录与系统状态 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* 近期轨迹列表 */}
         <div className="md:col-span-2 rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-zinc-100 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[16px] font-bold text-zinc-900 flex items-center gap-2">
@@ -184,31 +180,36 @@ export default function DashboardOverview() {
                <div className="flex flex-col items-center justify-center h-full text-zinc-400 opacity-60 min-h-[120px]">
                  <span className="text-sm font-medium">暂无生成记录，快去开启灵感吧</span>
                </div>
-            ) : recentActivities.map((activity) => (
-              <Link href={`/reverse-prompt?task=${activity.id}`} key={activity.id} className="group flex items-center justify-between p-3 sm:p-4 rounded-[20px] hover:bg-zinc-50 border border-transparent hover:border-zinc-100 transition-all duration-300">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-500 group-hover:bg-white group-hover:text-indigo-500 group-hover:shadow-sm transition-all border border-zinc-200/50">
-                    {activity.type === 'video' ? <Video className="w-4 h-4" /> : activity.type === 'image' ? <ImageIcon className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                  </div>
-                  <div>
-                    <h4 className="text-[14px] font-semibold text-zinc-900">{activity.title}</h4>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[11px] font-medium text-zinc-500">{activity.platform}</span>
-                      <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
-                      {/* 这里的 time 将由后端直接返回格式化好的字符串，如 "10分钟前" */}
-                      <span className="text-[11px] text-zinc-400">{activity.time}</span>
+            ) : recentActivities.map((activity) => {
+              // 🎯 这里是完美修复后的动态跳转逻辑
+              let targetUrl = `/reverse-prompt?task=${activity.id}`; 
+              if (activity.type === 'video') targetUrl = `/enhance-prompt?task=${activity.id}`; 
+              if (activity.type === 'sparkles') targetUrl = `/search-assets?task=${activity.id}`; 
+
+              return (
+                <Link href={targetUrl} key={activity.id} className="group flex items-center justify-between p-3 sm:p-4 rounded-[20px] hover:bg-zinc-50 border border-transparent hover:border-zinc-100 transition-all duration-300">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-500 group-hover:bg-white group-hover:text-indigo-500 group-hover:shadow-sm transition-all border border-zinc-200/50">
+                      {activity.type === 'video' ? <Video className="w-4 h-4" /> : activity.type === 'image' ? <ImageIcon className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <h4 className="text-[14px] font-semibold text-zinc-900">{activity.title}</h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[11px] font-medium text-zinc-500">{activity.platform}</span>
+                        <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
+                        <span className="text-[11px] text-zinc-400">{activity.time}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0">
-                  <ArrowUpRight className="w-4 h-4" />
-                </div>
-              </Link>
-            ))}
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0">
+                    <ArrowUpRight className="w-4 h-4" />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
-        {/* 网络节点状态保持不变 */}
         <div className="rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-zinc-100 flex flex-col relative overflow-hidden">
           <div className="absolute -right-6 -top-6 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
           

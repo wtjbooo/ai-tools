@@ -116,7 +116,6 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
           finalImageUrl = `data:${imgRes.headers.get('content-type') || 'image/jpeg'};base64,${Buffer.from(arrayBuffer).toString('base64')}`;
         }
 
-        // 完美修复的完整 Prompt 模板字符串
         const systemPrompt = `你现在是全球顶尖的 AI 视觉底层算法工程师和机器语言（Prompt）编码专家。
 我们现在彻底放弃“人类讲故事”的描述方式！你需要将画面直接翻译成最硬核、最底层的【标签云（Tags）和参数咒语】。
 
@@ -185,15 +184,40 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
         const finalJSON = safeParseJSON(payloadData.choices[0].message.content);
         finalJSON._remainingQuota = context.remainingQuota; 
 
+        // ==========================================
+        // 🚀 新增：将后台异步生成的任务记录写入大盘流水表
+        // ==========================================
+        if (context.userId) {
+          try {
+            // 尝试从 AI 生成的结果中提取一小段中文作为标题，如果没有就用默认值
+            const generatedText = finalJSON.prompts?.simple?.zh || "图像视觉分析与提示词反推";
+            const cleanTitle = generatedText.replace(/[\r\n#*]/g, '').trim();
+            const displayTitle = cleanTitle.length > 20 ? cleanTitle.slice(0, 20) + "..." : cleanTitle;
+            
+            // 动态读取本次反推的积分成本
+            const actualCost = getModelCost(analyzerModel, 'vision');
+
+            await prisma.aIGenerationRecord.create({
+              data: {
+                userId: context.userId,
+                toolType: "reverse", // 标记为反推功能
+                title: `反推: ${displayTitle}`, 
+                cost: actualCost,
+                status: "success"
+              }
+            });
+          } catch (dbErr) {
+            console.error("[写入流水表失败 - Reverse Prompt]:", dbErr);
+          }
+        }
+
         tasksMap.set(taskId, { status: "success", result: finalJSON, task: { id: taskId, model: targetModel } });
 
       } catch (error: any) {
         console.error("后台异步任务执行失败:", error);
-        // 动态计算本次消耗的积分并准备退款
         const refundCost = getModelCost(analyzerModel, 'vision');
         tasksMap.set(taskId, { status: "error", error: translateError(error.message, refundCost) });
         
-        // 核心退款逻辑：通过 Prisma 将积分加回给用户
         try {
           await prisma.user.update({
             where: { id: context.userId },

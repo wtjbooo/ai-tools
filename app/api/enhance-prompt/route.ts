@@ -15,16 +15,26 @@ const KEYS = {
 };
 
 function translateError(errorMsg: string): string {
-  if (errorMsg.includes("Google官方报错")) return `⚠️ 谷歌官方通道拒绝访问: ${errorMsg.split('报错: ')[1] || "国内服务器可能被墙，请使用 N1N 中转模型"}`;
-  
   const msg = errorMsg.toLowerCase();
+  
+  // 1. 优先拦截：免费通道被全球用户挤爆了的情况
+  if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) {
+     return "😴 免费通道当前太火爆了（谷歌服务器排队中），请稍后再试，或在左上角切换为其它 VIP 大模型。";
+  }
+
+  // 2. 拦截：Google 官方网络或区域拦截
+  if (errorMsg.includes("Google官方报错")) {
+     return `⚠️ 谷歌官方通道异常: ${errorMsg.split('报错: ')[1] || "国内服务器可能被墙，请使用 N1N 中转模型"}`;
+  }
+
+  // 3. 其他常规报错拦截
   if (msg.includes("api key") || msg.includes("未配置")) return "🔑 服务器密钥缺失：请检查环境变量的分组 Key 是否正确。";
   if (msg.includes("not found") && msg.includes("gemini")) return "🛰️ 模型失效：接口已更新，请尝试更换模型。";
   if (msg.includes("无可用渠道") || msg.includes("no available channel")) return "🔀 中转渠道异常：该模型当前无可用节点，请切换其他模型。";
   if (msg.includes("401") || msg.includes("invalid")) return "🚫 访问被拒绝：API Key 已失效或额度已耗尽。";
-  if (msg.includes("503") || msg.includes("overloaded")) return "⏳ 服务器太火爆了：AI 正在排队，请稍后再试。";
   if (msg.includes("failed to fetch") || msg.includes("timeout")) return "📡 网络连接超时：服务器网络无法访问该接口。";
-  return `❌ 扩写失败：${errorMsg}`;
+  
+  return `❌ 任务失败：${errorMsg}`;
 }
 
 function safeParseJSON(text: string) {
