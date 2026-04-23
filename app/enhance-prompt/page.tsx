@@ -5,8 +5,6 @@ import TypewriterEffect from "@/components/TypewriterEffect";
 import CustomDropdown from "@/components/CustomDropdown";
 import { useAiTool } from "@/hooks/useAiTool";
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
-
-// 🚀 引入我们刚刚写的全局物价局
 import { getModelCost } from "@/lib/pricing";
 
 const STYLE_PILLS = ["通用", "🎬 电影质感", "📸 拍立得复古", "🤖 赛博朋克", "🌸 吉卜力动画", "🏛️ 史诗奇幻"];
@@ -44,12 +42,43 @@ export default function EnhancePromptPage() {
   const [copied, setCopied] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // 🚀 新增：用于存放从历史记录里“读档”恢复的数据
+  const [recoveredResult, setRecoveredResult] = useState<{ promptZh?: string; promptEn?: string; negativeEn?: string } | null>(null);
+
   const { openModal } = useUpgradeModal();
   const { loading: isLoading, results: result, error: apiError, execute } = useAiTool<{ promptZh?: string; promptEn?: string; negativeEn?: string }>();
 
-  // 🚀 实时计算当前所选模型需要消耗的积分
-  // 注意：扩写是文本任务，所以传 'text'
   const currentCost = getModelCost(activeModel, 'text');
+
+  // 🚀 新增：组件加载时，检查网址里有没有 task ID，如果有就去读档
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get("task");
+    
+    if (taskId) {
+      fetch(`/api/get-record?taskId=${taskId}`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.success && json.data) {
+            const record = json.data;
+            // 1. 恢复输入框的原文
+            if (record.originalInput) {
+              setInput(record.originalInput);
+            }
+            // 2. 恢复 AI 生成的完整 JSON
+            if (record.resultJson) {
+              try {
+                const parsed = JSON.parse(record.resultJson);
+                setRecoveredResult(parsed);
+              } catch (e) {
+                console.error("解析历史记录失败:", e);
+              }
+            }
+          }
+        })
+        .catch(err => console.error("读取历史数据异常:", err));
+    }
+  }, []);
 
   useEffect(() => {
     if (apiError && (apiError.includes("次数") || apiError.includes("已用完") || apiError.includes("额度"))) {
@@ -65,6 +94,9 @@ export default function EnhancePromptPage() {
     }
     setValidationError("");
     setCopied("");
+    // 🚀 清空历史回显数据，准备接收新数据
+    setRecoveredResult(null); 
+    
     execute("/api/enhance-prompt", { 
       text: input, style: activeStyle, targetModel: activeModel, targetPlatform: activePlatform 
     });
@@ -75,6 +107,9 @@ export default function EnhancePromptPage() {
     setCopied(blockName);
     setTimeout(() => setCopied(""), 2000);
   };
+
+  // 🚀 核心：显示的最终结果，如果有“回显记录”就用回显的，否则就用新生成的
+  const finalResult = recoveredResult || result;
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] px-4 py-16 sm:px-6 lg:px-8 font-sans selection:bg-zinc-200">
@@ -128,7 +163,6 @@ export default function EnhancePromptPage() {
           </div>
 
           <div className="flex items-center justify-between border-t border-black/5 px-5 py-4 relative z-10">
-            {/* 🚀 这里是新增的动态提示区 */}
             <div className="flex items-center gap-4">
               <span className="text-xs font-medium text-zinc-400">{input.length} / 500</span>
               <span className="flex items-center gap-1.5 rounded-full bg-blue-50/80 px-2.5 py-1 text-[11px] font-medium text-blue-600 border border-blue-100/50 transition-all duration-300">
@@ -153,7 +187,8 @@ export default function EnhancePromptPage() {
           </p>
         )}
 
-        {result && (
+        {/* 🚀 核心替换：使用 finalResult 来渲染结果 */}
+        {finalResult && (
           <div className="mt-10 space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 relative z-0">
             <div className="group rounded-[20px] border border-zinc-100 bg-white p-6 shadow-sm hover:border-zinc-200 transition-all">
               <div className="mb-4 flex items-center justify-between">
@@ -161,36 +196,36 @@ export default function EnhancePromptPage() {
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
                   中文 Prompt (国内平台)
                 </h3>
-                <button onClick={() => handleCopy(result.promptZh || "", "zh")} className="text-xs font-medium text-zinc-500 hover:text-zinc-800 transition-colors">
+                <button onClick={() => handleCopy(finalResult.promptZh || "", "zh")} className="text-xs font-medium text-zinc-500 hover:text-zinc-800 transition-colors">
                   {copied === "zh" ? <span className="text-green-600">✓ 已复制</span> : "复制中文"}
                 </button>
               </div>
               <p className="text-base leading-relaxed text-zinc-700 selection:bg-blue-100">
-                <TypewriterEffect text={result.promptZh || ""} speed={20} />
+                <TypewriterEffect text={finalResult.promptZh || ""} speed={20} />
               </p>
             </div>
 
             <div className="group relative rounded-[20px] border border-zinc-200 bg-zinc-50 p-6 shadow-sm transition-all hover:border-zinc-300 hover:shadow-md">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-800">🪄 英文 Prompt (国外平台)</h3>
-                <button onClick={() => handleCopy(result.promptEn || "", "en")} className="flex items-center space-x-1 rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm ring-1 ring-inset ring-zinc-200 transition-all hover:bg-zinc-100 hover:scale-105 active:scale-95">
+                <button onClick={() => handleCopy(finalResult.promptEn || "", "en")} className="flex items-center space-x-1 rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm ring-1 ring-inset ring-zinc-200 transition-all hover:bg-zinc-100 hover:scale-105 active:scale-95">
                   {copied === "en" ? <span className="text-green-600">✓ 已复制</span> : <span>复制英文</span>}
                 </button>
               </div>
               <p className="font-mono text-sm leading-relaxed text-zinc-800 selection:bg-zinc-200">
-                <TypewriterEffect text={result.promptEn || ""} speed={10} />
+                <TypewriterEffect text={finalResult.promptEn || ""} speed={10} />
               </p>
             </div>
 
-            {result.negativeEn && (
+            {finalResult.negativeEn && (
               <div className="rounded-[16px] border border-red-100 bg-red-50/50 p-5 shadow-sm">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-red-500">🚫 负面提示词 (规避缺陷)</h3>
-                  <button onClick={() => handleCopy(result.negativeEn || "", "neg")} className="text-xs text-red-400 hover:text-red-600 transition-colors">
+                  <button onClick={() => handleCopy(finalResult.negativeEn || "", "neg")} className="text-xs text-red-400 hover:text-red-600 transition-colors">
                     {copied === "neg" ? "已复制" : "复制"}
                   </button>
                 </div>
-                <p className="font-mono text-xs leading-relaxed text-red-700/80">{result.negativeEn}</p>
+                <p className="font-mono text-xs leading-relaxed text-red-700/80">{finalResult.negativeEn}</p>
               </div>
             )}
           </div>

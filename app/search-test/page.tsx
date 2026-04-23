@@ -41,11 +41,37 @@ export default function SearchTestPage() {
   const [activeModel, setActiveModel] = useState("gemini-free");
   const [savingIndex, setSavingIndex] = useState<number | null>(null);
 
+  // 🚀 新增：用于存放历史记录回显的数据
+  const [recoveredResult, setRecoveredResult] = useState<{ analysis: string; items: any[] } | null>(null);
+
   const { openModal } = useUpgradeModal();
-  // 🚨 注意这里：将泛型改为 any，因为我们现在返回的是 { analysis: string, items: any[] }
   const { loading, results, error, execute } = useAiTool<any>(); 
 
   const currentCost = getModelCost(activeModel, 'text');
+
+  // 🚀 新增：一进页面，如果有 task ID，立刻去“读档”
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get("task");
+    if (taskId) {
+      fetch(`/api/get-record?taskId=${taskId}`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.success && json.data) {
+            const record = json.data;
+            if (record.originalInput) setQuery(record.originalInput);
+            if (record.resultJson) {
+              try {
+                setRecoveredResult(JSON.parse(record.resultJson));
+              } catch (e) {
+                console.error("解析搜索记录失败:", e);
+              }
+            }
+          }
+        })
+        .catch(err => console.error("读取历史数据异常:", err));
+    }
+  }, []);
 
   useEffect(() => {
     if (error && (error.includes("次数") || error.includes("已用完") || error.includes("额度"))) {
@@ -55,6 +81,7 @@ export default function SearchTestPage() {
 
   const handleSearch = () => {
     if (!query.trim()) return;
+    setRecoveredResult(null); // 🚀 清空老记录，准备获取新数据
     execute("/api/ai/search-assets", { query, mode, targetModel: activeModel });
   };
 
@@ -79,9 +106,10 @@ export default function SearchTestPage() {
     window.open(fallbackUrl, "_blank");
   };
 
-  // 解析后端返回的数据结构
-  const safeItems = results?.items || [];
-  const aiAnalysisText = results?.analysis || "";
+  // 🚀 核心：优先使用历史数据，如果没有历史数据再用新生成的数据
+  const finalResult = recoveredResult || results;
+  const safeItems = finalResult?.items || [];
+  const aiAnalysisText = finalResult?.analysis || "";
   
   const groupedResults = PLATFORMS.map(platform => ({
     platform, items: safeItems.filter((r: any) => r.platform === platform)
@@ -92,7 +120,7 @@ export default function SearchTestPage() {
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-gray-900 pb-20 selection:bg-blue-100 font-sans transition-all duration-700">
       
-      {/* 顶部搜索区 - Apple 极简悬浮风格 */}
+      {/* 顶部搜索区 */}
       <div className={`sticky top-0 z-40 transition-all duration-500 ease-in-out ${hasSearched ? 'bg-white/80 backdrop-blur-2xl border-b border-black/5 shadow-sm py-4' : 'pt-[20vh] bg-transparent'}`}>
         <div className="max-w-4xl mx-auto px-4 flex flex-col gap-5">
           
@@ -150,7 +178,7 @@ export default function SearchTestPage() {
         ) : groupedResults.length > 0 ? (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-12">
             
-            {/* 🤖 20% AI 科技风：全局深度解析卡片 */}
+            {/* 全局深度解析卡片 */}
             {aiAnalysisText && (
               <div className="relative overflow-hidden rounded-[24px] bg-white border border-black/[0.03] shadow-[0_4px_30px_rgb(0,0,0,0.03)] p-6 md:p-8 group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-30 group-hover:opacity-50 transition-opacity"></div>

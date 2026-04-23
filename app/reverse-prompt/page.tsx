@@ -16,7 +16,9 @@ type PromptText = { zh: string; en: string; };
 type ReversePromptResult = { summary: AnalysisBlock[]; cinematography: AnalysisBlock[]; prompts: Record<OutputStyle, PromptText>; negativePrompt: PromptText; platformVariants: Record<TargetPlatform, PromptText>; disclaimer: string; };
 type PreviewItem = { key: string; name: string; size: number; url: string; type: "image" | "video"; };
 type TaskMeta = { taskId?: string; model?: string; fileCount?: number; outputLanguage?: OutputLanguage; outputStyle?: OutputStyle; targetPlatform?: TargetPlatform; };
-type RestoredFile = { name: string; size: number; type?: string; };
+
+// 🚀 新增：让历史图片也能被渲染出来，增加 url 属性
+type RestoredFile = { name: string; size: number; type?: string; url?: string; };
 
 const STYLE_LABELS: Record<OutputStyle, string> = { simple: "精简版", standard: "标准版", pro: "导演剪辑版(Pro)" };
 const STYLE_OPTIONS = Object.entries(STYLE_LABELS) as Array<[OutputStyle, string]>;
@@ -176,16 +178,18 @@ export default function ReversePromptPage() {
   const [streamedRaw, setStreamedRaw] = useState("");
   const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
+  // 🚀 修改：通过新架构，使用历史图片的真实 URL 展示缩略图
   const previewItems = useMemo<PreviewItem[]>(() => {
     if (files.length > 0) return files.map((file) => ({ key: `${file.name}-${file.lastModified}`, name: file.name, size: file.size, url: URL.createObjectURL(file), type: isVideoFile(file) ? "video" : "image", }));
-    if (restoredFiles.length > 0) return restoredFiles.map((file, idx) => ({ key: `restored-${idx}`, name: file.name, size: file.size, url: "", type: isVideoFile(file) ? "video" : "image", }));
+    if (restoredFiles.length > 0) return restoredFiles.map((file, idx) => ({ key: `restored-${idx}`, name: file.name, size: file.size, url: file.url || "", type: isVideoFile(file) ? "video" : "image", }));
     return [];
   }, [files, restoredFiles]);
 
   const currentCost = getModelCost(analyzerModel, 'vision');
 
-  useEffect(() => { return () => { previewItems.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url); }); }; }, [previewItems]);
+  useEffect(() => { return () => { previewItems.forEach((item) => { if (item.url && item.url.startsWith("blob:")) URL.revokeObjectURL(item.url); }); }; }, [previewItems]);
 
+  // 🚀 核心：全新接入“大一统流水表”的读档逻辑
   useEffect(() => {
     if (hasTriedRestore.current) return;
     hasTriedRestore.current = true;
@@ -196,20 +200,30 @@ export default function ReversePromptPage() {
     async function restoreTask() {
       try {
         setIsRestoring(true); setError("");
-        const response = await fetch(`/api/reverse-prompt?taskId=${encodeURIComponent(taskId)}`);
+        // 我们改为去请求咱们自己手写的新接口 get-record
+        const response = await fetch(`/api/get-record?taskId=${encodeURIComponent(taskId)}`);
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload?.error || "恢复失败");
+        
+        if (!response.ok || !payload.success) throw new Error(payload?.error || "恢复失败");
         if (cancelled) return;
-        const task = payload?.task ?? {};
-        if (payload?.result) setResult(payload.result as ReversePromptResult);
-        if (Array.isArray(task.inputFiles)) setRestoredFiles(task.inputFiles);
-        setTaskMeta({ taskId: task.id, model: task.model, fileCount: task.sourceCount, outputLanguage: task.outputLanguage, outputStyle: task.outputStyle, targetPlatform: task.targetPlatform });
-        if (task.outputLanguage) setOutputLanguage(task.outputLanguage);
-        if (task.outputStyle) setOutputStyle(task.outputStyle);
-        if (task.targetPlatform) setTargetPlatform(task.targetPlatform);
+        
+        const record = payload.data;
+        
+        // 1. 恢复 AI 解析的成果
+        if (record.resultJson) {
+           setResult(JSON.parse(record.resultJson));
+        }
+        
+        // 2. 恢复源文件缩略图 (originalInput 存的是图片的云端链接)
+        if (record.originalInput) {
+           const isVid = record.originalInput.includes('.mp4') || record.originalInput.includes('.mov');
+           setRestoredFiles([{ name: "已归档素材", size: 0, type: isVid ? "video/mp4" : "image/jpeg", url: record.originalInput }]);
+        }
+
+        setTaskMeta({ taskId: record.id, model: "历史记录", fileCount: 1 });
         window.setTimeout(() => { document.getElementById("reverse-prompt-result")?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 80);
       } catch (err) {
-        if (cancelled) return; setError(err instanceof Error ? err.message : "恢复结果失败");
+        if (cancelled) return; setError(err instanceof Error ? err.message : "读取存档失败");
       } finally {
         if (!cancelled) setIsRestoring(false);
       }
@@ -486,7 +500,7 @@ export default function ReversePromptPage() {
        {(isLoading || isRestoring) && !result && (
           <SoftCard className="scroll-mt-6" >
             <div id="reverse-prompt-loading">
-              <PanelTitle title={isRestoring ? "正在恢复结果" : uploadStatus ? uploadStatus : "AI 视觉引擎深度扫描中..."} description="正在拆解像素与光影关系，请不要离开页面" />
+              <PanelTitle title={isRestoring ? "正在从历史记录恢复..." : uploadStatus ? uploadStatus : "AI 视觉引擎深度扫描中..."} description={isRestoring ? "正在调取云端数据，马上就好" : "正在拆解像素与光影关系，请不要离开页面"} />
               
               <div className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-gray-100/80 shadow-inner">
                 <div 
@@ -496,19 +510,6 @@ export default function ReversePromptPage() {
                    <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]" style={{ backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }}></div>
                 </div>
               </div>
-
-              {streamedRaw ? (
-                <div className="mt-5 max-h-[300px] overflow-y-auto rounded-[18px] bg-gray-900 px-5 py-4 font-mono text-[13px] text-green-400 shadow-inner custom-scrollbar">
-                  <div className="sticky top-0 mb-3 flex items-center gap-2 bg-gray-900/90 py-1 text-xs text-gray-400 backdrop-blur-sm">
-                    <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span></span>RECEIVING STREAM DATA...
-                  </div>
-                  <div className="whitespace-pre-wrap break-all opacity-90 leading-relaxed">{streamedRaw}<span className="ml-1 inline-block h-3 w-2 animate-pulse bg-green-400"></span></div>
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  {[1, 2, 3].map((item) => ( <div key={item} className="rounded-[18px] border border-black/8 bg-white/86 p-4"><div className="mt-3 space-y-2"><div className="h-2.5 w-4/5 animate-pulse rounded-full bg-gray-200" /><div className="h-2.5 w-3/5 animate-pulse rounded-full bg-gray-200" /></div></div> ))}
-                </div>
-              )}
             </div>
           </SoftCard>
         )}
