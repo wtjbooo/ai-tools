@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getEnhanceSystemPrompt } from "@/app/config/prompts"; 
 import { withProtection } from "@/lib/api-wrapper";
 import { enhanceRateLimit } from "@/lib/ratelimit"; 
-import { getModelCost } from "@/lib/pricing";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY; 
 
@@ -16,13 +13,16 @@ const KEYS = {
 };
 
 function translateError(errorMsg: string): string {
+  // 🚀 精准透传 Google 官方的原生报错（比如 IP 不在服务区）
+  if (errorMsg.includes("Google官方报错")) return `⚠️ 谷歌官方通道拒绝访问: ${errorMsg.split('报错: ')[1] || "国内服务器可能被墙，请使用 N1N 中转模型"}`;
+  
   const msg = errorMsg.toLowerCase();
   if (msg.includes("api key") || msg.includes("未配置")) return "🔑 服务器密钥缺失：请检查环境变量的分组 Key 是否正确。";
   if (msg.includes("not found") && msg.includes("gemini")) return "🛰️ 模型失效：接口已更新，请尝试更换模型。";
   if (msg.includes("无可用渠道") || msg.includes("no available channel")) return "🔀 中转渠道异常：该模型当前无可用节点，请切换其他模型。";
   if (msg.includes("401") || msg.includes("invalid")) return "🚫 访问被拒绝：API Key 已失效或额度已耗尽。";
   if (msg.includes("503") || msg.includes("overloaded")) return "⏳ 服务器太火爆了：AI 正在排队，请稍后再试。";
-  if (msg.includes("failed to fetch") || msg.includes("timeout")) return "📡 网络连接超时：大模型思考太久了。";
+  if (msg.includes("failed to fetch") || msg.includes("timeout")) return "📡 网络连接超时：服务器网络无法访问该接口。";
   return `❌ 扩写失败：${errorMsg}`;
 }
 
@@ -51,14 +51,28 @@ export const POST = withProtection(
 
       let data;
 
-      // 🚦 轨道一：仅仅只有 gemini-free 走官方白嫖通道！
+      // 🚦 轨道一：官方白嫖通道 (已替换为底层 Fetch 引擎)
       if (targetModel === "gemini-free") {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
-          generationConfig: { responseMimeType: "application/json" }, 
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("服务器未配置 GEMINI_API_KEY");
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+          }),
         });
-        data = safeParseJSON(result.response.text());
+
+        if (!response.ok) { 
+          const err = await response.json(); 
+          throw new Error(`Google官方报错: ${err.error?.message || response.statusText}`); 
+        }
+        
+        const payload = await response.json();
+        const textResponse = payload.candidates[0].content.parts[0].text;
+        data = safeParseJSON(textResponse);
       } 
       // 🚦 轨道二：DeepSeek 原生直连通道
       else if (targetModel.includes("deepseek")) {
@@ -81,10 +95,10 @@ export const POST = withProtection(
         const payload = await response.json();
         data = safeParseJSON(payload.choices[0].message.content);
       } 
-      // 🚦 轨道三：其他所有高级模型 (包含 Gemini Pro) 统一走 N1N 中转付费通道！
+      // 🚦 轨道三：N1N 中转付费通道
       else {
         let selectedKey = KEYS.openai; 
-        let actualModel = targetModel; // 🚀 直接使用前端传来的名字，不做任何截断
+        let actualModel = targetModel; 
 
         if (targetModel.includes("gemini")) { 
           selectedKey = KEYS.gemini; 
