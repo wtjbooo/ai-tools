@@ -53,7 +53,7 @@ export const POST = withProtection(
 
       // 🚦 轨道一：仅仅只有 gemini-free 走官方白嫖通道！
       if (targetModel === "gemini-free") {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" }); 
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
           generationConfig: { responseMimeType: "application/json" }, 
@@ -84,11 +84,10 @@ export const POST = withProtection(
       // 🚦 轨道三：其他所有高级模型 (包含 Gemini Pro) 统一走 N1N 中转付费通道！
       else {
         let selectedKey = KEYS.openai; 
-        let actualModel = targetModel;
+        let actualModel = targetModel; // 🚀 直接使用前端传来的名字，不做任何截断
 
         if (targetModel.includes("gemini")) { 
           selectedKey = KEYS.gemini; 
-          actualModel = "gemini-1.5-pro"; // N1N 渠道里识别的规范名字
         } else if (targetModel.includes("claude")) {
           selectedKey = KEYS.claude;
         }

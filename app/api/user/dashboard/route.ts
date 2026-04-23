@@ -39,11 +39,12 @@ export async function GET() {
       },
     });
 
-    // 2. 完美修复 2：彻底接入新版积分制逻辑！避免 user.credits 引发崩溃
+    // 2. 完美修复 2：彻底接入新版积分制逻辑，同步真实钱包！
     const DAILY_FREE_POINTS = 100; // 与 lib/quota.ts 保持一致
     const now = new Date();
     const lastUsed = user.lastUsedDate;
     let usedCredits = user.freeUsesToday;
+    const bonusCredits = user.bonusCredits || 0; // 👈 获取真实的加油包余额
 
     // 跨天判断：如果最后一次使用时间不是今天，说明今天是全新的，已用积分为 0
     const isToday =
@@ -56,9 +57,10 @@ export async function GET() {
       usedCredits = 0; 
     }
 
-    // Pro 用户展示无限额度，普通用户计算剩余积分
-    const maxCredits = user.isPro ? 99999 : DAILY_FREE_POINTS;
-    const remainingCredits = user.isPro ? 99999 : Math.max(0, maxCredits - usedCredits);
+    // 🚀 把加油包算进大盘里！
+    const baseCredits = user.isPro ? 99999 : DAILY_FREE_POINTS;
+    const maxCredits = baseCredits + bonusCredits; // 总额度 = 基础 + 加油包
+    const remainingCredits = Math.max(0, maxCredits - usedCredits);
 
     // 3. 构造友好的时间与数据展示
     const formattedTasks = recentTasks.map(task => {
@@ -74,7 +76,6 @@ export async function GET() {
 
       return {
         id: task.id,
-        // 👈 配合上面的修改：读取 rawResponseText 作为摘要展示
         title: task.rawResponseText ? task.rawResponseText.slice(0, 20) + "..." : "AI 视觉分析任务", 
         type: "video", 
         time: timeStr,
@@ -82,9 +83,10 @@ export async function GET() {
       };
     });
 
+    // 💡 只有这一个干净利落的 return
     return NextResponse.json({
       quota: {
-        used: user.isPro ? 0 : usedCredits, // Pro 用户显示已用 0
+        used: usedCredits, // 🚀 真实显示用掉的积分
         total: maxCredits,
         remaining: remainingCredits
       },
