@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-// 注意：这里导入的是扩写的 Prompt 和 限流器
 import { getEnhanceSystemPrompt } from "@/app/config/prompts"; 
 import { withProtection } from "@/lib/api-wrapper";
 import { enhanceRateLimit } from "@/lib/ratelimit"; 
@@ -10,18 +9,17 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY; 
 
-// 🚀 核心修复：读取你 .env 里的分组 Key
 const KEYS = {
   gemini: process.env.GEMINI_GROUP_KEY,   
   openai: process.env.OPENAI_GROUP_KEY,   
   claude: process.env.CLAUDE_GROUP_KEY,   
 };
 
-// 💡 终极汉化报错拦截
 function translateError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase();
   if (msg.includes("api key") || msg.includes("未配置")) return "🔑 服务器密钥缺失：请检查环境变量的分组 Key 是否正确。";
-  if (msg.includes("not found") && msg.includes("gemini")) return "🛰️ 模型失效：接口已更新，请换个模型试试。";
+  if (msg.includes("not found") && msg.includes("gemini")) return "🛰️ 模型失效：Google 官方接口版本已更新，已尝试自动兼容。";
+  if (msg.includes("无可用渠道") || msg.includes("no available channel")) return "🔀 中转渠道异常：该模型当前无可用节点，请切换其他模型。";
   if (msg.includes("401") || msg.includes("invalid")) return "🚫 访问被拒绝：API Key 已失效或额度已耗尽。";
   if (msg.includes("503") || msg.includes("overloaded")) return "⏳ 服务器太火爆了：AI 正在排队，请稍后再试。";
   if (msg.includes("failed to fetch") || msg.includes("timeout")) return "📡 网络连接超时：大模型思考太久了（建议更换出字快的模型，如 Gemini Flash 或 GPT-4o-mini）。";
@@ -42,16 +40,26 @@ function safeParseJSON(text: string) {
 export const POST = withProtection(
   async (req: NextRequest, { userId, remainingQuota }) => {
     try {
-      const { query, mode, targetModel = "gemini-free", targetPlatform = "generic" } = await req.json();
-      const systemPrompt = getEnhanceSystemPrompt(query, mode, targetModel, targetPlatform);
+      const body = await req.json();
+      const { mode, targetModel = "gemini-free", targetPlatform = "generic" } = body;
+      
+      // 🚀 核心修复 1：地毯式搜索前端传来的内容，确保绝对不会漏掉用户的输入！
+      const userInput = body.prompt || body.query || body.keyword || body.text || "";
+      if (!userInput.trim()) throw new Error("接收到的输入为空，请检查网络或刷新页面重试。");
+
+      const systemPrompt = getEnhanceSystemPrompt(userInput, mode, targetModel, targetPlatform);
+
+      // 🚀 核心修复 2：防胡说八道补丁！强行把用户真实输入贴在 AI 脸上，严禁输出示例！
+      const finalPrompt = `${systemPrompt}\n\n====================\n【系统最高指令】：请严格基于以下用户的真实输入进行扩写！绝不允许照抄你在系统提示词里看到的“液态金属实验室”等示例内容！\n【用户真实输入】：${userInput}`;
 
       let data;
 
-      // 🚦 轨道一：Gemini 免费版走官方直连通道
-      if (targetModel === "gemini-free") {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
+      // 🚦 轨道一：Gemini 全系走官方直连 (避开 N1N 无可用渠道的问题，加上 -latest 解决 404)
+      if (targetModel.includes("gemini")) {
+        const modelName = targetModel.includes("pro") ? "gemini-1.5-pro-latest" : "gemini-1.5-flash-latest";
+        const model = genAI.getGenerativeModel({ model: modelName }); 
         const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
+          contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
           generationConfig: { responseMimeType: "application/json" }, 
         });
         data = safeParseJSON(result.response.text());
@@ -66,7 +74,7 @@ export const POST = withProtection(
             model: targetModel,
             messages: [
               { role: "system", content: "你是一个只能输出 JSON 的 AI 助手。" },
-              { role: "user", content: systemPrompt }
+              { role: "user", content: finalPrompt }
             ],
             temperature: 0.7,
             response_format: { type: "json_object" } 
@@ -77,28 +85,24 @@ export const POST = withProtection(
         const payload = await response.json();
         data = safeParseJSON(payload.choices[0].message.content);
       } 
-      // 🚦 轨道三：高级模型全部走 N1N 中转通道 (智能匹配对应的 Key)
+      // 🚦 轨道三：其他高级模型走 N1N 中转通道
       else {
-        let selectedKey = KEYS.openai; // 默认给 OpenAI
-        let actualModel = targetModel;
-
-        if (targetModel.includes("gemini")) { selectedKey = KEYS.gemini; actualModel = "gemini-1.5-pro"; } // 修复 Pro 版调用
-        else if (targetModel.includes("claude")) selectedKey = KEYS.claude;
-
+        let selectedKey = KEYS.openai; 
+        if (targetModel.includes("claude")) selectedKey = KEYS.claude;
         if (!selectedKey) throw new Error(`该模型对应的 API Key 分组尚未配置`);
 
         const response = await fetch(`${N1N_BASE_URL}/chat/completions`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${selectedKey}` },
           body: JSON.stringify({
-            model: actualModel,
-            messages: [{ role: "user", content: systemPrompt }],
+            model: targetModel,
+            messages: [{ role: "user", content: finalPrompt }],
             temperature: 0.7,
-            response_format: actualModel.includes("gpt") || actualModel.includes("gemini") ? { type: "json_object" } : undefined 
+            response_format: targetModel.includes("gpt") ? { type: "json_object" } : undefined 
           }),
         });
 
-        if (!response.ok) { const err = await response.json(); throw new Error(err.error?.message || `请求 ${actualModel} 失败`); }
+        if (!response.ok) { const err = await response.json(); throw new Error(err.error?.message || `请求 ${targetModel} 失败`); }
         const payload = await response.json();
         data = safeParseJSON(payload.choices[0].message.content); 
       }
