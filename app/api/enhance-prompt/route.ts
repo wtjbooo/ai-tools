@@ -1,7 +1,9 @@
+// app/api/enhance-prompt/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getEnhanceSystemPrompt } from "@/app/config/prompts"; 
 import { withProtection } from "@/lib/api-wrapper";
 import { enhanceRateLimit } from "@/lib/ratelimit"; 
+import prisma from "@/lib/prisma"; // 🚀 新增：引入 Prisma 客户端
 
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY; 
@@ -13,7 +15,6 @@ const KEYS = {
 };
 
 function translateError(errorMsg: string): string {
-  // 🚀 精准透传 Google 官方的原生报错（比如 IP 不在服务区）
   if (errorMsg.includes("Google官方报错")) return `⚠️ 谷歌官方通道拒绝访问: ${errorMsg.split('报错: ')[1] || "国内服务器可能被墙，请使用 N1N 中转模型"}`;
   
   const msg = errorMsg.toLowerCase();
@@ -51,7 +52,6 @@ export const POST = withProtection(
 
       let data;
 
-      // 🚦 轨道一：官方白嫖通道 (已替换为底层 Fetch 引擎)
       if (targetModel === "gemini-free") {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) throw new Error("服务器未配置 GEMINI_API_KEY");
@@ -74,7 +74,6 @@ export const POST = withProtection(
         const textResponse = payload.candidates[0].content.parts[0].text;
         data = safeParseJSON(textResponse);
       } 
-      // 🚦 轨道二：DeepSeek 原生直连通道
       else if (targetModel.includes("deepseek")) {
         if (!DEEPSEEK_API_KEY) throw new Error("服务端未配置 DEEPSEEK_API_KEY");
         const response = await fetch("https://api.deepseek.com/chat/completions", {
@@ -95,7 +94,6 @@ export const POST = withProtection(
         const payload = await response.json();
         data = safeParseJSON(payload.choices[0].message.content);
       } 
-      // 🚦 轨道三：N1N 中转付费通道
       else {
         let selectedKey = KEYS.openai; 
         let actualModel = targetModel; 
@@ -122,6 +120,30 @@ export const POST = withProtection(
         if (!response.ok) { const err = await response.json(); throw new Error(err.error?.message || `请求 ${actualModel} 失败`); }
         const payload = await response.json();
         data = safeParseJSON(payload.choices[0].message.content); 
+      }
+
+      // ==========================================
+      // 🚀 新增：将生成的任务记录写入大盘统一流水表
+      // ==========================================
+      if (userId) {
+        try {
+          // 清洗输入词，作为大盘显示的标题，太长就截断
+          const cleanTitle = userInput.replace(/[\r\n#*]/g, '').trim();
+          const displayTitle = cleanTitle.length > 20 ? cleanTitle.slice(0, 20) + "..." : cleanTitle;
+
+          await prisma.aIGenerationRecord.create({
+            data: {
+              userId: userId,
+              toolType: "enhance", // 标记为扩写功能
+              title: `扩写: ${displayTitle || "未命名任务"}`, 
+              cost: 2, // 默认文本任务扣除 2 积分
+              status: "success"
+            }
+          });
+        } catch (dbErr) {
+          console.error("[写入流水表失败 - Enhance]:", dbErr);
+          // 注意：此处不抛出异常，保障用户能正常获取 AI 结果
+        }
       }
 
       return NextResponse.json({ 

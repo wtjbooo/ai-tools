@@ -24,17 +24,17 @@ export async function GET() {
 
     const user = session.user;
 
-    // 1. 获取近期轨迹（优化：将 3 条提升为 5 条，让前端页面更丰满）
-    const recentTasks = await prisma.reversePromptTask.findMany({
+    // 1. 获取近期轨迹（🚀 核心优化：改成查询全新的 AIGenerationRecord 万能流水表）
+    const recentTasks = await prisma.aIGenerationRecord.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       take: 5, 
       select: {
         id: true,
-        targetPlatform: true,
+        toolType: true,
+        title: true,
         status: true,
         createdAt: true,
-        rawResponseText: true, 
       },
     });
 
@@ -65,7 +65,7 @@ export async function GET() {
     const displayTotal = baseCredits + Math.max(0, dbBonusCredits - dbUsedCredits);
     const remainingCredits = Math.max(0, baseCredits + dbBonusCredits - dbUsedCredits);
 
-    // 3. 构造友好的时间与数据展示（优化：增加了分钟级别的精准计算）
+    // 3. 构造友好的时间与数据展示
     const formattedTasks = recentTasks.map(task => {
       const taskDate = new Date(task.createdAt);
       const diffMs = now.getTime() - taskDate.getTime();
@@ -79,20 +79,27 @@ export async function GET() {
       else if (diffHrs < 48) timeStr = "昨天";
       else timeStr = `${Math.floor(diffHrs / 24)} 天前`;
 
-      // 提取标题，做安全校验
-      let title = "AI 视觉分析任务";
-      if (task.rawResponseText && typeof task.rawResponseText === 'string') {
-         // 去除可能包含的 Markdown 符号或换行符，让标题更干净
-         const cleanText = task.rawResponseText.replace(/[\r\n#*]/g, '').trim();
-         title = cleanText.length > 20 ? cleanText.slice(0, 20) + "..." : cleanText;
+      // 🚀 核心优化：根据不同的工具类型，给前端返回对应的图标和中文名
+      let platformName = "官方原生工具";
+      let frontendType = "sparkles"; // 默认星光图标
+
+      if (task.toolType === "reverse") {
+         platformName = "图像反推";
+         frontendType = "image";
+      } else if (task.toolType === "enhance") {
+         platformName = "魔法扩写";
+         frontendType = "video";
+      } else if (task.toolType === "search") {
+         platformName = "全网搜索";
+         frontendType = "sparkles";
       }
 
       return {
         id: task.id,
-        title: title || "AI 视觉分析任务", 
-        type: "video", // 根据你的业务，如果有图片任务可以根据数据库字段动态判断
+        title: task.title || "AI 灵感任务", 
+        type: frontendType, 
         time: timeStr,
-        platform: task.targetPlatform || "通用",
+        platform: platformName,
       };
     });
 

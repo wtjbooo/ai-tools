@@ -134,6 +134,8 @@ model User {
   collections        Collection[]
   orders        Order[]
 
+  aiRecords          AIGenerationRecord[]
+
   // ==========================================
   // 💡 新增：商业化与每日额度限制字段
   // ==========================================
@@ -344,4 +346,31 @@ model Order {
   @@index([userId, status])
   @@index([outTradeNo])
   @@index([createdAt])
+}
+
+// ==========================================
+// 💡 新增：AI 生成通用历史流水表 (Dashboard 专用)
+// ==========================================
+model AIGenerationRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  // 记录属于哪个功能，例如: "reverse", "enhance", "search"
+  toolType    String   
+  
+  // 前端卡片展示的标题/摘要
+  title       String   @db.Text
+  
+  // 任务状态: "success", "failed", "pending"
+  status      String   @default("success") 
+  
+  // 这次任务消耗了多少积分
+  cost        Int      @default(0)
+
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([toolType])
 }
