@@ -51,7 +51,7 @@ export default function GuideAndShowcase() {
           <div className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div className="relative h-56 bg-gray-100">
               <img 
-                src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&q=80" 
+                src="https://imgchr.com/i/peWFIO0" 
                 alt="赛博朋克摄影案例" 
                 className="absolute inset-0 h-full w-full object-cover"
               />
