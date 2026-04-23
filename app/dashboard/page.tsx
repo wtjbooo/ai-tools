@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
@@ -17,10 +16,8 @@ import {
   Loader2
 } from "lucide-react";
 
-// 🚀 1. 引入弹窗全局遥控器
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
 
-// 定义数据类型
 interface DashboardData {
   quota: { used: number; total: number; remaining: number };
   recentActivities: Array<{
@@ -34,8 +31,6 @@ interface DashboardData {
 
 export default function DashboardOverview() {
   const { user } = useAuth();
-  
-  // 🚀 2. 拿到遥控器上的开门按钮
   const { openModal } = useUpgradeModal();
   
   const [data, setData] = useState<DashboardData | null>(null);
@@ -51,20 +46,23 @@ export default function DashboardOverview() {
         }
         const json = await res.json();
         setData(json);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        // 优化：TypeScript 规范，捕获到的 error 类型推荐设为 unknown
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("发生未知错误");
+        }
       } finally {
         setIsLoading(false);
       }
     }
 
-    // 只要有用户，就开始拉取数据
     if (user) {
        fetchDashboardData();
     }
   }, [user]);
 
-  // 如果正在加载，显示高科技感的骨架屏
   if (isLoading || !data) {
     return (
        <div className="flex flex-col items-center justify-center min-h-[60vh] text-zinc-400">
@@ -82,7 +80,9 @@ export default function DashboardOverview() {
     );
   }
 
-  const { quota, recentActivities } = data;
+  // 🛡️ 优化：防御性编程。即使后端接口暂时没传 recentActivities 字段，也不会导致 .map() 报错崩溃
+  const quota = data.quota;
+  const recentActivities = data.recentActivities || []; 
   const percent = Math.min((quota.used / quota.total) * 100, 100);
 
   return (
@@ -98,7 +98,6 @@ export default function DashboardOverview() {
           <p className="mt-2 text-[14px] text-zinc-500">这里是你的专属 AI 灵感控制中心。</p>
         </div>
         
-        {/* 🚀 3. 给按钮绑上 onClick={openModal} 事件 */}
         <button 
           onClick={openModal}
           className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-zinc-900/20 hover:bg-zinc-800 transition-all active:scale-95"
@@ -110,8 +109,7 @@ export default function DashboardOverview() {
 
       {/* 上半部分：核心数据与快捷入口 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* ✨ 核心算力额度卡片 (真实数据驱动!) ✨ */}
+        {/* 核心算力额度卡片保持不变 */}
         <div className="md:col-span-2 relative overflow-hidden rounded-[32px] bg-white p-8 shadow-[0_12px_40px_rgba(0,0,0,0.04)] border border-zinc-100">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
              <Zap className="w-32 h-32 text-indigo-600" />
@@ -131,7 +129,6 @@ export default function DashboardOverview() {
               </div>
             </div>
             
-            {/* 充满科技感的进度条 */}
             <div className="h-3 w-full bg-zinc-100 rounded-full overflow-hidden shadow-inner">
               <div 
                 className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 relative transition-all duration-1000 ease-out"
@@ -144,7 +141,7 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* 快捷通道 */}
+        {/* 快捷通道保持不变 */}
         <div className="rounded-[32px] bg-gradient-to-br from-zinc-900 to-zinc-800 p-8 shadow-[0_12px_40px_rgba(24,24,27,0.15)] text-white relative overflow-hidden group">
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay" />
           <h3 className="text-[16px] font-bold mb-6 text-zinc-100">快速启动</h3>
@@ -170,7 +167,7 @@ export default function DashboardOverview() {
       {/* 下半部分：生成记录与系统状态 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* ✨ 近期轨迹列表 (真实数据驱动!) ✨ */}
+        {/* 近期轨迹列表 */}
         <div className="md:col-span-2 rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-zinc-100 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[16px] font-bold text-zinc-900 flex items-center gap-2">
@@ -198,6 +195,7 @@ export default function DashboardOverview() {
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[11px] font-medium text-zinc-500">{activity.platform}</span>
                       <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
+                      {/* 这里的 time 将由后端直接返回格式化好的字符串，如 "10分钟前" */}
                       <span className="text-[11px] text-zinc-400">{activity.time}</span>
                     </div>
                   </div>
@@ -210,7 +208,7 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* ✨ 网络节点与系统公告 ✨ */}
+        {/* 网络节点状态保持不变 */}
         <div className="rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-zinc-100 flex flex-col relative overflow-hidden">
           <div className="absolute -right-6 -top-6 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
           
@@ -220,7 +218,6 @@ export default function DashboardOverview() {
           </h3>
 
           <div className="space-y-5 flex-1">
-            {/* 状态灯 */}
             <div className="flex items-center justify-between p-4 rounded-[20px] bg-zinc-50 border border-zinc-100">
               <div className="flex items-center gap-3">
                 <div className="relative flex h-3 w-3">
@@ -232,7 +229,6 @@ export default function DashboardOverview() {
               <span className="text-[11px] font-mono text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-md">99.9%</span>
             </div>
 
-            {/* 负载条 */}
             <div className="px-1 space-y-2">
               <div className="flex justify-between text-[12px] font-medium">
                 <span className="text-zinc-500 flex items-center gap-1.5"><Cpu className="w-3.5 h-3.5" /> N1N Gateway</span>
@@ -243,7 +239,6 @@ export default function DashboardOverview() {
               </div>
             </div>
 
-            {/* 公告 */}
             <div className="mt-auto pt-4 border-t border-zinc-100">
                <span className="inline-block px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-md mb-2">UPDATE</span>
                <p className="text-[13px] text-zinc-600 leading-relaxed font-medium">
