@@ -2,39 +2,46 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { User, Shield, Zap, LogOut, Sparkles, CheckCircle2, Mail, Fingerprint } from "lucide-react";
+import { signOut } from "next-auth/react"; // 引入真实的退出登录机制
+import { User, Shield, Zap, LogOut, Sparkles, CheckCircle2, Mail, Fingerprint, Copy, Check } from "lucide-react";
 
 export default function SettingsPage() {
   const { user } = useAuth();
   
-  // 引擎状态持久化 (真实可用)
   const [engineMode, setEngineMode] = useState<"speed" | "quality">("quality");
   const [isSaving, setIsSaving] = useState(false);
   const [nickname, setNickname] = useState("");
+  
+  // 复制状态控制
+  const [copiedId, setCopiedId] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
 
-  // 初始化读取本地偏好
   useEffect(() => {
     if (user?.name) setNickname(user.name);
     const savedMode = localStorage.getItem("xaira_engine_mode") as "speed" | "quality";
     if (savedMode) setEngineMode(savedMode);
   }, [user]);
 
-  // 切换引擎并保存到本地
   const handleEngineChange = (mode: "speed" | "quality") => {
     setEngineMode(mode);
     localStorage.setItem("xaira_engine_mode", mode);
   };
 
-  // 模拟保存操作
   const handleSaveProfile = () => {
     setIsSaving(true);
-    // 这里未来接入你的 /api/user/update 接口
     setTimeout(() => setIsSaving(false), 800);
   };
 
-  // 模拟退出登录
-  const handleLogout = () => {
-    alert("接入 Auth.js 的 signOut() 即可安全退出");
+  // 一键复制功能
+  const handleCopy = (text: string, type: 'id' | 'email') => {
+    navigator.clipboard.writeText(text);
+    if (type === 'id') {
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    } else {
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 2000);
+    }
   };
 
   return (
@@ -50,7 +57,7 @@ export default function SettingsPage() {
 
       <div className="space-y-8">
         
-        {/* 模块一：丰满后的个人资料 */}
+        {/* 模块一：个人资料 (Pro 级排版) */}
         <section className="bg-white rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden">
           <div className="p-6 sm:p-8 border-b border-zinc-100 bg-zinc-50/50 flex items-center gap-3">
             <div className="p-2 bg-white rounded-xl shadow-sm border border-zinc-100">
@@ -60,7 +67,7 @@ export default function SettingsPage() {
           </div>
           
           <div className="p-6 sm:p-8 space-y-8">
-            {/* 头像与昵称区域 */}
+            {/* 上半部：可编辑区 */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
               <div className="relative group">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-50 border border-indigo-50 flex items-center justify-center shrink-0 shadow-inner">
@@ -73,51 +80,64 @@ export default function SettingsPage() {
                 </div>
               </div>
               
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 space-y-1.5">
                 <label className="block text-sm font-medium text-zinc-700">显示昵称</label>
                 <div className="flex items-center gap-3 max-w-md">
                   <input 
                     type="text" 
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-sm font-medium text-zinc-900"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-zinc-200 shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-sm font-medium text-zinc-900"
                   />
                   <button 
                     onClick={handleSaveProfile}
-                    className="px-5 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-xl hover:bg-zinc-800 transition-colors active:scale-95 whitespace-nowrap min-w-[80px]"
+                    className="px-6 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-xl hover:bg-zinc-800 transition-colors active:scale-95 whitespace-nowrap"
                   >
-                    {isSaving ? "保存..." : "保存"}
+                    {isSaving ? "保存中..." : "保存更改"}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* 分割线 */}
-            <div className="h-px w-full bg-zinc-100"></div>
-
-            {/* 新增：只读账号信息展示，填补视觉空白 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <label className="text-xs font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
+            {/* 下半部：只读身份卡片 (高级灰底框) */}
+            <div className="bg-zinc-50/80 rounded-2xl p-5 border border-zinc-100/80 grid grid-cols-1 sm:grid-cols-2 gap-6 relative overflow-hidden">
+              <div className="space-y-1.5 relative z-10">
+                <label className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5" /> 绑定邮箱
                 </label>
-                <p className="text-sm font-medium text-zinc-900">
-                  {user?.email || "未绑定邮箱"}
-                </p>
+                <div className="flex items-center gap-2 group/copy">
+                  <p className="text-sm font-medium text-zinc-900">
+                    {user?.email || "未绑定邮箱"}
+                  </p>
+                  {user?.email && (
+                    <button onClick={() => handleCopy(user.email!, 'email')} className="text-zinc-400 hover:text-indigo-500 transition-colors">
+                      {copiedEmail ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 opacity-0 group-hover/copy:opacity-100 transition-opacity" />}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
+
+              <div className="space-y-1.5 relative z-10">
+                <label className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
                   <Fingerprint className="w-3.5 h-3.5" /> 创作者 ID
                 </label>
-                <p className="text-sm font-mono text-zinc-500">
-                  {user?.id ? `usr_${user.id.substring(0, 8)}...` : "未知"}
-                </p>
+                <div className="flex items-center gap-2 group/copy">
+                  <p className="text-sm font-mono text-zinc-500">
+                    {user?.id ? `usr_${user.id}` : "未知"}
+                  </p>
+                  {user?.id && (
+                    <button onClick={() => handleCopy(`usr_${user.id}`, 'id')} className="text-zinc-400 hover:text-indigo-500 transition-colors">
+                      {copiedId ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 opacity-0 group-hover/copy:opacity-100 transition-opacity" />}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+
           </div>
         </section>
 
-        {/* 模块二：AI 引擎偏好 (真实交互版) */}
+        {/* 模块二：AI 引擎偏好 (保持科技感) */}
         <section className="bg-white rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden relative group">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
           
@@ -144,7 +164,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h4 className={`font-bold ${engineMode === "speed" ? "text-indigo-900" : "text-zinc-700"}`}>极速轻量模式</h4>
-                  <p className="text-xs text-zinc-500 mt-1">响应极快，调用轻量级模型，适合脑暴与初步探索。</p>
+                  <p className="text-xs text-zinc-500 mt-1">调用低延迟模型，适合灵感爆发期的快速试错。</p>
                 </div>
               </div>
 
@@ -160,7 +180,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h4 className={`font-bold ${engineMode === "quality" ? "text-purple-900" : "text-zinc-700"}`}>深度推理模式</h4>
-                  <p className="text-xs text-zinc-500 mt-1">质量优先，调用顶级视觉/语言模型进行精细化生成。</p>
+                  <p className="text-xs text-zinc-500 mt-1">调用满血版视觉语言大模型，适合精细化定稿。</p>
                 </div>
               </div>
             </div>
@@ -168,15 +188,15 @@ export default function SettingsPage() {
         </section>
 
         {/* 模块三：危险区域 */}
-        <section className="bg-white rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-red-50/50 overflow-hidden">
-          <div className="p-6 sm:p-8 flex items-center justify-between">
+        <section className="bg-white rounded-[32px] shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-red-100/60 overflow-hidden">
+          <div className="p-6 sm:p-8 flex items-center justify-between bg-gradient-to-r from-red-50/30 to-transparent">
             <div>
-              <h2 className="text-lg font-bold text-zinc-900">账号操作</h2>
-              <p className="text-sm text-zinc-500 mt-1">退出当前设备登录状态，保障资产安全。</p>
+              <h2 className="text-[15px] font-bold text-red-900">账号操作</h2>
+              <p className="text-[13px] text-red-600/70 mt-0.5">退出当前设备登录状态，保障资产安全。</p>
             </div>
             <button 
-              onClick={handleLogout}
-              className="px-5 py-2.5 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors flex items-center gap-2"
+              onClick={() => signOut({ callbackUrl: "/login" })} // 真实执行登出并跳回登录页
+              className="px-5 py-2 text-sm font-bold text-red-600 bg-white border border-red-200 shadow-sm hover:bg-red-50 hover:border-red-300 rounded-xl transition-all active:scale-95 flex items-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               退出登录
