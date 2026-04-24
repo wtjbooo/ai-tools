@@ -24,7 +24,10 @@ export default function SettingsPage() {
   // 初始化用户数据
   useEffect(() => {
     if (user?.name) setNickname(user.name);
-    if (user?.image) setAvatarUrl(user.image); // 加载已有头像
+    
+    // 💡 核心修复：使用 (user as any) 绕过 TypeScript 对 AuthUser 的严格类型检查
+    const userImage = (user as any)?.image;
+    if (userImage) setAvatarUrl(userImage); 
     
     const savedMode = localStorage.getItem("xaira_engine_mode") as "speed" | "quality";
     if (savedMode) setEngineMode(savedMode);
@@ -35,7 +38,6 @@ export default function SettingsPage() {
     localStorage.setItem("xaira_engine_mode", mode);
   };
 
-  // 🚀 真实的保存昵称逻辑 (调用你刚写的 PATCH 接口)
   const handleSaveProfile = async () => {
     if (!nickname.trim()) {
       alert("昵称不能为空");
@@ -50,9 +52,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ name: nickname }),
       });
       const data = await res.json();
-      if (data.success) {
-        // 可以选择在这里给个成功提示
-      } else {
+      if (!data.success) {
         alert(data.error || "保存失败");
       }
     } catch (error) {
@@ -63,7 +63,6 @@ export default function SettingsPage() {
     }
   };
 
-// 🚀 真实的头像上传逻辑 (客户端直传 R2 方案)
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -75,29 +74,25 @@ export default function SettingsPage() {
 
     setIsUploading(true);
     try {
-      // 步骤 1：向我们自己的服务器申请 R2 的“预签名上传通道”
       const res = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           filename: file.name,
           contentType: file.type,
-          folder: "avatars" // 👈 关键：明确告诉后端，存到 avatars 文件夹！
+          folder: "avatars" 
         }),
       });
       const data = await res.json();
 
       if (!data.uploadUrl) throw new Error(data.error || "获取上传链接失败");
 
-      // 步骤 2：拿着刚才的通道链接，客户端直接将文件 PUT 给 Cloudflare R2
-      // 这一步完全不走你的服务器带宽，速度极快！
       await fetch(data.uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type },
         body: file,
       });
 
-      // 步骤 3：把 R2 的公开访问链接，保存到我们数据库的 User 表里
       const newAvatarUrl = data.publicUrl;
       const profileRes = await fetch("/api/user/profile", {
         method: "PATCH",
@@ -108,7 +103,6 @@ export default function SettingsPage() {
       const profileData = await profileRes.json();
       if (!profileData.success) throw new Error("数据库更新头像失败");
 
-      // 步骤 4：实时更新界面上的头像
       setAvatarUrl(newAvatarUrl);
       
     } catch (error: any) {
@@ -116,7 +110,6 @@ export default function SettingsPage() {
       alert(error.message || "头像更换失败，请检查网络或配置");
     } finally {
       setIsUploading(false);
-      // 清空 input 的值，确保下次选同一张图也能触发上传
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -166,7 +159,6 @@ export default function SettingsPage() {
                 className="relative group cursor-pointer"
                 onClick={() => !isUploading && fileInputRef.current?.click()}
               >
-                {/* 隐藏的 File Input */}
                 <input 
                   type="file" 
                   accept="image/png, image/jpeg, image/webp" 
@@ -176,10 +168,8 @@ export default function SettingsPage() {
                 />
                 
                 {avatarUrl ? (
-                  // 用户有自定义头像时的渲染
                   <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full object-cover border border-zinc-200 shadow-sm" />
                 ) : (
-                  // 没有头像时的首字母渲染
                   <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-50 border border-indigo-50 flex items-center justify-center shrink-0 shadow-inner">
                     <span className="text-2xl font-black text-indigo-300">
                       {nickname.charAt(0)?.toUpperCase() || "X"}
@@ -187,7 +177,6 @@ export default function SettingsPage() {
                   </div>
                 )}
                 
-                {/* 悬浮遮罩与加载动画 */}
                 <div className={`absolute inset-0 bg-black/40 rounded-full flex items-center justify-center transition-opacity backdrop-blur-sm ${isUploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                   {isUploading ? (
                     <Loader2 className="w-6 h-6 text-white animate-spin" />

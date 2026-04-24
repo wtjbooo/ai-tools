@@ -24,6 +24,7 @@ export type AuthUser = {
   nickname?: string | null;
   name?: string | null;
   avatar?: string | null;
+  image?: string | null; // 💡 核心修复 1：增加 image 字段，对齐 Prisma
   isPro?: boolean;
 };
 
@@ -103,6 +104,7 @@ function normalizeUser(value: unknown): AuthUser | null {
     nickname: (record.nickname || record.name) as string | null,
     name: typeof record.name === "string" ? record.name : null,
     avatar: rawImage, 
+    image: rawImage, // 💡 核心修复 2：将数据同时映射给 image，保持全局兼容
     isPro: Boolean(record.isPro || record.isVip), 
   };
 }
@@ -265,7 +267,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 export function AuthButton() {
   const { user, isAuthenticated, isReady, openLogin, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const router = useRouter(); // ✨ 引入路由钩子
+  const router = useRouter(); 
 
   if (!isReady) {
     return (
@@ -288,9 +290,9 @@ export function AuthButton() {
           }`}
         >
           <div className="relative">
-            {user.avatar ? (
+            {user.avatar || user.image ? (
               <img 
-                src={user.avatar} 
+                src={(user.avatar || user.image) as string} 
                 alt="Avatar" 
                 className={`h-6 w-6 rounded-full object-cover border ${user.isPro ? "border-amber-300" : "border-zinc-200"}`} 
               />
@@ -329,7 +331,6 @@ export function AuthButton() {
                 </div>
               )}
 
-              {/* ✨ 核心修改：一键进入 Dashboard ✨ */}
               <button
                 onClick={() => {
                   setIsDropdownOpen(false);
@@ -370,7 +371,7 @@ export function AuthButton() {
 }
 
 // ----------------------------------------------------------------------
-// LoginModal (极简邮箱版) - 保持不变
+// LoginModal (极简邮箱版)
 // ----------------------------------------------------------------------
 
 type ModalProps = {
