@@ -1,24 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { User, Shield, Zap, LogOut, Sparkles, CheckCircle2 } from "lucide-react";
+import { User, Shield, Zap, LogOut, Sparkles, CheckCircle2, Mail, Fingerprint } from "lucide-react";
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  
+  // 引擎状态持久化 (真实可用)
   const [engineMode, setEngineMode] = useState<"speed" | "quality">("quality");
   const [isSaving, setIsSaving] = useState(false);
+  const [nickname, setNickname] = useState("");
+
+  // 初始化读取本地偏好
+  useEffect(() => {
+    if (user?.name) setNickname(user.name);
+    const savedMode = localStorage.getItem("xaira_engine_mode") as "speed" | "quality";
+    if (savedMode) setEngineMode(savedMode);
+  }, [user]);
+
+  // 切换引擎并保存到本地
+  const handleEngineChange = (mode: "speed" | "quality") => {
+    setEngineMode(mode);
+    localStorage.setItem("xaira_engine_mode", mode);
+  };
 
   // 模拟保存操作
   const handleSaveProfile = () => {
     setIsSaving(true);
-    setTimeout(() => setIsSaving(false), 1000);
+    // 这里未来接入你的 /api/user/update 接口
+    setTimeout(() => setIsSaving(false), 800);
   };
 
-  // 模拟退出登录 (请替换为你真实的登出逻辑)
+  // 模拟退出登录
   const handleLogout = () => {
-    // 例如：signOut()
-    alert("这里将接入你的退出登录逻辑");
+    alert("接入 Auth.js 的 signOut() 即可安全退出");
   };
 
   return (
@@ -34,7 +50,7 @@ export default function SettingsPage() {
 
       <div className="space-y-8">
         
-        {/* 模块一：个人资料 */}
+        {/* 模块一：丰满后的个人资料 */}
         <section className="bg-white rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden">
           <div className="p-6 sm:p-8 border-b border-zinc-100 bg-zinc-50/50 flex items-center gap-3">
             <div className="p-2 bg-white rounded-xl shadow-sm border border-zinc-100">
@@ -43,35 +59,65 @@ export default function SettingsPage() {
             <h2 className="text-lg font-bold text-zinc-900">个人资料</h2>
           </div>
           
-          <div className="p-6 sm:p-8 space-y-6">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-50 border border-indigo-50 flex items-center justify-center shrink-0 shadow-inner">
-                <span className="text-2xl font-black text-indigo-300">
-                  {user?.name?.charAt(0)?.toUpperCase() || "X"}
-                </span>
+          <div className="p-6 sm:p-8 space-y-8">
+            {/* 头像与昵称区域 */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+              <div className="relative group">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-50 border border-indigo-50 flex items-center justify-center shrink-0 shadow-inner">
+                  <span className="text-2xl font-black text-indigo-300">
+                    {nickname.charAt(0)?.toUpperCase() || "X"}
+                  </span>
+                </div>
+                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm">
+                  <span className="text-white text-xs font-medium">更换</span>
+                </div>
               </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-zinc-700 mb-2">昵称</label>
-                <input 
-                  type="text" 
-                  defaultValue={user?.name || "未命名创作者"} 
-                  className="w-full max-w-md px-4 py-3 rounded-2xl bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-sm font-medium text-zinc-900"
-                />
+              
+              <div className="flex-1 space-y-1">
+                <label className="block text-sm font-medium text-zinc-700">显示昵称</label>
+                <div className="flex items-center gap-3 max-w-md">
+                  <input 
+                    type="text" 
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-sm font-medium text-zinc-900"
+                  />
+                  <button 
+                    onClick={handleSaveProfile}
+                    className="px-5 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-xl hover:bg-zinc-800 transition-colors active:scale-95 whitespace-nowrap min-w-[80px]"
+                  >
+                    {isSaving ? "保存..." : "保存"}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="pt-4 flex items-center gap-4">
-              <button 
-                onClick={handleSaveProfile}
-                className="px-6 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-xl hover:bg-zinc-800 transition-colors active:scale-95 flex items-center gap-2"
-              >
-                {isSaving ? "保存中..." : "保存更改"}
-              </button>
+            {/* 分割线 */}
+            <div className="h-px w-full bg-zinc-100"></div>
+
+            {/* 新增：只读账号信息展示，填补视觉空白 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-xs font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" /> 绑定邮箱
+                </label>
+                <p className="text-sm font-medium text-zinc-900">
+                  {user?.email || "未绑定邮箱"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
+                  <Fingerprint className="w-3.5 h-3.5" /> 创作者 ID
+                </label>
+                <p className="text-sm font-mono text-zinc-500">
+                  {user?.id ? `usr_${user.id.substring(0, 8)}...` : "未知"}
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* 模块二：AI 引擎偏好 (20% 科技感) */}
+        {/* 模块二：AI 引擎偏好 (真实交互版) */}
         <section className="bg-white rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden relative group">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
           
@@ -83,12 +129,11 @@ export default function SettingsPage() {
           </div>
 
           <div className="p-6 sm:p-8 relative z-10">
-            <p className="text-sm text-zinc-500 mb-6">选择适合你当前工作流的底层算力调度模式。</p>
+            <p className="text-sm text-zinc-500 mb-6">选择适合你当前工作流的底层算力调度模式。更改后立即生效。</p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-              {/* 选项 A：极速模式 */}
               <div 
-                onClick={() => setEngineMode("speed")}
+                onClick={() => handleEngineChange("speed")}
                 className={`cursor-pointer p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col gap-3 ${engineMode === "speed" ? "border-indigo-500 bg-indigo-50/50 shadow-sm" : "border-zinc-100 hover:border-zinc-200 bg-white"}`}
               >
                 <div className="flex justify-between items-start">
@@ -99,13 +144,12 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h4 className={`font-bold ${engineMode === "speed" ? "text-indigo-900" : "text-zinc-700"}`}>极速轻量模式</h4>
-                  <p className="text-xs text-zinc-500 mt-1">响应极快，适合大批量初步探索。</p>
+                  <p className="text-xs text-zinc-500 mt-1">响应极快，调用轻量级模型，适合脑暴与初步探索。</p>
                 </div>
               </div>
 
-              {/* 选项 B：深度模式 */}
               <div 
-                onClick={() => setEngineMode("quality")}
+                onClick={() => handleEngineChange("quality")}
                 className={`cursor-pointer p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col gap-3 ${engineMode === "quality" ? "border-purple-500 bg-purple-50/50 shadow-sm" : "border-zinc-100 hover:border-zinc-200 bg-white"}`}
               >
                 <div className="flex justify-between items-start">
@@ -116,7 +160,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h4 className={`font-bold ${engineMode === "quality" ? "text-purple-900" : "text-zinc-700"}`}>深度推理模式</h4>
-                  <p className="text-xs text-zinc-500 mt-1">质量优先，适合最终产出的精细化生成。</p>
+                  <p className="text-xs text-zinc-500 mt-1">质量优先，调用顶级视觉/语言模型进行精细化生成。</p>
                 </div>
               </div>
             </div>
@@ -128,7 +172,7 @@ export default function SettingsPage() {
           <div className="p-6 sm:p-8 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-zinc-900">账号操作</h2>
-              <p className="text-sm text-zinc-500 mt-1">退出当前设备登录状态。</p>
+              <p className="text-sm text-zinc-500 mt-1">退出当前设备登录状态，保障资产安全。</p>
             </div>
             <button 
               onClick={handleLogout}
