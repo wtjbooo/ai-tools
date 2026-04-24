@@ -1,63 +1,63 @@
-import { NextResponse } from "next/server";
+// app/api/notifications/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-// 注意：这里假设你的 auth 逻辑可以通过 getServerSession 获取
-// 如果你的项目有专门的 auth 配置文件，请根据实际路径调整
-import { getServerSession } from "next-auth/next"; 
 
 // 1. GET 接口：获取当前用户的所有通知
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return new NextResponse("未认证", { status: 401 });
-    }
+    // 💡 使用你专属的 Cookie 鉴权逻辑
+    const sessionToken = cookies().get("session_token")?.value;
+    if (!sessionToken) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-    // 先找到用户 ID
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const session = await prisma.session.findUnique({
+      where: { sessionToken },
     });
 
-    if (!user) return new NextResponse("用户不存在", { status: 404 });
+    if (!session || session.expires < new Date()) {
+      return NextResponse.json({ error: "登录已过期" }, { status: 401 });
+    }
 
     // 查询该用户的所有通知，按时间倒序排列（最新的在前面）
     const notifications = await prisma.notification.findMany({
-      where: { userId: user.id },
+      where: { userId: session.userId },
       orderBy: { createdAt: 'desc' },
     });
 
     return NextResponse.json(notifications);
   } catch (error) {
-    console.error("[NOTIFICATIONS_GET]", error);
-    return new NextResponse("内部错误", { status: 500 });
+    console.error("[NOTIFICATIONS_GET_ERROR]", error);
+    return NextResponse.json({ error: "内部错误" }, { status: 500 });
   }
 }
 
 // 2. PATCH 接口：将所有通知标记为已读
-export async function PATCH() {
+export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return new NextResponse("未认证", { status: 401 });
-    }
+    // 💡 同样的鉴权逻辑
+    const sessionToken = cookies().get("session_token")?.value;
+    if (!sessionToken) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const session = await prisma.session.findUnique({
+      where: { sessionToken },
     });
 
-    if (!user) return new NextResponse("用户不存在", { status: 404 });
+    if (!session || session.expires < new Date()) {
+      return NextResponse.json({ error: "登录已过期" }, { status: 401 });
+    }
 
-    // 更新该用户所有未读的通知
+    // 更新该用户所有未读的通知为已读
     await prisma.notification.updateMany({
       where: { 
-        userId: user.id,
+        userId: session.userId,
         isRead: false 
       },
       data: { isRead: true },
     });
 
-    return NextResponse.json({ message: "全部标记为已读" });
+    return NextResponse.json({ success: true, message: "全部标记为已读" });
   } catch (error) {
-    console.error("[NOTIFICATIONS_PATCH]", error);
-    return new NextResponse("内部错误", { status: 500 });
+    console.error("[NOTIFICATIONS_PATCH_ERROR]", error);
+    return NextResponse.json({ error: "内部错误" }, { status: 500 });
   }
 }
