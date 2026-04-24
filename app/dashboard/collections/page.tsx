@@ -61,10 +61,20 @@ export default function CollectionsPage() {
     }
   };
 
-  // 💡 新增：处理卡片点击跳转
-  const handleCardClick = (taskId: string) => {
-    // 根据你总览大盘支持的路由，携带 task 参数跳转
-    router.push(`/dashboard?task=${taskId}`);
+// 💡 修改：处理卡片点击跳转，根据类型跳转到对应的详情页
+  const handleCardClick = (taskId: string, type: string) => {
+    // 建立类型到具体页面路径的映射字典
+    const routeMap: Record<string, string> = {
+      reverse: "reverse-prompt", // 对应 /reverse-prompt 页面
+      enhance: "enhance-prompt", // 对应 /enhance-prompt 页面
+      search: "search-test",     // 对应 /search-test 页面 (根据你最开始建的目录)
+    };
+
+    // 获取对应的路径，如果没匹配到默认跳回 dashboard
+    const targetRoute = routeMap[type.toLowerCase()] || "dashboard";
+    
+    // 执行精准跳转
+    router.push(`/${targetRoute}?task=${taskId}`);
   };
 
   return (
@@ -99,7 +109,7 @@ export default function CollectionsPage() {
           {items.map((item) => (
             <div
               key={item.id}
-              onClick={() => handleCardClick(item.id)} // 💡 给整个卡片加上点击跳转
+              onClick={() => handleCardClick(item.id, item.type)} // 👈 这里加上 item.type
               className="cursor-pointer group relative bg-white rounded-[28px] p-6 border border-zinc-200/60 shadow-sm 
                          hover:shadow-[0_20px_50px_rgba(99,102,241,0.06)] hover:border-indigo-200/80 
                          transition-all duration-500 flex flex-col h-64 overflow-hidden"
