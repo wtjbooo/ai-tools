@@ -224,20 +224,30 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-1.5 relative z-10">
-                <label className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
-                  <Fingerprint className="w-3.5 h-3.5" /> 创作者 ID
-                </label>
-                <div className="flex items-center gap-2 group/copy">
-                  <p className="text-sm font-mono text-zinc-500">
-                    {user?.id ? `usr_${user.id}` : "未知"}
-                  </p>
-                  {user?.id && (
-                    <button onClick={() => handleCopy(`usr_${user.id}`, 'id')} className="text-zinc-400 hover:text-indigo-500 transition-colors">
-                      {copiedId ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 opacity-0 group-hover/copy:opacity-100 transition-opacity" />}
-                    </button>
-                  )}
-                </div>
-              </div>
+  <label className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
+    <Fingerprint className="w-3.5 h-3.5" /> 创作者 ID
+  </label>
+  <div className="flex items-center gap-2 group/copy">
+    {/* 💡 核心优化：采用 XA-前缀 + 8位大写字符，总长度 11 位，看起来非常像高级序列号 */}
+    <p className="text-sm font-mono text-zinc-600 font-bold tracking-widest">
+      {user?.id ? `XA-${user.id.substring(1, 9).toUpperCase()}` : "未知"}
+    </p>
+    
+    {user?.id && (
+      <button 
+        onClick={() => handleCopy(`usr_${user.id}`, 'id')} 
+        className="text-zinc-400 hover:text-indigo-500 transition-colors" 
+        title="复制完整 ID"
+      >
+        {copiedId ? (
+          <Check className="w-4 h-4 text-emerald-500" />
+        ) : (
+          <Copy className="w-3.5 h-3.5 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+        )}
+      </button>
+    )}
+  </div>
+</div>
             </div>
 
           </div>
