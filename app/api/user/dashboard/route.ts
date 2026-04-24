@@ -23,8 +23,9 @@ export async function GET() {
     }
 
     const user = session.user;
+    const now = new Date();
 
-    // 1. 获取近期轨迹（🚀 核心优化：改成查询全新的 AIGenerationRecord 万能流水表）
+    // 1. 获取近期轨迹
     const recentTasks = await prisma.aIGenerationRecord.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -38,39 +39,42 @@ export async function GET() {
       },
     });
 
-    // 2. 完美修复：彻底抹平失败退款导致的“大盘总额度虚高”问题
-    const DAILY_FREE_POINTS = 100; 
-    const DAILY_PRO_POINTS = 2000; 
+    // 2. 🚀 完美修复：计算本月第一天，作为流水查询起点
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // 3. 🎯 商业级聚合查询 (Aggregate)：直接累加本月内且成功的流水 cost
+    const usageResult = await prisma.aIGenerationRecord.aggregate({
+      _sum: { cost: true },
+      where: {
+        userId: user.id,
+        status: "success", // 只统计扣费成功的任务
+        createdAt: { gte: startOfMonth }, // 大于等于本月第一天
+      },
+    });
+
+    // 从流水表中提取真实的本月已消耗总积分（如果没有记录，则默认为 0）
+    const monthlyUsed = usageResult._sum.cost || 0;
+
+    // 4. 重构清爽干净的额度算法
+    const MONTHLY_FREE_POINTS = 100; 
+    const MONTHLY_PRO_POINTS = 2000; 
     
-    const now = new Date();
-    const lastUsed = user.lastUsedDate;
-    let dbUsedCredits = user.freeUsesToday;
-    const dbBonusCredits = user.bonusCredits || 0; 
+    // 基础额度
+    const baseCredits = user.isPro ? MONTHLY_PRO_POINTS : MONTHLY_FREE_POINTS;
+    // 额外购买或奖励的额度
+    const bonusCredits = user.bonusCredits || 0; 
 
-    // 跨天判断
-    const isToday =
-      lastUsed &&
-      lastUsed.getDate() === now.getDate() &&
-      lastUsed.getMonth() === now.getMonth() &&
-      lastUsed.getFullYear() === now.getFullYear();
+    // 极简且绝对正确的计算公式
+    const displayTotal = baseCredits + bonusCredits; // 总额度永远等于 基础 + 额外
+    const displayUsed = monthlyUsed; // 已用额度永远等于流水表累加
+    const remainingCredits = Math.max(0, displayTotal - displayUsed); // 剩余 = 总计 - 已用
 
-    if (!isToday) {
-      dbUsedCredits = 0; 
-    }
-
-    const baseCredits = user.isPro ? DAILY_PRO_POINTS : DAILY_FREE_POINTS;
-
-    // 🎯 核心净值算法：将“失败退款”与“已用次数”在展示时互相抵消！
-    const displayUsed = Math.max(0, dbUsedCredits - dbBonusCredits);
-    const displayTotal = baseCredits + Math.max(0, dbBonusCredits - dbUsedCredits);
-    const remainingCredits = Math.max(0, baseCredits + dbBonusCredits - dbUsedCredits);
-
-    // 3. 构造友好的时间与数据展示
+    // 5. 构造友好的时间与数据展示
     const formattedTasks = recentTasks.map(task => {
       const taskDate = new Date(task.createdAt);
       const diffMs = now.getTime() - taskDate.getTime();
-      const diffMins = Math.floor(diffMs / (1000 * 60)); // 计算相差多少分钟
-      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60)); // 计算相差多少小时
+      const diffMins = Math.floor(diffMs / (1000 * 60)); 
+      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60)); 
       
       let timeStr = "";
       if (diffMins < 1) timeStr = "刚刚";
@@ -79,9 +83,8 @@ export async function GET() {
       else if (diffHrs < 48) timeStr = "昨天";
       else timeStr = `${Math.floor(diffHrs / 24)} 天前`;
 
-      // 🚀 核心优化：根据不同的工具类型，给前端返回对应的图标和中文名
       let platformName = "官方原生工具";
-      let frontendType = "sparkles"; // 默认星光图标
+      let frontendType = "sparkles"; 
 
       if (task.toolType === "reverse") {
          platformName = "图像反推";
