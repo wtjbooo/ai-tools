@@ -1,9 +1,10 @@
+// app/api/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+// 如果你的 prisma 报错，可以试试加上大括号：import { prisma } from "@/lib/prisma"
 import prisma from "@/lib/prisma";
 
-// 1. 初始化 R2 客户端
 const s3Client = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -16,7 +17,6 @@ const s3Client = new S3Client({
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. 基础鉴权：确保只有登录用户才能上传文件
     const token = req.cookies.get("session_token")?.value 
                || req.cookies.get("next-auth.session-token")?.value 
                || req.cookies.get("__Secure-next-auth.session-token")?.value;
@@ -34,33 +34,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "登录已失效，请重新登录" }, { status: 401 });
     }
 
-    // 2. 💡 核心修复：接收前端发来的 JSON 数据
     const body = await req.json();
-    const { filename, contentType } = body;
+    // 💡 核心升级：增加 folder 参数，默认存入 uploads 文件夹
+    const { filename, contentType, folder = "uploads" } = body;
 
     if (!filename || !contentType) {
       return NextResponse.json({ error: "缺少文件名或文件类型" }, { status: 400 });
     }
 
-    // 3. 生成云端存储的唯一文件路径 (FileKey)
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 8);
-    // 过滤掉文件名里的奇怪字符，防止 R2 报错
     const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const fileKey = `uploads/${session.userId}/${timestamp}-${randomString}-${safeFilename}`;
+    
+    // 💡 动态拼装存储路径：文件夹名/用户ID/文件名 (例如：avatars/usr_123/168..._avatar.png)
+    const fileKey = `${folder}/${session.userId}/${timestamp}-${randomString}-${safeFilename}`;
 
-    // 4. 向 Cloudflare R2 申请一个准许上传的“通行证” (预签名 URL)
     const putCommand = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: fileKey,
       ContentType: contentType,
     });
 
-    // 生成一个有效期为 1 小时的直传链接
     const uploadUrl = await getSignedUrl(s3Client, putCommand, { expiresIn: 3600 });
 
-    // 5. 将链接和 Key 返回给前端
-    return NextResponse.json({ uploadUrl, fileKey });
+    // 提前把公开访问的图片 URL 拼好，一起返回给前端
+    // 用正则去掉域名末尾可能多出的斜杠，防止出现 https://pub-xxx.com//avatars/...
+    const publicDomain = process.env.R2_PUBLIC_DOMAIN?.replace(/\/$/, "");
+    const publicUrl = `${publicDomain}/${fileKey}`;
+
+    // 返回：上传通道URL，文件Key，公开访问URL
+    return NextResponse.json({ uploadUrl, fileKey, publicUrl });
 
   } catch (error: any) {
     console.error("生成上传通道失败:", error);
