@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSearchSystemPrompt } from "@/app/config/prompts";
 import { withProtection } from "@/lib/api-wrapper";
 import { searchRateLimit } from "@/lib/ratelimit";
-import prisma from "@/lib/prisma"; // 🚀 新增：引入 Prisma 客户端
+import prisma from "@/lib/prisma";
 
 const N1N_BASE_URL = process.env.N1N_BASE_URL || "https://api.n1n.ai/v1";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY; 
@@ -17,7 +17,6 @@ const KEYS = {
 function translateError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase();
   
-  // 💡 优先拦截“挤爆了”的报错，不管是英文还是代码
   if (msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded")) {
      return "😴 免费通道当前太火爆了（谷歌服务器排队中），请稍后再试，或在左上角切换为其它 VIP 大模型。";
   }
@@ -52,8 +51,19 @@ export const POST = withProtection(
       const userInput = query || body.prompt || body.keyword || body.text || "";
       if (!userInput.trim()) throw new Error("接收到的输入为空，请检查网络或刷新页面重试。");
 
+      // 获取基础的系统 Prompt
       const systemPrompt = getSearchSystemPrompt(userInput, mode, targetModel);
-      const finalPrompt = `${systemPrompt}\n\n====================\n【系统最高指令】：请严格按照上述要求，对以下关键词进行搜索策略扩展！\n【用户真实搜索词】：${userInput}`;
+      
+      // 🚀 核心修复：重写最终的 Final Prompt，增加极其严厉的“反废话”和“直接输出事实”的指令
+      const finalPrompt = `${systemPrompt}
+
+====================
+【系统最高指令】：
+1. 请严格按照上述要求，对以下关键词进行搜索策略扩展。
+2. 🛑 核心约束：在生成 \`summary\` 或 \`analysis\`（即 AI 全局洞察）字段时，**必须直接给出相关的实质性内容（例如真实的排行榜单、具体的 AI 工具名称、核心数据或关键事实）**。
+3. 🚫 绝对禁止：严禁输出任何“如何检索”、“建议采取多元化路径”、“不要盲从”等空泛的搜索方法论、风险提示或说教废话！如果用户问排行榜，就直接按你的知识库给出排行榜！
+
+【用户真实搜索词】：${userInput}`;
 
       let data;
 
@@ -141,9 +151,6 @@ export const POST = withProtection(
         return { ...item, url: realUrl };
       });
 
-      // ==========================================
-      // 🚀 新增：将生成的任务记录写入大盘统一流水表
-      // ==========================================
       if (userId) {
         try {
           const cleanTitle = userInput.replace(/[\r\n#*]/g, '').trim();
@@ -152,11 +159,11 @@ export const POST = withProtection(
           await prisma.aIGenerationRecord.create({
             data: {
               userId: userId,
-              toolType: "search", // 标记为搜索功能
+              toolType: "search",
               title: `搜索: ${displayTitle || "未命名任务"}`, 
               originalInput: userInput,
               resultJson: JSON.stringify(data),
-              cost: 2, // 默认文本任务扣除 2 积分
+              cost: 2, 
               status: "success"
             }
           });
