@@ -181,10 +181,10 @@ export default function DashboardOverview() {
                  <span className="text-sm font-medium">暂无生成记录，快去开启灵感吧</span>
                </div>
             ) : recentActivities.map((activity) => {
-              // 🎯 这里是完美修复后的动态跳转逻辑
+              // 🎯 修复路由：改为 /search-test
               let targetUrl = `/reverse-prompt?task=${activity.id}`; 
               if (activity.type === 'video') targetUrl = `/enhance-prompt?task=${activity.id}`; 
-              if (activity.type === 'sparkles') targetUrl = `/search-assets?task=${activity.id}`; 
+              if (activity.type === 'sparkles') targetUrl = `/search-test?task=${activity.id}`; 
 
               return (
                 <Link href={targetUrl} key={activity.id} className="group flex items-center justify-between p-3 sm:p-4 rounded-[20px] hover:bg-zinc-50 border border-transparent hover:border-zinc-100 transition-all duration-300">

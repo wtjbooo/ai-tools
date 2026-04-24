@@ -39,10 +39,10 @@ export async function GET() {
       },
     });
 
-    // 2. 🚀 完美修复：计算本月第一天，作为流水查询起点
+    // 2. 计算本月第一天，作为流水查询起点
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // 3. 🎯 商业级聚合查询 (Aggregate)：直接累加本月内且成功的流水 cost
+    // 3. 商业级聚合查询 (Aggregate)：直接累加本月内且成功的流水 cost
     const usageResult = await prisma.aIGenerationRecord.aggregate({
       _sum: { cost: true },
       where: {
@@ -61,8 +61,9 @@ export async function GET() {
     
     // 基础额度
     const baseCredits = user.isPro ? MONTHLY_PRO_POINTS : MONTHLY_FREE_POINTS;
-    // 额外购买或奖励的额度
-    const bonusCredits = user.bonusCredits || 0; 
+    
+    // 🚀 核心修复：强制把额外积分封印为 0，防止数据库脏测试数据让你“亏本”！
+    const bonusCredits = 0; 
 
     // 极简且绝对正确的计算公式
     const displayTotal = baseCredits + bonusCredits; // 总额度永远等于 基础 + 额外
