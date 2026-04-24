@@ -43,7 +43,7 @@ export async function GET() {
       where: { 
         userId: user.id, 
         status: "success",
-        cost: { gt: 0 } // cost 大于 0
+        cost: { gt: 0 } 
       },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -68,7 +68,8 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      planName: user.isPro ? "Pro 创作者" : "免费计划",
+      // 💡 这里把英文换成了纯中文的极简称呼
+      planName: user.isPro ? "Pro 创作者" : "基础体验版",
       isPro: user.isPro,
       quota: { used: monthlyUsed, total: totalCredits, remaining },
       history: formattedHistory

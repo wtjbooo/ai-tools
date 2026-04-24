@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
-import { CreditCard, Zap, Sparkles, Receipt, Loader2, ArrowRight } from "lucide-react";
+import { CreditCard, Zap, Sparkles, Receipt, Loader2 } from "lucide-react";
 
 interface BillingData {
   planName: string;
@@ -64,7 +64,8 @@ export default function BillingPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
           额度与账单 <span className="text-zinc-300 font-light">/</span> 
-          <span className="text-zinc-400 text-lg font-medium">Quota & Billing</span>
+          {/* 💡 替换了原本的 Quota & Billing */}
+          <span className="text-zinc-400 text-lg font-medium">资产与订阅</span>
         </h1>
         <p className="text-sm text-zinc-500 mt-1">管理你的算力订阅与积分消耗明细。</p>
       </div>
@@ -80,8 +81,9 @@ export default function BillingPage() {
                 <CreditCard className="w-6 h-6" />
               </div>
               {data.isPro && (
-                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold uppercase tracking-widest rounded-full">
-                  Active
+                // 💡 替换了原本的 ACTIVE
+                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold tracking-widest rounded-full">
+                  当前生效
                 </span>
               )}
             </div>
@@ -98,7 +100,7 @@ export default function BillingPage() {
                 className="w-full flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 py-3.5 text-sm font-semibold text-white shadow-lg shadow-zinc-900/20 hover:bg-zinc-800 transition-all active:scale-95"
               >
                 <Zap className="w-4 h-4 text-amber-400" />
-                升级 Pro 获取无限灵感
+                升级获取无限灵感
               </button>
             )}
           </div>
