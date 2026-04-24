@@ -46,9 +46,22 @@ export const POST = withProtection(
   async (req: NextRequest, { userId, remainingQuota }) => {
     try {
       const body = await req.json();
-      const { query, mode, targetModel = "gemini-free" } = body;
+      // 💡 1. 接收前端传过来的 engineMode
+      const { query, mode, targetModel: originalTargetModel = "gemini-free", engineMode } = body;
       
       const userInput = query || body.prompt || body.keyword || body.text || "";
+      if (!userInput.trim()) throw new Error("接收到的输入为空，请检查网络或刷新页面重试。");
+
+      // ==========================================
+      // 🚀 2. 核心逻辑：引擎偏好设置拦截器 (Model Routing)
+      // ==========================================
+      let targetModel = originalTargetModel;
+      if (engineMode === "speed") {
+        targetModel = "gpt-4o-mini"; // 【极速轻量模式】：速度快，适合快速出搜索矩阵
+      } else if (engineMode === "quality") {
+        targetModel = "gpt-4o";      // 【深度推理模式】：逻辑极强，适合深度总结
+      }
+
       if (!userInput.trim()) throw new Error("接收到的输入为空，请检查网络或刷新页面重试。");
 
       // 获取基础的系统 Prompt
@@ -110,13 +123,17 @@ export const POST = withProtection(
         data = safeParseJSON(payload.choices[0].message.content);
       } 
       else {
-        let selectedKey = KEYS.openai; 
+        // 确保这部分逻辑长这样：
+      } else {
+        let selectedKey = KEYS.openai; // 默认使用 openai 的 key
         let actualModel = targetModel; 
 
         if (targetModel.includes("gemini")) { 
           selectedKey = KEYS.gemini; 
         } else if (targetModel.includes("claude")) {
           selectedKey = KEYS.claude;
+        } else if (targetModel.includes("gpt")) {
+          selectedKey = KEYS.openai; // 💡 确保 GPT 走 openai 的 key
         }
 
         if (!selectedKey) throw new Error(`该模型对应的 API Key 分组尚未配置`);

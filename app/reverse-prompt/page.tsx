@@ -304,7 +304,19 @@ export default function ReversePromptPage() {
 
       setUploadStatus("素材已就绪，AI 视觉引擎深度提取中...");
       
-      const requestBody = { inputType: isVideo ? "video" : "images", analyzerModel, outputLanguage, outputStyle, targetPlatform, fileKeys: uploadedFileKeys };
+      // 💡 1. 读取本地存储的偏好设置，如果没有设置过，默认使用 quality (深度推理)
+      const enginePref = localStorage.getItem("xaira_engine_mode") || "quality";
+      
+      // 💡 2. 将 engineMode 打包进请求体中发给后端
+      const requestBody = { 
+        inputType: isVideo ? "video" : "images", 
+        analyzerModel, 
+        outputLanguage, 
+        outputStyle, 
+        targetPlatform, 
+        fileKeys: uploadedFileKeys,
+        engineMode: enginePref  // 👈 核心：把系统设置的偏好传给 API
+      };
       
       const response = await fetch("/api/reverse-prompt", { 
           method: "POST", 

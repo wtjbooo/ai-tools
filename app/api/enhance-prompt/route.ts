@@ -52,10 +52,21 @@ export const POST = withProtection(
   async (req: NextRequest, { userId, remainingQuota }) => {
     try {
       const body = await req.json();
-      const { query, mode, targetModel = "gemini-free", targetPlatform = "generic" } = body;
+      // 💡 1. 接收 engineMode
+      const { query, mode, targetModel: originalTargetModel = "gemini-free", targetPlatform = "generic", engineMode } = body;
       
       const userInput = query || body.prompt || body.keyword || body.text || "";
       if (!userInput.trim()) throw new Error("接收到的输入为空，请检查网络或刷新页面重试。");
+
+      // ==========================================
+      // 🚀 2. 核心逻辑：引擎偏好设置拦截器 (Model Routing)
+      // ==========================================
+      let targetModel = originalTargetModel;
+      if (engineMode === "speed") {
+        targetModel = "gpt-4o-mini"; // 极速轻量模式
+      } else if (engineMode === "quality") {
+        targetModel = "gpt-4o";      // 深度推理模式
+      }
 
       const systemPrompt = getEnhanceSystemPrompt(userInput, mode, targetModel, targetPlatform);
       const finalPrompt = `${systemPrompt}\n\n====================\n【系统最高指令】：请严格基于以下用户的真实输入进行扩写！绝不允许照抄你在系统提示词里看到的“液态金属实验室”等示例内容！\n【用户真实输入】：${userInput}`;
@@ -112,6 +123,8 @@ export const POST = withProtection(
           selectedKey = KEYS.gemini; 
         } else if (targetModel.includes("claude")) {
           selectedKey = KEYS.claude;
+        } else if (targetModel.includes("gpt")) {
+          selectedKey = KEYS.openai; // 💡 确保强制接管后使用 OpenAI 密钥
         }
         
         if (!selectedKey) throw new Error(`该模型对应的 API Key 分组尚未配置`);

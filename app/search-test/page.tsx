@@ -82,7 +82,17 @@ export default function SearchTestPage() {
   const handleSearch = () => {
     if (!query.trim()) return;
     setRecoveredResult(null); // 🚀 清空老记录，准备获取新数据
-    execute("/api/ai/search-assets", { query, mode, targetModel: activeModel });
+    
+    // 💡 1. 读取本地偏好设置（如果没有则默认 quality）
+    const enginePref = localStorage.getItem("xaira_engine_mode") || "quality";
+    
+    // 💡 2. 在 execute 中把 engineMode 一起打包传给后端
+    execute("/api/ai/search-assets", { 
+      query, 
+      mode, 
+      targetModel: activeModel,
+      engineMode: enginePref  // 👈 核心：传递系统设置的偏好
+    });
   };
 
   const handleSave = async (e: React.MouseEvent, item: any, index: number) => {

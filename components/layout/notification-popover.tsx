@@ -1,118 +1,104 @@
-'use client';
+// app/dashboard/layout.tsx
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Bell, CheckCheck, Cpu, CreditCard, Sparkles, X, Loader2 } from 'lucide-react';
+import { useAuth } from "@/components/auth/auth-provider";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react"; 
+import { LayoutDashboard, History, FolderHeart, CreditCard, Settings, Bell, LogOut } from "lucide-react";
+import { NotificationPopover } from "@/components/layout/notification-popover";
 
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  content: string;
-  createdAt: string;
-  isRead: boolean;
-}
+const NAV_ITEMS = [
+  // ... 保持你原有的配置不变 ...
+  { label: "总览大盘", href: "/dashboard", icon: LayoutDashboard },
+  { label: "生成历史", href: "/dashboard/history", icon: History },
+  { label: "灵感收藏", href: "/dashboard/collections", icon: FolderHeart },
+  { label: "额度与账单", href: "/dashboard/billing", icon: CreditCard },
+  { label: "系统设置", href: "/dashboard/settings", icon: Settings },
+];
 
-export function NotificationPopover({ 
-  isOpen, 
-  onClose 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void;
-}) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user, isReady, logout } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+  
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  
+  // ✨ 1. 新增：存储真实未读数量的状态
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // --- 1. 获取数据的函数 ---
-  const fetchNotifications = async () => {
-    setLoading(true);
+  // ✨ 2. 新增：拉取未读数量的函数
+  const fetchUnreadCount = async () => {
     try {
       const res = await fetch('/api/notifications');
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data);
+        // 过滤出未读的消息，并计算长度
+        const count = data.filter((n: any) => !n.isRead).length;
+        setUnreadCount(count);
       }
     } catch (err) {
-      console.error("加载通知失败", err);
-    } finally {
-      setLoading(false);
+      console.error(err);
     }
   };
 
-  // 当弹窗打开时，自动刷新一次数据
+  // ✨ 3. 新增：当用户数据准备好后，立刻拉取一次数量
   useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
+    if (user) {
+      fetchUnreadCount();
     }
-  }, [isOpen]);
+  }, [user]);
 
-  // --- 2. 标记全部已读的函数 ---
-  const markAllAsRead = async () => {
-    try {
-      const res = await fetch('/api/notifications', { method: 'PATCH' });
-      if (res.ok) {
-        // 前端同步更新状态，提升用户体验
-        setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-      }
-    } catch (err) {
-      console.error("更新失败", err);
-    }
-  };
+  // ... 保持你原有的拦截逻辑不变 ...
+  useEffect(() => {
+    if (isReady && !user) router.push("/");
+  }, [isReady, user, router]);
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'system': return <Cpu className="w-5 h-5 text-indigo-500" />;
-      case 'billing': return <CreditCard className="w-5 h-5 text-red-500" />;
-      case 'task': return <Sparkles className="w-5 h-5 text-emerald-500" />;
-      default: return <Bell className="w-5 h-5 text-zinc-500" />;
-    }
-  };
-
-  if (!isOpen) return null;
+  if (!isReady || !user) {
+    return <div className="flex min-h-screen items-center justify-center bg-zinc-50"><div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>;
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:pl-64 p-4" onClick={onClose}>
-      <div 
-        className="relative sm:ml-4 sm:mt-auto sm:mb-20 w-full sm:w-[420px] bg-white/70 dark:bg-zinc-900/80 backdrop-blur-2xl border border-zinc-200/50 dark:border-zinc-800/50 rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 顶部 */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200/50 dark:border-zinc-800/50">
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">消息通知</h3>
-          </div>
-          <div className="flex items-center gap-4">
-            <button onClick={markAllAsRead} className="text-sm font-medium text-zinc-500 hover:text-indigo-500 transition-colors flex items-center gap-1.5">
-              <CheckCheck className="w-4 h-4" /> 全部已读
-            </button>
-            <button onClick={onClose} className="p-1 text-zinc-400 hover:text-zinc-900"><X className="w-5 h-5" /></button>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#F8F9FA] flex">
+      <aside className="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 border-r border-zinc-200/60 bg-white/80 backdrop-blur-2xl">
+        <div className="h-full px-4 py-6 overflow-y-auto flex flex-col">
+          {/* ... Logo 和导航菜单保持不变 ... */}
 
-        {/* 列表 */}
-        <div className="overflow-y-auto flex-1 p-3">
-          {loading ? (
-            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-300" /></div>
-          ) : notifications.length === 0 ? (
-            <div className="py-12 text-center text-zinc-500 text-sm font-medium">暂无消息通知</div>
-          ) : (
-            notifications.map((n) => (
-              <div key={n.id} className="relative flex gap-4 p-4 hover:bg-white/60 dark:hover:bg-zinc-800/40 rounded-[24px] transition-all cursor-pointer mb-1">
-                {!n.isRead && <div className="absolute left-2.5 top-[28px] w-1.5 h-1.5 bg-indigo-500 rounded-full shadow-lg" />}
-                <div className="flex-shrink-0 mt-0.5 ml-1">
-                  <div className="p-3 bg-zinc-100/80 dark:bg-zinc-800/50 rounded-2xl">{getIcon(n.type)}</div>
-                </div>
-                <div className="flex-1 min-w-0 pr-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className={`text-sm font-semibold truncate ${n.isRead ? 'text-zinc-400' : 'text-zinc-900'}`}>{n.title}</h4>
-                    <span className="text-[10px] text-zinc-400">{new Date(n.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <p className="text-[13px] text-zinc-500 line-clamp-2">{n.content}</p>
-                </div>
-              </div>
-            ))
-          )}
+          {/* 底部操作区 */}
+          <div className="pt-6 mt-6 border-t border-zinc-100 space-y-2">
+            <button 
+              onClick={() => setIsNotificationOpen(true)}
+              className="flex w-full items-center p-3 rounded-[16px] text-zinc-500 hover:bg-zinc-100/80 hover:text-zinc-900 transition-all text-[14px]"
+            >
+              <Bell className="w-5 h-5" />
+              <span className="ml-3">消息通知</span>
+              
+              {/* ✨ 4. 替换：只有当未读数大于 0 的时候，才显示这个徽标！ */}
+              {unreadCount > 0 && (
+                <span className="ml-auto bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            <button onClick={logout} className="flex w-full items-center p-3 rounded-[16px] text-zinc-500 hover:bg-red-50 hover:text-red-600 transition-all text-[14px]">
+              <LogOut className="w-5 h-5" />
+              <span className="ml-3">断开连接</span>
+            </button>
+          </div>
         </div>
-      </div>
+      </aside>
+
+      {/* 主内容区保持不变 */}
+      <main className="flex-1 sm:ml-64 relative min-w-0">
+        {/* ... */}
+      </main>
+
+      {/* ✨ 5. 替换：将刷新函数传递给子组件 */}
+      <NotificationPopover 
+        isOpen={isNotificationOpen} 
+        onClose={() => setIsNotificationOpen(false)} 
+        onStatusChange={fetchUnreadCount}
+      />
     </div>
   );
 }

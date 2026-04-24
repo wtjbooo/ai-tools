@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 async function reversePromptHandler(req: NextRequest, context: { userId: string; remainingQuota?: number }) {
   try {
     const body = await req.json();
-    const { analyzerModel, inputType, fileKeys, targetPlatform = "generic" } = body;
+    const { analyzerModel, inputType, fileKeys, targetPlatform = "generic", engineMode } = body;
     
     if (!fileKeys || !Array.isArray(fileKeys) || fileKeys.length === 0) {
         throw new Error("未接收到云端素材");
@@ -92,15 +92,31 @@ async function reversePromptHandler(req: NextRequest, context: { userId: string;
         let targetModel = analyzerModel;
         let apiUrl = `${N1N_BASE_URL}/chat/completions`; 
 
-        if (analyzerModel === 'gemini-free') {
-          selectedKey = process.env.GEMINI_API_KEY; 
-          apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-          targetModel = 'gemini-1.5-flash';
-        } else if (analyzerModel.includes("gemini")) {
-          selectedKey = KEYS.gemini;
-          targetModel = analyzerModel; 
-        } else if (analyzerModel.includes("claude")) {
-          selectedKey = KEYS.claude;
+        // ==========================================
+        // 🚀 核心逻辑：引擎偏好设置拦截器 (Model Routing)
+        // ==========================================
+        if (engineMode === "speed") {
+          // 【极速轻量模式】：强制接管，调用极速视觉模型
+          targetModel = "gpt-4o-mini"; // 速度最快，成本极低
+          selectedKey = KEYS.openai;
+          apiUrl = `${N1N_BASE_URL}/chat/completions`;
+        } else if (engineMode === "quality") {
+          // 【深度推理模式】：强制接管，调用满血视觉大模型
+          targetModel = "gpt-4o"; // 画质理解天花板（如果你有 Claude 可以换成 claude-3.5-sonnet）
+          selectedKey = KEYS.openai;
+          apiUrl = `${N1N_BASE_URL}/chat/completions`;
+        } else {
+          // 【兼容模式】：如果前端没传偏好设置，走原有的默认兜底逻辑
+          if (analyzerModel === 'gemini-free') {
+            selectedKey = process.env.GEMINI_API_KEY; 
+            apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+            targetModel = 'gemini-1.5-flash';
+          } else if (analyzerModel.includes("gemini")) {
+            selectedKey = KEYS.gemini;
+            targetModel = analyzerModel; 
+          } else if (analyzerModel.includes("claude")) {
+            selectedKey = KEYS.claude;
+          }
         }
 
         if (!selectedKey) throw new Error(`服务端未配置该模型所属的 API Key`);
