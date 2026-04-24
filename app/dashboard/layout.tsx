@@ -4,7 +4,7 @@
 import { useAuth } from "@/components/auth/auth-provider";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react"; // ✨ 新增了 useState
 import { 
   LayoutDashboard, 
   History, 
@@ -14,6 +14,9 @@ import {
   Bell,
   LogOut
 } from "lucide-react";
+
+// ✨ 引入我们刚刚创建的通知面板组件 (请确保文件路径匹配)
+import { NotificationPopover } from "@/components/layout/notification-popover";
 
 const NAV_ITEMS = [
   { label: "总览大盘", href: "/dashboard", icon: LayoutDashboard },
@@ -31,6 +34,9 @@ export default function DashboardLayout({
   const { user, isReady, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  
+  // ✨ 新增：用于控制消息通知弹窗开关的状态
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   // 如果已准备好且未登录，重定向回首页
   useEffect(() => {
@@ -94,7 +100,11 @@ export default function DashboardLayout({
 
           {/* 底部操作区 */}
           <div className="pt-6 mt-6 border-t border-zinc-100 space-y-2">
-            <button className="flex w-full items-center p-3 rounded-[16px] text-zinc-500 hover:bg-zinc-100/80 hover:text-zinc-900 transition-all text-[14px]">
+            {/* ✨ 修改：给按钮加上 onClick 事件 */}
+            <button 
+              onClick={() => setIsNotificationOpen(true)}
+              className="flex w-full items-center p-3 rounded-[16px] text-zinc-500 hover:bg-zinc-100/80 hover:text-zinc-900 transition-all text-[14px]"
+            >
               <Bell className="w-5 h-5" />
               <span className="ml-3">消息通知</span>
               <span className="ml-auto bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">3</span>
@@ -117,6 +127,12 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
+
+      {/* ✨ 新增：挂载通知弹窗组件，它会浮在整个页面的顶层 */}
+      <NotificationPopover 
+        isOpen={isNotificationOpen} 
+        onClose={() => setIsNotificationOpen(false)} 
+      />
     </div>
   );
 }
