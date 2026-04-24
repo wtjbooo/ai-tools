@@ -43,12 +43,11 @@ model Tag {
 
 model Tool {
   id                   String  @id @default(cuid())
- 
   name                 String
   slug                 String  @unique
   description          String
   content              String  @default("")
-  tutorial        String @default("")
+  tutorial             String  @default("")
   website              String?
   normalizedWebsite    String?
   sourceUrl            String?
@@ -59,8 +58,7 @@ model Tool {
   featuredOrder        Int     @default(0)
 
   clicks               Int     @default(0)
-  views              
-  Int     @default(0)
+  views                Int     @default(0)
   outClicks            Int     @default(0)
 
   logoUrl              String  @default("")
@@ -69,8 +67,7 @@ model Tool {
 
   categoryId           String
   categoryConfidence   Int     @default(0)
-  tagConfidence  
-      Int     @default(0)
+  tagConfidence        Int     @default(0)
   classificationStatus String  @default("unknown")
 
   reviewStatus         String  @default("pending")
@@ -81,8 +78,7 @@ model Tool {
 
   reviewNotes          String    @default("")
   rejectReason         String    @default("")
-  reviewedBy     
-      String    @default("")
+  reviewedBy           String    @default("")
   reviewedAt           DateTime?
   publishedAt          DateTime?
   importedAt           DateTime?
@@ -92,8 +88,7 @@ model Tool {
 
   category             Category            @relation(fields: [categoryId], references: [id])
   tags                 ToolTag[]
-  viewEvents       
-    ToolViewEvent[]
+  viewEvents           ToolViewEvent[]
   outClickEvents       ToolOutClickEvent[]
 
   @@index([categoryId])
@@ -122,16 +117,13 @@ model ToolTag {
 
 model User {
   id            String  @id @default(cuid())
-  
   name          String?
   image         String?
 
-  phone         String?
-  @unique
+  phone         String? @unique
   phoneVerified Boolean   @default(false)
 
-  email         String?
-  @unique
+  email         String? @unique
   emailVerified DateTime?
   role          UserRole  @default(USER)
 
@@ -140,19 +132,16 @@ model User {
 
   reversePromptTasks ReversePromptTask[]
   collections        Collection[]
-  orders        Order[]
-
+  orders             Order[]
   aiRecords          AIGenerationRecord[]
 
   // ==========================================
-  // 💡 新增：商业化与每日额度限制字段
+  // 💡 商业化与每日额度限制字段
   // ==========================================
-  freeUsesToday Int       @default(0) // 今天已使用的免费次数
-  lastUsedDate  DateTime?
-  // 最后一次扣除次数的日期（用于跨天重置）
-  isPro         Boolean   @default(false) // 预留：判断是否为高级/付费用户，高级用户可以无限制或有更高额度
-
-bonusCredits  Int       @default(0) // 用户购买的额外永久积分（如加油包）
+  freeUsesToday Int       @default(0) 
+  lastUsedDate  DateTime? 
+  isPro         Boolean   @default(false) 
+  bonusCredits  Int       @default(0) 
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -161,8 +150,7 @@ bonusCredits  Int       @default(0) // 用户购买的额外永久积分（如�
 model Account {
   id                String          @id @default(cuid())
   userId            String
-  provider         
-  AccountProvider
+  provider          AccountProvider
   providerAccountId String
 
   accessToken       String?
@@ -186,7 +174,6 @@ model Session {
   expires      DateTime
 
   createdAt    DateTime @default(now())
-  
   updatedAt    DateTime @updatedAt
 
   user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -234,8 +221,7 @@ model Submission {
   tutorial          String  @default("")
 
   sourceType        String  @default("submission")
-  status     
-        String  @default("pending")
+  status            String  @default("pending")
   qualityScore      Int     @default(0)
   needsManualReview Boolean @default(true)
 
@@ -263,8 +249,7 @@ model ToolViewEvent {
   dayBucket  String
   createdAt  DateTime @default(now())
 
-  tool       Tool @relation(fields: [toolId], references: [id], 
-  onDelete: Cascade)
+  tool       Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
 
   @@unique([toolId, sessionKey, dayBucket])
   @@index([toolId, createdAt])
@@ -292,24 +277,21 @@ model ReversePromptTask {
   sourceCount          Int       @default(0)
   inputUrls            String    @default("[]")
   outputLanguage       String    @default("zh")
-  outputStyle          String 
-    @default("standard")
+  outputStyle          String    @default("standard")
   targetPlatform       String    @default("generic")
   model                String    @default("")
   metaJson             String    @default("{}")
   rawResponseText      String    @default("")
   rawResultJson        String    @default("")
   normalizedResultJson String    @default("{}")
-  resultJson        
-    String    @default("{}")
+  resultJson           String    @default("{}")
   errorMessage         String    @default("")
   startedAt            DateTime?
   finishedAt           DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  user                 User?
-  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([inputType, createdAt])
@@ -317,17 +299,15 @@ model ReversePromptTask {
   @@index([createdAt])
 }
 
-// 💡 收藏模型：用于存放来自全网（小红书、抖音等）的素材
 model Collection {
   id          String   @id @default(cuid())
   userId      String
   
-  title       String   // 标题
-  description String?
-  @db.Text
-  coverUrl    String?  // 封面图预览
-  sourceUrl   String   // 素材原文链接
-  platform    String   @default("website") // 来源：xiaohongshu, douyin, website
+  title       String   
+  description String?  @db.Text
+  coverUrl    String?  
+  sourceUrl   String   
+  platform    String   @default("website") 
   
   tags        String   @default("")
   metaJson    String   @default("{}")
@@ -342,21 +322,15 @@ model Collection {
   @@index([createdAt])
 }
 
-// ==========================================
-// 💡 新增：商业化订单模型
-// ==========================================
 model Order {
-  
   id            String   @id @default(cuid())
   userId        String
-  outTradeNo    String   @unique // 传给微信/支付宝的唯一商户订单号
-  amount        Int      // 订单金额（⚠️ 强烈建议单位为“分”，例如 990 代表 9.9 元，避免浮点数精度丢失）
-  planType      String   // 套餐类型：例如 "quota_50" (加油包) 或 "monthly_pro" (包月会员)
-  status        String   @default("pending") // 支付状态：pending(待支付), paid(已支付), failed(失败), closed(已关闭)
-  paymentMethod String   
-  @default("wechat")  // 支付方式：wechat, alipay
+  outTradeNo    String   @unique 
+  amount        Int      
+  planType      String   
+  status        String   @default("pending") 
+  paymentMethod String   @default("wechat")  
   paidAt        DateTime?
-  // 支付成功的时间戳
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -368,34 +342,19 @@ model Order {
   @@index([createdAt])
 }
 
-// ==========================================
-// 💡 新增：AI 生成通用历史流水表 (Dashboard 专用)
-// ==========================================
 model AIGenerationRecord {
   id            String   @id @default(cuid())
   userId        String
-  
-  // 记录属于哪个功能，例如: "reverse", "enhance", "search"
   toolType      String   
-  
-  // 前端卡片展示的标题/摘要
   title         String   @db.Text
-  
-  originalInput String?  @db.Text // 用户的原始输入短句
-  resultJson    String?  @db.Text // AI 生成的完整长句/JSON结果
-
-  // 任务状态: "success", "failed", "pending"
+  originalInput String?  @db.Text 
+  resultJson    String?  @db.Text 
   status        String   @default("success") 
-  
-  // 这次任务消耗了多少积分
   cost          Int      @default(0)
-
-  // 👇 新增：用于记录是否被收藏，默认为 false (未收藏)
   isFavorited   Boolean  @default(false)
 
   createdAt     DateTime @default(now())
-  // 👇 新增：记录更新时间，因为收藏状态是可以随时切换的
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime @default(now()) @updatedAt
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

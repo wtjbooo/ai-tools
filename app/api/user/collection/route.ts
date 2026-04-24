@@ -1,17 +1,14 @@
-// app/api/user/collection/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 
-/**
- * 获取收藏列表 (GET) & 添加收藏 (POST)
- */
-
-// 1. 获取当前用户的所有收藏
 export async function GET() {
   try {
+    // 1. 鉴权：严格复用你现有的 session_token 体系
     const sessionToken = cookies().get("session_token")?.value;
-    if (!sessionToken) return NextResponse.json({ error: "未登录" }, { status: 401 });
+    if (!sessionToken) {
+      return NextResponse.json({ error: "未授权" }, { status: 401 });
+    }
 
     const session = await prisma.session.findUnique({
       where: { sessionToken },
@@ -21,55 +18,43 @@ export async function GET() {
       return NextResponse.json({ error: "登录已过期" }, { status: 401 });
     }
 
-    const collections = await prisma.collection.findMany({
-      where: { userId: session.userId },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return NextResponse.json({ success: true, data: collections });
-  } catch (error) {
-    return NextResponse.json({ error: "获取收藏失败" }, { status: 500 });
-  }
-}
-
-// 2. 添加一个新的收藏
-export async function POST(req: NextRequest) {
-  try {
-    const sessionToken = cookies().get("session_token")?.value;
-    if (!sessionToken) return NextResponse.json({ error: "未登录" }, { status: 401 });
-
-    const session = await prisma.session.findUnique({
-      where: { sessionToken },
-    });
-
-    if (!session || session.expires < new Date()) {
-      return NextResponse.json({ error: "登录已过期" }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { title, description, coverUrl, sourceUrl, platform, tags, metaJson } = body;
-
-    // 必填项检查
-    if (!title || !sourceUrl) {
-      return NextResponse.json({ error: "标题和链接必填" }, { status: 400 });
-    }
-
-    const newCollection = await prisma.collection.create({
-      data: {
+    // 2. 核心查询：捞取大一统表中当前用户点过爱心的数据
+    const collections = await prisma.aIGenerationRecord.findMany({
+      where: {
         userId: session.userId,
-        title,
-        description,
-        coverUrl,
-        sourceUrl,
-        platform: platform || "website",
-        tags: tags || "",
-        metaJson: metaJson ? JSON.stringify(metaJson) : "{}",
+        isFavorited: true, // 仅拉取已收藏
       },
+      orderBy: {
+        updatedAt: "desc", // 按照最近收藏的时间倒序
+      },
+      select: {
+        id: true,
+        toolType: true,
+        title: true,
+        originalInput: true,
+        resultJson: true, // 保留 json 方便你未来扩展图片展示
+        createdAt: true,
+        isFavorited: true,
+      }
     });
 
-    return NextResponse.json({ success: true, data: newCollection });
+    // 这里我们将原始字段映射为前端好处理的格式
+    const formattedData = collections.map(item => ({
+      id: item.id,
+      type: item.toolType,
+      title: item.title,
+      prompt: item.originalInput || "无提示词记录",
+      createdAt: item.createdAt.toISOString().split('T')[0], // 格式化为 YYYY-MM-DD
+      isFavorited: item.isFavorited
+    }));
+
+    return NextResponse.json({ 
+      success: true, 
+      data: formattedData 
+    });
+
   } catch (error) {
-    console.error("[COLLECTION_POST_ERROR]", error);
-    return NextResponse.json({ error: "添加收藏失败" }, { status: 500 });
+    console.error("[COLLECTION_GET_ERROR]", error);
+    return NextResponse.json({ error: "获取收藏数据失败" }, { status: 500 });
   }
 }

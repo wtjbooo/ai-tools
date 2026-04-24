@@ -62,7 +62,9 @@ export async function GET() {
         thumbnail: thumbnail,
         prompt: record.title, // 流水表里存的是截断的摘要，刚好可以展示在这里
         tags: tags,
-        createdAt: timeString
+        createdAt: timeString,
+        // 👇 核心修复：把数据库中的收藏状态传给前端 (如果没有值默认给 false)
+        isFavorited: record.isFavorited || false 
       };
     });
 
