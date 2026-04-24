@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { signOut } from "next-auth/react"; // 引入真实的退出登录机制
+import { useRouter } from "next/navigation"; // 改用 Next.js 原生路由
 import { User, Shield, Zap, LogOut, Sparkles, CheckCircle2, Mail, Fingerprint, Copy, Check } from "lucide-react";
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const router = useRouter(); // 引入路由
   
   const [engineMode, setEngineMode] = useState<"speed" | "quality">("quality");
   const [isSaving, setIsSaving] = useState(false);
@@ -30,6 +31,12 @@ export default function SettingsPage() {
   const handleSaveProfile = () => {
     setIsSaving(true);
     setTimeout(() => setIsSaving(false), 800);
+  };
+
+  // 原生退出登录逻辑
+  const handleLogout = () => {
+    // 这里你可以加上清除本地 token 的逻辑，目前先直接跳回登录页
+    router.push("/login");
   };
 
   // 一键复制功能
@@ -57,7 +64,7 @@ export default function SettingsPage() {
 
       <div className="space-y-8">
         
-        {/* 模块一：个人资料 (Pro 级排版) */}
+        {/* 模块一：个人资料 */}
         <section className="bg-white rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden">
           <div className="p-6 sm:p-8 border-b border-zinc-100 bg-zinc-50/50 flex items-center gap-3">
             <div className="p-2 bg-white rounded-xl shadow-sm border border-zinc-100">
@@ -67,7 +74,6 @@ export default function SettingsPage() {
           </div>
           
           <div className="p-6 sm:p-8 space-y-8">
-            {/* 上半部：可编辑区 */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
               <div className="relative group">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-50 border border-indigo-50 flex items-center justify-center shrink-0 shadow-inner">
@@ -99,7 +105,6 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* 下半部：只读身份卡片 (高级灰底框) */}
             <div className="bg-zinc-50/80 rounded-2xl p-5 border border-zinc-100/80 grid grid-cols-1 sm:grid-cols-2 gap-6 relative overflow-hidden">
               <div className="space-y-1.5 relative z-10">
                 <label className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase flex items-center gap-1.5">
@@ -137,7 +142,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* 模块二：AI 引擎偏好 (保持科技感) */}
+        {/* 模块二：AI 引擎偏好 */}
         <section className="bg-white rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-zinc-100 overflow-hidden relative group">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
           
@@ -195,7 +200,7 @@ export default function SettingsPage() {
               <p className="text-[13px] text-red-600/70 mt-0.5">退出当前设备登录状态，保障资产安全。</p>
             </div>
             <button 
-              onClick={() => signOut({ callbackUrl: "/login" })} // 真实执行登出并跳回登录页
+              onClick={handleLogout}
               className="px-5 py-2 text-sm font-bold text-red-600 bg-white border border-red-200 shadow-sm hover:bg-red-50 hover:border-red-300 rounded-xl transition-all active:scale-95 flex items-center gap-2"
             >
               <LogOut className="w-4 h-4" />
