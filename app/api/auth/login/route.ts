@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       return jsonError("请输入密码或验证码", 400);
     }
 
-    // ==========================================
+// ==========================================
     // 🎟️ 生成通行证 Session (登录成功后的共用逻辑)
     // ==========================================
     const sessionToken = randomBytes(32).toString("hex");
@@ -126,15 +126,19 @@ export async function POST(request: Request) {
       sessionToken, userId: user.id, email, exp: expires.getTime(),
     });
 
-    cookies().set({
-      name: SESSION_COOKIE_NAME,
-      value: signedToken,
+    const cookieOptions = {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "lax" as const,
       secure: process.env.NODE_ENV === "production",
       path: "/",
       expires,
-    });
+    };
+
+    // 1. 发送签名版通行证 (lx_session)
+    cookies().set(SESSION_COOKIE_NAME, signedToken, cookieOptions);
+
+    // 2. 补发基础版通行证 (session_token)，确保前端 100% 能认出你！
+    cookies().set("session_token", sessionToken, cookieOptions);
 
     return NextResponse.json({
       ok: true,
