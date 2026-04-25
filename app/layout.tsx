@@ -9,6 +9,7 @@ import { AuthButton, AuthProvider } from "@/components/auth/auth-provider";
 import { Analytics } from '@vercel/analytics/react';
 import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext";
 import SiteShell from "@/components/SiteShell";
+import { GlobalToast } from '@/components/layout/global-toast';
 
 // 🚀 引入我们刚刚抽离的独立升级按钮组件！
 import UpgradeProButton from "@/components/UpgradeProButton";
@@ -243,6 +244,9 @@ export default function RootLayout({
               <main>{children}</main>
             </SiteShell>
             
+            {/* ✨ 完美添加：将全局弹窗挂载在这里，这样全站任何页面都能看到了！ */}
+            <GlobalToast />
+
           </UpgradeModalProvider>
         </AuthProvider>
         <Analytics />
