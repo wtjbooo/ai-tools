@@ -1,10 +1,20 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/auth";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+// 初始化 R2 (S3) 客户端
+const s3Client = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+  },
+});
 
 function slugify(input: string) {
   return input
@@ -45,9 +55,11 @@ function resolveIconUrl(iconHref: string, website: string) {
   }
 }
 
-function isBlobLogoUrl(url: string | null | undefined) {
+// 检查是否已经是 R2 的链接 (或者是旧的 blob 链接)
+function isCloudLogoUrl(url: string | null | undefined) {
   if (!url) return false;
-  return url.includes("blob.vercel-storage.com");
+  const r2Domain = process.env.R2_PUBLIC_DOMAIN?.replace(/^https?:\/\//, "") || "r2.dev";
+  return url.includes(r2Domain) || url.includes("blob.vercel-storage.com");
 }
 
 function withTimeoutSignal(ms: number) {
@@ -342,26 +354,43 @@ async function fetchWebsiteIcon(website: string) {
   return null;
 }
 
-async function uploadLogoToBlob(website: string, toolName: string) {
+// 🚀 核心改动：上传到 R2 的逻辑
+async function uploadLogoToR2(website: string, toolName: string) {
   try {
     const iconFile = await fetchWebsiteIcon(website);
     if (!iconFile) return "";
 
     const ext = getFileExtensionFromContentType(iconFile.contentType);
     const baseName =
-      slugFromWebsite(website) || slugify(toolName) || `tool-${Date.now()}`;
+      slugFromWebsite(website) || slugify(toolName) || `tool`;
+      
+    // 手动添加 Date.now() 作为随机后缀，防止同名覆盖
+    const fileName = `${baseName}-${Date.now()}.${ext}`;
+    
+    // 放入你要求的 "ai-tool-logos" 文件夹
+    const path = `ai-tool-logos/${fileName}`;
 
-    const path = `tool-logos/${baseName}.${ext}`;
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: path,
+        Body: iconFile.buffer,
+        ContentType: iconFile.contentType || "image/png",
+      })
+    );
 
-    const blob = await put(path, iconFile.buffer, {
-      access: "public",
-      contentType: iconFile.contentType || "image/png",
-      addRandomSuffix: true,
-    });
-
-    return blob.url;
+    // 拼接公开访问的 URL
+    const publicDomain = process.env.R2_PUBLIC_DOMAIN;
+    if (!publicDomain) {
+      console.error("请在 .env 中配置 R2_PUBLIC_DOMAIN");
+      return "";
+    }
+    
+    // 确保域名和路径拼接正确（去除结尾多余的斜杠）
+    const cleanDomain = publicDomain.replace(/\/+$/, "");
+    return `${cleanDomain}/${path}`;
   } catch (error) {
-    console.error("upload logo to blob failed:", error);
+    console.error("upload logo to R2 failed:", error);
     return "";
   }
 }
@@ -401,7 +430,8 @@ export async function POST(req: Request) {
           return logoUrl === "";
         }
 
-        return logoUrl === "" || !isBlobLogoUrl(logoUrl);
+        // 核心改动：检查是否是 R2 或旧的 Blob 链接
+        return logoUrl === "" || !isCloudLogoUrl(logoUrl);
       })
       .slice(0, limit);
 
@@ -422,7 +452,8 @@ export async function POST(req: Request) {
 
         logs.push(`开始处理：${tool.name}`);
 
-        const logoUrl = await uploadLogoToBlob(website, tool.name);
+        // 核心改动：调用 R2 上传函数
+        const logoUrl = await uploadLogoToR2(website, tool.name);
 
         if (!logoUrl) {
           logs.push(`未抓到图标：${tool.name}`);
@@ -435,7 +466,7 @@ export async function POST(req: Request) {
           data: { logoUrl },
         });
 
-        logs.push(`成功写入 logoUrl：${tool.name}`);
+        logs.push(`成功写入 R2 logoUrl：${tool.name}`);
         success += 1;
       } catch (error) {
         console.error(`backfill logo failed for ${tool.name}:`, error);
