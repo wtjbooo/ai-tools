@@ -18,16 +18,9 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
+// 💡 这里的备用域名已经正式修改为不带 www 的顶级域名啦！
 const SITE_URL =
-  process.env.SITE_URL?.replace(/\/+$/, "") || "https://www.xaira.top";
-
-const siteHost = (() => {
-  try {
-    return new URL(SITE_URL).host;
-  } catch {
-    return "www.xaira.top";
-  }
-})();
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://xaira.top";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -199,7 +192,7 @@ function Footer() {
         <div className="space-y-3">
           <div className="text-sm font-semibold text-gray-900">站点信息</div>
           <div className="space-y-2 text-sm leading-7 text-gray-600">
-            <p>域名：{siteHost}</p>
+            <p>域名：xaira.top</p>
             <p>内容持续更新，欢迎提交高质量 AI 工具与产品入口。</p>
           </div>
         </div>
