@@ -230,8 +230,8 @@ export default function SettingsPage() {
   <div className="flex items-center gap-2 group/copy">
     {/* 💡 核心优化：采用 XA-前缀 + 8位大写字符，总长度 11 位，看起来非常像高级序列号 */}
     <p className="text-sm font-mono text-zinc-600 font-bold tracking-widest">
-      {user?.id ? `XA-${user.id.substring(1, 9).toUpperCase()}` : "未知"}
-    </p>
+  {user?.id ? `XA-${String(parseInt(user.id.substring(2, 10), 36)).padStart(8, '0').substring(0, 8)}` : "未知"}
+</p>
     
     {user?.id && (
       <button 
