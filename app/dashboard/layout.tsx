@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 // ✨ 引入我们刚刚创建的通知面板组件 (请确保文件路径匹配)
-import { NotificationPopover } from "@/components/layout/notification-popover";
+import NotificationPopover from "@/components/layout/notification-popover";
 
 const NAV_ITEMS = [
   { label: "总览大盘", href: "/dashboard", icon: LayoutDashboard },
