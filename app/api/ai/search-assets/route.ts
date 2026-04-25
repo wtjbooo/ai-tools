@@ -121,9 +121,7 @@ export const POST = withProtection(
         if (!response.ok) { const err = await response.json(); throw new Error(err.error?.message || `请求 DeepSeek 失败`); }
         const payload = await response.json();
         data = safeParseJSON(payload.choices[0].message.content);
-      } 
-      else {
-        // 确保这部分逻辑长这样：
+
       } else {
         let selectedKey = KEYS.openai; // 默认使用 openai 的 key
         let actualModel = targetModel; 
