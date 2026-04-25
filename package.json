@@ -21,6 +21,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.3.1",
     "alipay-sdk": "^4.14.0",
+    "bcryptjs": "^3.0.3",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.3.1",
     "fuse.js": "^7.3.0",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.19",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.11",
     "@types/react": "^19",
