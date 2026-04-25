@@ -4,16 +4,22 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Mail, Sparkles, ShieldCheck, ArrowRight } from "lucide-react";
+import { Mail, Sparkles, ShieldCheck, ArrowRight, KeyRound } from "lucide-react";
 
 function EmailAuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/";
 
-  const [step, setStep] = useState<1 | 2>(1);
+  // 登录模式状态
+  const [mode, setMode] = useState<"password" | "code">("password");
+  
+  // 表单数据
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  
+  // 交互状态
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
@@ -25,24 +31,23 @@ function EmailAuthContent() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const handleSendCode = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  // 发送验证码
+  const handleSendCode = async () => {
     setError("");
-
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("请输入有效的邮箱地址");
       return;
     }
 
-    setIsLoading(true);
+    setCountdown(60);
     try {
+      // 保持使用你原来的发送验证码接口
       const res = await fetch("/api/auth/email/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, purpose: "login" }),
       });
 
-      // 如果有响应但不是 200，尝试解析错误信息
       if (!res.ok) {
         let errorMsg = "发送失败，请稍后重试";
         try {
@@ -51,43 +56,38 @@ function EmailAuthContent() {
         } catch (parseErr) {}
         throw new Error(errorMsg);
       }
-
-      // 发送成功，跳转第二步
-      setStep(2);
-      setCountdown(60);
     } catch (err: any) {
-      // 捕获网络中断或 Failed to fetch
-      if (err.message === "Failed to fetch") {
-        setError("网络连接不稳定，请检查是否已收到邮件。");
-      } else {
-        setError(err.message);
-      }
-    } finally {
-      setIsLoading(false);
+      setError(err.message === "Failed to fetch" ? "网络连接不稳定，请重试。" : err.message);
+      setCountdown(0);
     }
   };
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
+  // 提交登录/注册表单
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!code || code.length < 6) {
-      setError("请输入 6 位验证码");
-      return;
-    }
+    if (!email) return setError("请输入邮箱");
+    if (mode === "password" && !password) return setError("请输入密码");
+    if (mode === "code" && !code) return setError("请输入验证码");
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/email/verify-code", {
+      // 对接我们在第三步重写的新 API！
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ 
+          email, 
+          password: password || undefined, 
+          code: mode === "code" ? code : undefined 
+        }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "验证失败");
+      if (!res.ok || !data.ok) throw new Error(data.error || "验证失败");
 
-      // 登录成功，强制刷新全站状态
+      // 登录成功，强制跳转并刷新状态
       window.location.href = redirectTo;
     } catch (err: any) {
       setError(err.message);
@@ -97,106 +97,108 @@ function EmailAuthContent() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center relative px-4 overflow-hidden">
-      {/* ✨ 低调奢华的 AI 极光背景 (仅在卡片背后隐约发光) ✨ */}
+      {/* ✨ 低调奢华的 AI 极光背景 ✨ */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-500/10 via-purple-500/5 to-cyan-400/10 rounded-full blur-[80px] pointer-events-none animate-pulse duration-[5000ms]" />
 
-      <div className="relative w-full max-w-[380px] bg-white/70 backdrop-blur-2xl rounded-[32px] p-8 shadow-[0_16px_64px_-12px_rgba(15,23,42,0.1)] border border-white/80 ring-1 ring-black/[0.03]">
+      <div className="relative w-full max-w-[400px] bg-white/70 backdrop-blur-2xl rounded-[32px] p-8 shadow-[0_16px_64px_-12px_rgba(15,23,42,0.1)] border border-white/80 ring-1 ring-black/[0.03]">
+        
+        {/* 顶部图标与标题 */}
         <div className="text-center mb-8">
           <div className="mx-auto w-12 h-12 bg-gradient-to-br from-zinc-800 to-zinc-950 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-zinc-900/20">
-            {step === 1 ? (
-              <Mail className="w-5 h-5 text-white/90" />
+            {mode === "password" ? (
+              <KeyRound className="w-5 h-5 text-indigo-400" />
             ) : (
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              <Mail className="w-5 h-5 text-emerald-400" />
             )}
           </div>
           <h1 className="text-[22px] font-semibold tracking-tight text-zinc-900 flex items-center justify-center gap-2">
-            {step === 1 ? "欢迎回来" : "安全验证"}
-            {step === 1 && <Sparkles className="w-5 h-5 text-indigo-400" />}
+            欢迎来到 XAira
+            <Sparkles className="w-5 h-5 text-indigo-400" />
           </h1>
-          <p className="mt-2 text-[13px] text-zinc-500 font-medium">
-            {step === 1
-              ? "使用邮箱快速登录，探索 AI 灵感"
-              : `验证码已发送至 ${email}`}
-          </p>
         </div>
 
-        {step === 1 ? (
-          <form onSubmit={handleSendCode} className="space-y-5">
-            <div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full px-4 py-3.5 bg-white/50 border border-zinc-200/80 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all text-sm shadow-sm"
-                required
-                autoFocus
-              />
-            </div>
-            {error && <p className="text-xs text-red-500 text-center font-medium bg-red-50 py-1.5 rounded-lg">{error}</p>}
-            
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98] shadow-md shadow-zinc-900/10"
-            >
-              {isLoading ? "发送中..." : "继续"}
-              {!isLoading && <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
-            </button>
+        {/* 模式切换 Tabs */}
+        <div className="flex bg-zinc-100/80 p-1 rounded-xl mb-6">
+          <button
+            type="button"
+            onClick={() => { setMode("password"); setError(""); }}
+            className={`flex-1 rounded-lg py-2 text-[13px] font-medium transition-all duration-200 ${
+              mode === "password" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+            }`}
+          >
+            密码登录
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode("code"); setError(""); }}
+            className={`flex-1 rounded-lg py-2 text-[13px] font-medium transition-all duration-200 ${
+              mode === "code" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"
+            }`}
+          >
+            验证码登录/注册
+          </button>
+        </div>
 
-            <div className="text-center mt-4">
-              <button
-                type="button"
-                onClick={() => setStep(2)}
-                className="text-[12px] font-medium text-zinc-400 hover:text-zinc-700 transition-colors"
-              >
-                已收到验证码？直接输入
-              </button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyCode} className="space-y-5">
-            <div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 邮箱输入框 */}
+          <div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="请输入邮箱地址"
+              className="w-full px-4 py-3.5 bg-white/50 border border-zinc-200/80 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all text-sm shadow-sm"
+              required
+            />
+          </div>
+
+          {/* 验证码输入框 (仅验证码模式显示) */}
+          {mode === "code" && (
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="••••••"
-                className="w-full px-4 py-3.5 bg-white/50 border border-zinc-200/80 rounded-2xl text-zinc-900 placeholder:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all text-center tracking-[0.5em] text-xl font-bold shadow-sm"
-                required
-                autoFocus
+                placeholder="6位验证码"
                 maxLength={6}
+                className="w-full px-4 py-3.5 bg-white/50 border border-zinc-200/80 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all text-sm shadow-sm tracking-widest"
+                required={mode === "code"}
               />
-            </div>
-            {error && <p className="text-xs text-red-500 text-center font-medium bg-red-50 py-1.5 rounded-lg">{error}</p>}
-            
-            <button
-              type="submit"
-              disabled={isLoading || code.length !== 6}
-              className="group w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98] shadow-md shadow-zinc-900/10"
-            >
-              {isLoading ? "验证中..." : "完成登录"}
-            </button>
-            
-            <div className="flex items-center justify-between mt-5 px-1">
               <button
                 type="button"
-                onClick={() => setStep(1)}
-                className="text-[12px] font-medium text-zinc-400 hover:text-zinc-800 transition-colors"
+                onClick={handleSendCode}
+                disabled={countdown > 0}
+                className="shrink-0 px-4 py-3.5 bg-zinc-100 text-zinc-700 rounded-2xl text-[13px] font-medium hover:bg-zinc-200 disabled:opacity-50 transition-colors whitespace-nowrap"
               >
-                更换邮箱
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendCode()}
-                disabled={countdown > 0 || isLoading}
-                className="text-[12px] font-medium text-zinc-400 hover:text-zinc-800 disabled:opacity-50 transition-colors"
-              >
-                {countdown > 0 ? `${countdown} 秒后可重发` : "重新发送验证码"}
+                {countdown > 0 ? `${countdown}s 后重发` : "获取验证码"}
               </button>
             </div>
-          </form>
-        )}
+          )}
+
+          {/* 密码输入框 */}
+          <div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={mode === "code" ? "设置登录密码 (可选)" : "请输入密码"}
+              className="w-full px-4 py-3.5 bg-white/50 border border-zinc-200/80 rounded-2xl text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all text-sm shadow-sm"
+              required={mode === "password"} // 仅在密码模式下必填
+            />
+          </div>
+
+          {error && <p className="text-xs text-red-500 text-center font-medium bg-red-50 py-1.5 rounded-lg">{error}</p>}
+          
+          {/* 提交按钮 */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="group mt-2 w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-zinc-900 text-white rounded-2xl text-sm font-medium hover:bg-zinc-800 focus:outline-none disabled:opacity-50 transition-all active:scale-[0.98] shadow-md shadow-zinc-900/10"
+          >
+            {isLoading ? "处理中..." : mode === "password" ? "立即登录" : "登录 / 注册"}
+            {!isLoading && <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
+          </button>
+        </form>
 
         <div className="mt-8 text-center border-t border-zinc-100 pt-6">
           <Link href="/" className="text-[12px] font-medium text-zinc-400 hover:text-zinc-600 transition-colors">
