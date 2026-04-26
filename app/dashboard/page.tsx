@@ -77,7 +77,7 @@ export default function DashboardOverview() {
           </h1>
           <p className="mt-2 text-[14px] text-zinc-500">这里是你的专属 AI 灵感控制中心。</p>
         </div>
-        <button onClick={openModal} className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-zinc-900/20 hover:bg-zinc-800 transition-all active:scale-95">
+        <button onClick={() => openModal()} className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-zinc-900/20 hover:bg-zinc-800 transition-all active:scale-95">
           <Zap className="w-4 h-4 text-indigo-400" />
           升级引擎算力
         </button>
