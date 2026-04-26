@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
-import { CreditCard, Zap, Sparkles, Receipt, Loader2 } from "lucide-react";
+import { CreditCard, Zap, Sparkles, Receipt, Loader2, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 interface BillingData {
   planName: string;
@@ -23,6 +23,7 @@ const typeMap: Record<string, string> = {
   reverse: "图像反推",
   enhance: "魔法扩写",
   search: "全网搜索",
+  checkin: "系统福利", // 🚀 新增签到的流水标签
 };
 
 export default function BillingPage() {
@@ -64,7 +65,6 @@ export default function BillingPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
           额度与账单 <span className="text-zinc-300 font-light">/</span> 
-          {/* 💡 替换了原本的 Quota & Billing */}
           <span className="text-zinc-400 text-lg font-medium">资产与订阅</span>
         </h1>
         <p className="text-sm text-zinc-500 mt-1">管理你的算力订阅与积分消耗明细。</p>
@@ -74,14 +74,12 @@ export default function BillingPage() {
         
         {/* 左侧：订阅计划与额度概览 */}
         <div className="lg:col-span-1 space-y-6">
-          {/* 当前计划卡片 */}
           <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-zinc-100 relative overflow-hidden group">
             <div className="flex justify-between items-start mb-6">
               <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-900 border border-zinc-100">
                 <CreditCard className="w-6 h-6" />
               </div>
               {data.isPro && (
-                // 💡 替换了原本的 ACTIVE
                 <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold tracking-widest rounded-full">
                   当前生效
                 </span>
@@ -105,7 +103,6 @@ export default function BillingPage() {
             )}
           </div>
 
-          {/* 算力使用情况卡片 */}
           <div className="bg-white rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-zinc-100">
              <div className="flex justify-between items-end mb-6">
                 <div>
@@ -134,7 +131,7 @@ export default function BillingPage() {
           <div className="p-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
             <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
               <Receipt className="w-5 h-5 text-zinc-400" />
-              积分消耗明细
+              账单流水明细
             </h3>
             <span className="text-xs font-medium text-zinc-500 bg-white px-3 py-1 rounded-full border border-zinc-200 shadow-sm">
               最近 50 条记录
@@ -148,39 +145,49 @@ export default function BillingPage() {
               </div>
             ) : (
               <div className="space-y-1">
-                {data.history.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="flex items-center justify-between p-4 rounded-[20px] hover:bg-zinc-50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-4">
-                      {/* 日期模块 */}
-                      <div className="hidden sm:flex flex-col items-center justify-center w-12 h-12 rounded-2xl bg-zinc-100/80 text-zinc-500">
-                        <span className="text-xs font-bold leading-none mb-1">{item.date.split('-')[2]}</span>
-                        <span className="text-[10px] font-medium opacity-60 leading-none">{item.date.split('-')[1]}月</span>
-                      </div>
-                      
-                      {/* 内容标题 */}
-                      <div>
-                        <h4 className="text-[15px] font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
-                          {item.title}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[11px] font-bold tracking-wide text-zinc-500 uppercase bg-zinc-100 px-2 py-0.5 rounded-md">
-                            {typeMap[item.type.toLowerCase()] || item.type}
-                          </span>
-                          <span className="text-[11px] text-zinc-400 font-mono">{item.time}</span>
+                {data.history.map((item) => {
+                  // 🚀 核心渲染逻辑：判断是收入还是支出
+                  const isIncome = item.cost < 0; 
+                  const displayValue = isIncome ? `+ ${Math.abs(item.cost)}` : `- ${item.cost}`;
+                  
+                  return (
+                    <div 
+                      key={item.id} 
+                      className="flex items-center justify-between p-4 rounded-[20px] hover:bg-zinc-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="hidden sm:flex flex-col items-center justify-center w-12 h-12 rounded-2xl bg-zinc-100/80 text-zinc-500">
+                          <span className="text-xs font-bold leading-none mb-1">{item.date.split('-')[2]}</span>
+                          <span className="text-[10px] font-medium opacity-60 leading-none">{item.date.split('-')[1]}月</span>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-[15px] font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                            {item.title}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-[11px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-md ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-500'}`}>
+                              {typeMap[item.type.toLowerCase()] || item.type}
+                            </span>
+                            <span className="text-[11px] text-zinc-400 font-mono">{item.time}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* 扣费数值 */}
-                    <div className="flex items-center gap-1.5 shrink-0 ml-4">
-                      <span className="text-sm font-bold text-zinc-900">-{item.cost}</span>
-                      <Zap className="w-4 h-4 text-amber-500 fill-current opacity-80" />
+                      {/* 🚀 金额渲染：绿色加号，深色减号 */}
+                      <div className="flex items-center gap-1.5 shrink-0 ml-4">
+                        <span className={`text-sm font-bold ${isIncome ? 'text-emerald-500' : 'text-zinc-900'}`}>
+                          {displayValue}
+                        </span>
+                        {isIncome ? (
+                           <ArrowDownToLine className="w-4 h-4 text-emerald-500 opacity-80" />
+                        ) : (
+                           <Zap className="w-4 h-4 text-amber-500 fill-current opacity-80" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
