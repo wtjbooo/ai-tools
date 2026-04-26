@@ -82,7 +82,7 @@ export default function EnhancePromptPage() {
 
   useEffect(() => {
     if (apiError && (apiError.includes("次数") || apiError.includes("已用完") || apiError.includes("额度"))) {
-      openModal();
+      openModal(true);
     }
   }, [apiError, openModal]);
 

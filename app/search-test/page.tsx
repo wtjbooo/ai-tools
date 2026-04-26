@@ -75,7 +75,7 @@ export default function SearchTestPage() {
 
   useEffect(() => {
     if (error && (error.includes("次数") || error.includes("已用完") || error.includes("额度"))) {
-      openModal();
+      openModal(true);
     }
   }, [error, openModal]);
 

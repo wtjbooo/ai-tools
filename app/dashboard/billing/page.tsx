@@ -97,7 +97,7 @@ export default function BillingPage() {
 
             {!data.isPro && (
               <button 
-                onClick={openModal}
+                onClick={() => openModal()}
                 className="w-full flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 py-3.5 text-sm font-semibold text-white shadow-lg shadow-zinc-900/20 hover:bg-zinc-800 transition-all active:scale-95"
               >
                 <Zap className="w-4 h-4 text-amber-400" />
