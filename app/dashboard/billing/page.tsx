@@ -34,7 +34,10 @@ export default function BillingPage() {
   useEffect(() => {
     async function fetchBilling() {
       try {
-        const res = await fetch("/api/user/billing");
+        // 🚀 核心补丁：加时间戳并强制不缓存，彻底打穿浏览器缓存！
+        const res = await fetch(`/api/user/billing?t=${Date.now()}`, {
+          cache: 'no-store'
+        });
         if (res.ok) {
           const json = await res.json();
           if (json.success) setData(json);
