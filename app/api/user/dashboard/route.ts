@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const sessionToken = cookies().get("session_token")?.value;
-
     if (!sessionToken) {
       return NextResponse.json({ error: "未登录" }, { status: 401 });
     }
@@ -42,33 +41,44 @@ export async function GET() {
     // 2. 计算本月第一天，作为流水查询起点
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // 3. 商业级聚合查询 (Aggregate)：直接累加本月内且成功的流水 cost
-    const usageResult = await prisma.aIGenerationRecord.aggregate({
+    // 3. 🚀 商业级财务分拣：分别统计【真实消费】和【福利收入】
+    
+    // 消费流水：(cost > 0)
+    const usageAgg = await prisma.aIGenerationRecord.aggregate({
       _sum: { cost: true },
       where: {
         userId: user.id,
-        status: "success", // 只统计扣费成功的任务
-        createdAt: { gte: startOfMonth }, // 大于等于本月第一天
+        status: "success", 
+        cost: { gt: 0 }, // 只有正数才是真正的扣费
+        createdAt: { gte: startOfMonth }, 
       },
     });
+    const monthlyUsed = usageAgg._sum.cost || 0;
 
-    // 从流水表中提取真实的本月已消耗总积分（如果没有记录，则默认为 0）
-    const monthlyUsed = usageResult._sum.cost || 0;
+    // 收入流水：(cost < 0，如签到送的 100)
+    const bonusAgg = await prisma.aIGenerationRecord.aggregate({
+      _sum: { cost: true },
+      where: {
+        userId: user.id,
+        status: "success", 
+        cost: { lt: 0 }, // 负数代表赚到的奖励
+        createdAt: { gte: startOfMonth }, 
+      },
+    });
+    // 把负数的收入取绝对值，变成正数用来加到总额度里
+    const monthlyEarned = Math.abs(bonusAgg._sum.cost || 0); 
 
     // 4. 重构清爽干净的额度算法
     const MONTHLY_FREE_POINTS = 100; 
-    const MONTHLY_PRO_POINTS = 2000; 
+    const MONTHLY_PRO_POINTS = 3000; // 建议提至3000，显得39元更划算
     
-    // 基础额度
+    // 基础订阅额度
     const baseCredits = user.isPro ? MONTHLY_PRO_POINTS : MONTHLY_FREE_POINTS;
     
-    // 🚀 核心修复：强制把额外积分封印为 0，防止数据库脏测试数据让你“亏本”！
-    const bonusCredits = 0; 
-
     // 极简且绝对正确的计算公式
-    const displayTotal = baseCredits + bonusCredits; // 总额度永远等于 基础 + 额外
-    const displayUsed = monthlyUsed; // 已用额度永远等于流水表累加
-    const remainingCredits = Math.max(0, displayTotal - displayUsed); // 剩余 = 总计 - 已用
+    const displayTotal = baseCredits + monthlyEarned; // 总计 = 基础包 + 本月签到赚的
+    const displayUsed = monthlyUsed; // 已用 = 真实花掉的
+    const remainingCredits = Math.max(0, displayTotal - displayUsed); 
 
     // 5. 构造友好的时间与数据展示
     const formattedTasks = recentTasks.map(task => {
@@ -95,6 +105,9 @@ export async function GET() {
          frontendType = "video";
       } else if (task.toolType === "search") {
          platformName = "全网搜索";
+         frontendType = "sparkles";
+      } else if (task.toolType === "checkin") {
+         platformName = "官方福利";
          frontendType = "sparkles";
       }
 
