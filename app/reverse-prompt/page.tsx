@@ -288,7 +288,7 @@ export default function ReversePromptPage() {
         
         if (!presignRes.ok) {
           const errorData = await presignRes.json();
-          if (presignRes.status === 403) { openModal(); setError(""); return; }
+          if (presignRes.status === 403) { openModal(true); setError(""); return; }
           throw new Error(errorData.error || "无法获取上传通道，请稍后再试");
         }
         const { uploadUrl, fileKey } = await presignRes.json();
@@ -324,7 +324,7 @@ export default function ReversePromptPage() {
           body: JSON.stringify(requestBody) 
       });
 
-      if (response.status === 403) { openModal(); setError(""); return; }
+      if (response.status === 403) { openModal(true); setError(""); return; }
       
       const startData = await response.json();
       if (!response.ok) throw new Error(startData.error || "分析请求失败，请检查模型名称和额度");
@@ -389,8 +389,8 @@ export default function ReversePromptPage() {
 
     } catch (err: any) {
       const errMsg = err instanceof Error ? err.message : "分析失败，请稍后再试";
-      if (errMsg.includes("次数") && errMsg.includes("已用完")) {
-        openModal(); setError("");
+      if (errMsg.includes("次数") || errMsg.includes("已用完") || errMsg.includes("积分") || errMsg.includes("不足")) {
+        openModal(true); setError("");
       } else {
         if (errMsg.includes("退还")) {
           setQuotaNotice({ type: 'refund', msg: errMsg }); setError(""); 

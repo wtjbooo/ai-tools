@@ -3,9 +3,10 @@
 import React, { createContext, useContext, useState } from "react";
 import UpgradeModal from "@/components/UpgradeModal";
 
-// 定义遥控器的功能：打开弹窗、关闭弹窗
+// 1. 定义遥控器的功能：给 openModal 加上可选参数 isExhausted
 interface UpgradeModalContextType {
-  openModal: () => void;
+  isOpen: boolean;
+  openModal: (isExhausted?: boolean) => void;
   closeModal: () => void;
 }
 
@@ -14,12 +15,26 @@ const UpgradeModalContext = createContext<UpgradeModalContextType | undefined>(u
 // 这是一个巨大的包裹器，它会把整个网站包裹起来
 export function UpgradeModalProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  // 🚀 新增状态：用来记录弹窗到底是因为“没额度了”还是“主动点击”打开的
+  const [isExhausted, setIsExhausted] = useState(false); 
+
+  // 🚀 修改打开函数，接收参数并设置状态
+  const openModal = (exhausted = false) => {
+    setIsExhausted(exhausted);
+    setIsOpen(true);
+  };
+
+  const closeModal = () => setIsOpen(false);
 
   return (
-    <UpgradeModalContext.Provider value={{ openModal: () => setIsOpen(true), closeModal: () => setIsOpen(false) }}>
+    <UpgradeModalContext.Provider value={{ isOpen, openModal, closeModal }}>
       {children}
-      {/* 弹窗被挂载在全局最顶层！ */}
-      <UpgradeModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {/* 🚀 弹窗被挂载在全局最顶层，并把 isExhausted 传递给它！ */}
+      <UpgradeModal 
+        isOpen={isOpen} 
+        onClose={closeModal} 
+        isExhausted={isExhausted} 
+      />
     </UpgradeModalContext.Provider>
   );
 }
