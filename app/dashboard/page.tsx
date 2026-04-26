@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
+// 🚀 1. 新增：在这里导入我们刚刚写好的签到小组件
+import CheckInWidget from "@/components/dashboard/CheckInWidget";
 
 interface DashboardData {
   quota: { used: number; total: number; remaining: number };
@@ -108,6 +110,8 @@ export default function DashboardOverview() {
 
       {/* 上半部分：核心数据与快捷入口 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* 左侧大卡片：本月算力配额 */}
         <div className="md:col-span-2 relative overflow-hidden rounded-[32px] bg-white p-8 shadow-[0_12px_40px_rgba(0,0,0,0.04)] border border-zinc-100">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
              <Zap className="w-32 h-32 text-indigo-600" />
@@ -139,24 +143,31 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        <div className="rounded-[32px] bg-gradient-to-br from-zinc-900 to-zinc-800 p-8 shadow-[0_12px_40px_rgba(24,24,27,0.15)] text-white relative overflow-hidden group">
-          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay" />
-          <h3 className="text-[16px] font-bold mb-6 text-zinc-100">快速启动</h3>
-          <div className="space-y-3 relative z-10">
-            <Link href="/reverse-prompt" className="w-full flex items-center justify-between p-3.5 rounded-[16px] bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md border border-white/5 group/btn">
-              <div className="flex items-center gap-3">
-                <ImageIcon className="w-5 h-5 text-cyan-400" />
-                <span className="text-[14px] font-medium">图像提示词反推</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-zinc-400 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
-            </Link>
-            <Link href="/enhance-prompt" className="w-full flex items-center justify-between p-3.5 rounded-[16px] bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md border border-white/5 group/btn">
-              <div className="flex items-center gap-3">
-                <Video className="w-5 h-5 text-purple-400" />
-                <span className="text-[14px] font-medium">魔法视频扩写</span>
-              </div>
-              <ArrowRight className="w-4 h-4 text-zinc-400 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
-            </Link>
+        {/* 🚀 2. 修改点：右侧列容器，将签到组件和快速启动卡片纵向排列 */}
+        <div className="flex flex-col gap-6">
+          {/* Apple 风签到小组件 */}
+          <CheckInWidget />
+
+          {/* 原来的：快速启动黑卡 */}
+          <div className="flex-1 rounded-[32px] bg-gradient-to-br from-zinc-900 to-zinc-800 p-8 shadow-[0_12px_40px_rgba(24,24,27,0.15)] text-white relative overflow-hidden group">
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay" />
+            <h3 className="text-[16px] font-bold mb-6 text-zinc-100">快速启动</h3>
+            <div className="space-y-3 relative z-10">
+              <Link href="/reverse-prompt" className="w-full flex items-center justify-between p-3.5 rounded-[16px] bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md border border-white/5 group/btn">
+                <div className="flex items-center gap-3">
+                  <ImageIcon className="w-5 h-5 text-cyan-400" />
+                  <span className="text-[14px] font-medium">图像提示词反推</span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
+              </Link>
+              <Link href="/enhance-prompt" className="w-full flex items-center justify-between p-3.5 rounded-[16px] bg-white/10 hover:bg-white/20 transition-all backdrop-blur-md border border-white/5 group/btn">
+                <div className="flex items-center gap-3">
+                  <Video className="w-5 h-5 text-purple-400" />
+                  <span className="text-[14px] font-medium">魔法视频扩写</span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -181,7 +192,6 @@ export default function DashboardOverview() {
                  <span className="text-sm font-medium">暂无生成记录，快去开启灵感吧</span>
                </div>
             ) : recentActivities.map((activity) => {
-              // 🎯 修复路由：改为 /search-test
               let targetUrl = `/reverse-prompt?task=${activity.id}`; 
               if (activity.type === 'video') targetUrl = `/enhance-prompt?task=${activity.id}`; 
               if (activity.type === 'sparkles') targetUrl = `/search-test?task=${activity.id}`; 

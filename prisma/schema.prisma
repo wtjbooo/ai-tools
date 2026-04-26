@@ -150,6 +150,8 @@ model User {
   isPro         Boolean   @default(false) 
   bonusCredits  Int       @default(0) 
 
+  lastCheckInAt DateTime?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
