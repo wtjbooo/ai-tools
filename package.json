@@ -12,6 +12,8 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.53",
+    "@ai-sdk/react": "^3.0.170",
     "@aws-sdk/client-s3": "^3.1032.0",
     "@aws-sdk/s3-request-presigner": "^3.1029.0",
     "@google/generative-ai": "^0.24.1",
@@ -20,6 +22,7 @@
     "@upstash/redis": "^1.37.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.3.1",
+    "ai": "^6.0.168",
     "alipay-sdk": "^4.14.0",
     "bcryptjs": "^3.0.3",
     "csv-parser": "^3.2.0",

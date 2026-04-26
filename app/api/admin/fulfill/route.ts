@@ -1,4 +1,3 @@
-// app/api/admin/fulfill/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
@@ -22,38 +21,65 @@ export async function POST(req: NextRequest) {
 
     const userId = order.userId;
 
-    // 2. ⚡ 核心发货逻辑
-    let updateData: any = {};
-    
-    // 如果是包月 Pro
+    // 2. ⚡ 全新积分系统发货逻辑计算
+    let addedCredits = 0;
+    let isProUpdate = order.user.isPro; // 默认保持原有身份
+    let recordName = "系统充值";
+
     if (order.planType === "monthly_pro") {
-      updateData = { isPro: true };
+      isProUpdate = true;
+      addedCredits = 3000; // PRO 会员直接到账 3000 基础算力
+      recordName = "开通 PRO 连续包月";
     } 
-    // 如果是 50 次加油包
-    else if (order.planType === "quota_50") {
-      updateData = { 
-        bonusCredits: { increment: 50 } // 自动在原有积分上加 50
-      };
+    else if (order.planType === "credit_1000") {
+      addedCredits = 1000; // 加油包充值 1000 算力
+      recordName = "购买 1000 算力加油包";
+    } 
+    else {
+      // 防御性设计：如果是未知的旧套餐，默认给 100 积分
+      addedCredits = 100;
+      recordName = "后台手动补偿积分";
     }
 
-    // 3. 开启数据库事务：确保订单更新和用户充值同时成功
-    await prisma.$transaction([
-      prisma.user.update({
+    // 3. 🚀 开启安全的数据库事务：资产、订单、流水三张表必须同时成功
+    await prisma.$transaction(async (tx) => {
+      
+      // A. 更新用户资产
+      await tx.user.update({
         where: { id: userId },
-        data: updateData
-      }),
-      prisma.order.update({
+        data: { 
+          isPro: isProUpdate,
+          bonusCredits: { increment: addedCredits }
+        }
+      });
+
+      // B. 更新订单状态为已支付
+      await tx.order.update({
         where: { outTradeNo },
         data: { 
           status: "paid", 
           paidAt: new Date() 
         }
-      })
-    ]);
+      });
 
-    console.log(`[发货成功] 订单: ${outTradeNo}, 套餐: ${order.planType}, 用户 ID: ${userId}`);
+      // C. 记账！写入流水，让前端仪表盘能读到这笔收入
+      await tx.aIGenerationRecord.create({
+        data: {
+          userId: userId,
+          cost: -addedCredits, // 负数代表收入/充值福利
+          modelName: recordName,
+          taskType: "RECHARGE" // 标识为充值任务
+        }
+      });
 
-    return NextResponse.json({ success: true, message: "发货成功！积分/权益已秒到账。" });
+    });
+
+    console.log(`[发货成功] 订单: ${outTradeNo}, 充值: ${addedCredits}积分, 用户ID: ${userId}`);
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `发货成功！已为用户充值 ${addedCredits} 积分。` 
+    });
 
   } catch (error: any) {
     console.error("[发货系统崩溃]", error);
