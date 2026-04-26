@@ -67,13 +67,28 @@ export async function POST(req: NextRequest) {
     // 💡 核心：根据身份发放对应积分 (Pro 会员拿 500，普通拿 100)
     const rewardAmount = user.isPro ? PRO_DAILY_REWARD : DAILY_CHECKIN_REWARD;
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        bonusCredits: { increment: rewardAmount },
-        lastCheckInAt: now,
-      },
-    });
+    // 💡 核心改动：用事务同时更新用户积分和插入账单流水
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          bonusCredits: { increment: rewardAmount },
+          lastCheckInAt: now,
+        },
+      }),
+      // 往流水表里插入一条明细
+      prisma.aIGenerationRecord.create({
+        data: {
+          userId: user.id,
+          toolType: "checkin", // 自定义一个类型代表签到
+          title: "🎁 每日签到算力发放",
+          originalInput: "系统福利",
+          resultJson: "{}",
+          cost: -rewardAmount, // 注意这里是负数！这样在账单里就会显示成正的加分
+          status: "success"
+        }
+      })
+    ]);
 
     return NextResponse.json({ 
       success: true, 

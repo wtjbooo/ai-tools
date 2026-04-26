@@ -5,7 +5,7 @@ import { Sparkles, Check } from "lucide-react";
 import { DAILY_CHECKIN_REWARD, PRO_DAILY_REWARD } from "@/lib/pricing";
 import { useAuth } from "@/components/auth/auth-provider"; // 获取用户身份
 
-export default function CheckInWidget() {
+export default function CheckInWidget({ onSuccess }: { onSuccess?: () => void }) {
   const { user } = useAuth(); // 👈 真实获取当前登录的用户数据
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -54,7 +54,7 @@ export default function CheckInWidget() {
       
       if (res.ok && data.success) {
         setHasCheckedIn(true);
-        // 如果想让左边大卡片的余额立刻更新，可以在这里触发 context 的刷新
+        if (onSuccess) onSuccess(); // 🚀 新增：通知外面刷新数据！
       } else if (data.error === "今日已领取过算力") {
         setHasCheckedIn(true);
       }
