@@ -1,36 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // 引入数据库
-import { DAILY_CHECKIN_REWARD } from "@/lib/pricing"; // 引入中央物价局的签到额度
+import prisma from "@/lib/prisma";
+import { DAILY_CHECKIN_REWARD, PRO_DAILY_REWARD } from "@/lib/pricing";
 
-export async function POST(req: NextRequest) {
-  try {
-    // 1. 解析 Cookie 鉴权 (匹配交接文档中的双重通行证)
-    const sessionToken = req.cookies.get("session_token")?.value;
-    const lxSession = req.cookies.get("lx_session")?.value;
+// 公共的鉴权与获取用户逻辑
+async function getAuthenticatedUser(req: NextRequest) {
+  const sessionToken = req.cookies.get("session_token")?.value;
+  const lxSession = req.cookies.get("lx_session")?.value;
 
-    if (!sessionToken && !lxSession) {
-      return NextResponse.json({ success: false, error: "请先登录" }, { status: 401 });
-    }
+  if (!sessionToken && !lxSession) return null;
 
-    // 2. 获取当前用户 (请根据你的实际 Session 逻辑调整查询条件)
-    const user = await prisma.user.findFirst({
-      where: {
-        sessions: {
-          some: { sessionToken: sessionToken || lxSession }
-        }
+  return await prisma.user.findFirst({
+    where: {
+      sessions: {
+        some: { sessionToken: sessionToken || lxSession }
       }
-    });
+    }
+  });
+}
 
-    if (!user) {
-      return NextResponse.json({ success: false, error: "用户不存在" }, { status: 404 });
+// 🚀 GET：让前端一加载页面，就能查询今天是否已经签到
+export async function GET(req: NextRequest) {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user) return NextResponse.json({ success: false, hasCheckedInToday: false });
+
+    if (!user.lastCheckInAt) {
+      return NextResponse.json({ success: true, hasCheckedInToday: false });
     }
 
     const now = new Date();
+    const lastCheckInDate = new Date(user.lastCheckInAt);
     
-    // 3. 检查今日是否已签到
+    // 判断最后签到时间是否是今天
+    const isSameDay = 
+      lastCheckInDate.getFullYear() === now.getFullYear() &&
+      lastCheckInDate.getMonth() === now.getMonth() &&
+      lastCheckInDate.getDate() === now.getDate();
+
+    return NextResponse.json({ success: true, hasCheckedInToday: isSameDay });
+  } catch (error) {
+    return NextResponse.json({ success: false, hasCheckedInToday: false });
+  }
+}
+
+// 🚀 POST：执行签到动作并根据 Pro 身份发放积分
+export async function POST(req: NextRequest) {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user) return NextResponse.json({ success: false, error: "请先登录" }, { status: 401 });
+
+    const now = new Date();
+    
+    // 检查是否重复签到
     if (user.lastCheckInAt) {
       const lastCheckInDate = new Date(user.lastCheckInAt);
-      // 将时间抹平到凌晨 0 点，比较年月日是否相同
       const isSameDay = 
         lastCheckInDate.getFullYear() === now.getFullYear() &&
         lastCheckInDate.getMonth() === now.getMonth() &&
@@ -41,19 +64,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. 发放积分并更新签到时间
+    // 💡 核心：根据身份发放对应积分 (Pro 会员拿 500，普通拿 100)
+    const rewardAmount = user.isPro ? PRO_DAILY_REWARD : DAILY_CHECKIN_REWARD;
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        bonusCredits: { increment: DAILY_CHECKIN_REWARD },
+        bonusCredits: { increment: rewardAmount },
         lastCheckInAt: now,
       },
     });
 
     return NextResponse.json({ 
       success: true, 
-      amount: DAILY_CHECKIN_REWARD,
-      message: `签到成功，已放入 ${DAILY_CHECKIN_REWARD} 积分`
+      amount: rewardAmount,
+      isPro: user.isPro,
+      message: `签到成功，已放入 ${rewardAmount} 积分`
     });
 
   } catch (error: any) {

@@ -3,7 +3,8 @@
 // ==========================================
 // 🎁 运营福利与商业化全局配置
 // ==========================================
-export const DAILY_CHECKIN_REWARD = 100; // 每天签到赠送的积分数量
+export const DAILY_CHECKIN_REWARD = 100;      // 普通用户签到奖励
+export const PRO_DAILY_REWARD = 500;         // Pro 会员签到奖励 (大幅提升)
 
 /**
  * XAira 全局 AI 算力计费中心 (中央物价局)
