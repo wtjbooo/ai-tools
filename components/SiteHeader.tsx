@@ -105,7 +105,7 @@ export default function SiteHeader({
 
               {/* 🚀 3. 新增的主动购买/升级入口大门！ */}
               <button
-                onClick={openModal}
+                onClick={() => openModal()}
                 className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(79,70,229,0.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(79,70,229,0.4)] active:scale-95"
               >
                 <span className="text-[14px]">💎</span>
