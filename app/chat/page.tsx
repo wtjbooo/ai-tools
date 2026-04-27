@@ -123,14 +123,14 @@ export default function ChatPage() {
         >
           <input
             className="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-            value={input}
+            value={input || ''} 
             onChange={handleInputChange}
             placeholder="输入你的问题..."
             disabled={isLoading}
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || !input || input.trim() === ''} 
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             发送
