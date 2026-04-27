@@ -114,7 +114,7 @@ export async function POST(request: Request) {
         
         // 🛡️ 使用 safeDbQuery 包裹数据库操作
         user = await safeDbQuery(() => prisma.user.update({
-          where: { id: user.id },
+          where: { id: user!.id }, 
           data: updates,
         }));
       }
