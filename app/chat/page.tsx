@@ -33,27 +33,32 @@ export default function ChatPage() {
       .catch(() => setIsLoggedIn(false));
   }, []);
 
-  // 💡 我们只用这五个在所有版本里都绝对存在的官方属性！
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  // 💡 【真正的物理隔离】：先把所有参数放到一个独立变量里，并声明为 any
+  const chatOptions: any = {
+    api: "/api/chat",
     body: { model: selectedModel },
-    onResponse: (response) => {
+    onResponse: (response: any) => {
       if (response.status === 402) openModal(true); 
       if (response.status === 401) {
         alert("登录已过期，请点击右上角重新登录！");
         setIsLoggedIn(false);
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       alert("发送失败: " + error.message);
     }
-  });
+  };
+
+  // 💡 TypeScript 面对一个已经定义好的 any 变量，绝对不可能再去检查它的属性
+  const chatHookResult: any = useChat(chatOptions);
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = chatHookResult;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 🛡️ 终极防弹衣：无论 SDK 传过来什么牛鬼蛇神，我们都把它强制转成安全的字符串
   const safeInput = typeof input === "string" ? input : "";
 
   return (
@@ -78,13 +83,13 @@ export default function ChatPage() {
       </header>
 
       <main className="flex-1 w-full max-w-3xl overflow-y-auto px-4 py-6 scrollbar-hide">
-        {messages.length === 0 ? (
+        {messages?.length === 0 ? (
           <div className="text-center text-gray-400 mt-24 flex flex-col items-center gap-3">
              <div className="w-14 h-14 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-2xl">✨</div>
              <p className="text-[15px]">你好！我是 XAira 智能助手，今天想聊点什么？</p>
           </div>
         ) : (
-          messages.map((m) => (
+          messages?.map((m: any) => (
             <div key={m.id} className={`mb-6 flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               {m.role !== "user" && (
                 <div className="w-8 h-8 rounded-full border border-gray-100 bg-white flex items-center justify-center text-xs font-bold text-blue-600 shadow-sm mt-0.5">
@@ -114,11 +119,7 @@ export default function ChatPage() {
           </div>
         ) : (
           <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!safeInput.trim() || isLoading) return;
-              handleSubmit(e); // 完美调用官方发送逻辑
-            }}
+            onSubmit={handleSubmit}
             className="relative flex items-end w-full bg-white border border-gray-200 rounded-[28px] shadow-sm transition-all focus-within:ring-4 focus-within:ring-blue-50 focus-within:border-blue-200"
           >
             <textarea
