@@ -66,9 +66,9 @@ export async function POST(req: NextRequest) {
       await tx.aIGenerationRecord.create({
         data: {
           userId: userId,
-          cost: -addedCredits, // 负数代表收入/充值福利
-          modelName: recordName,
-          taskType: "RECHARGE" // 标识为充值任务
+          cost: -addedCredits,     // 负数代表收入/充值福利
+          toolType: "RECHARGE",    // 💡 修复：补上必填的 toolType
+          title: recordName        // 💡 修复：补上必填的 title，直接使用上方定义好的名称
         }
       });
 
