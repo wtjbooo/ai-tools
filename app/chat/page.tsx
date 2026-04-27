@@ -1,156 +1,139 @@
-"use client";
+'use client';
 
-import { useChat } from "@ai-sdk/react";
-import { useEffect, useRef, useState } from "react";
-import { useUpgradeModal } from "@/contexts/UpgradeModalContext";
+import { useChat } from '@ai-sdk/react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-const AI_MODELS = [
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 (基础版)" },
-  { id: "gpt-4o", name: "GPT-4o (旗舰版)" },
-  { id: "claude-3-5-sonnet-20240620", name: "Claude-sonnet-4-6 (代码强)" },
-  { id: "deepseek-chat", name: "DeepSeek V3 (官方)" },
-  { id: "deepseek-reasoner", name: "DeepSeek R1 (深度思考)" },
-  { id: "gemini-1.5-pro", name: "Gemini 2.5 Pro (官方)" },
-  { id: "LongCat-Flash-Thinking-2601", name: "LongCat-Flash-Thinking (官方)" }
+// 定义支持的模型列表 (精选高性价比组合)
+const MODELS = [
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (日常/高速)' },
+  { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (代码/逻辑)' },
+  { id: 'deepseek-chat', name: 'DeepSeek V3 (国产之光)' },
+  { id: 'deepseek-reasoner', name: 'DeepSeek R1 (深度思考)' },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (官方免费)' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (超长上下文)' },
+  { id: 'gpt-4o', name: 'GPT-4o (复杂任务备用)' },
 ];
 
 export default function ChatPage() {
-  const { openModal } = useUpgradeModal();
-  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].id);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const router = useRouter();
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [currentModel, setCurrentModel] = useState<string>(MODELS[0].id);
 
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        const userData = data.user || data; 
-        if (userData && (userData.id || userData.email || userData.name || userData.userId)) {
-          setIsLoggedIn(true);
-        } else {
-          setIsLoggedIn(false);
-        }
-      })
-      .catch(() => setIsLoggedIn(false));
-  }, []);
-
-  // 💡 【真正的物理隔离】：先把所有参数放到一个独立变量里，并声明为 any
-  const chatOptions: any = {
-    api: "/api/chat",
-    body: { model: selectedModel },
-    onResponse: (response: any) => {
-      if (response.status === 402) openModal(true); 
-      if (response.status === 401) {
-        alert("登录已过期，请点击右上角重新登录！");
-        setIsLoggedIn(false);
-      }
+  // 核心！最干净的 useChat 调用方式
+  // 默认请求就是 POST /api/chat，不传 api 参数彻底避开类型报错
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    body: {
+      model: currentModel, // 每次请求时带上当前选择的模型
     },
-    onError: (error: any) => {
-      alert("发送失败: " + error.message);
+    onError: (err) => {
+      console.error('聊天发生错误:', err);
+      alert('抱歉，发送消息时出现错误，请检查网络或刷新页面重试。');
     }
-  };
+  });
 
-  // 💡 TypeScript 面对一个已经定义好的 any 变量，绝对不可能再去检查它的属性
-  const chatHookResult: any = useChat(chatOptions);
-
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = chatHookResult;
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // 鉴权拦截逻辑
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const verifyUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          router.push('/login'); // 验证失败，重定向到登录页
+          return;
+        }
+      } catch (error) {
+        console.error('鉴权请求失败:', error);
+        router.push('/login');
+      } finally {
+        setIsAuthChecking(false);
+      }
+    };
+    
+    verifyUser();
+  }, [router]);
 
-  const safeInput = typeof input === "string" ? input : "";
+  // 如果还在检查登录状态，显示加载白屏
+  if (isAuthChecking) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 text-gray-500">
+        正在验证身份信息...
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full h-[calc(100vh-70px)] bg-gray-50 font-sans flex flex-col items-center">
-      
-      <header className="w-full max-w-3xl bg-white/80 backdrop-blur-md border-b border-gray-100 p-4 flex justify-between items-center z-10 sticky top-0">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800">XAira 智能助手</h1>
-          <p className="text-sm text-gray-500 mt-0.5">正在与最新的 AI 大模型对话</p>
-        </div>
-        
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* 顶部导航栏 & 模型切换器 */}
+      <header className="flex items-center justify-between p-4 bg-white border-b shadow-sm shrink-0">
+        <h1 className="text-xl font-bold text-gray-800">AI 智能助手</h1>
         <select
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-          disabled={isLoading}
-          className="border border-gray-200 rounded-lg px-4 py-2 bg-white text-[13px] font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm cursor-pointer"
+          value={currentModel}
+          onChange={(e) => setCurrentModel(e.target.value)}
+          className="p-2 border rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          {AI_MODELS.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
+          {MODELS.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
           ))}
         </select>
       </header>
 
-      <main className="flex-1 w-full max-w-3xl overflow-y-auto px-4 py-6 scrollbar-hide">
-        {messages?.length === 0 ? (
-          <div className="text-center text-gray-400 mt-24 flex flex-col items-center gap-3">
-             <div className="w-14 h-14 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-2xl">✨</div>
-             <p className="text-[15px]">你好！我是 XAira 智能助手，今天想聊点什么？</p>
+      {/* 聊天消息展示区 */}
+      <main className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-gray-400">
+            开始与 AI 进行对话吧！
           </div>
         ) : (
-          messages?.map((m: any) => (
-            <div key={m.id} className={`mb-6 flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              {m.role !== "user" && (
-                <div className="w-8 h-8 rounded-full border border-gray-100 bg-white flex items-center justify-center text-xs font-bold text-blue-600 shadow-sm mt-0.5">
-                  Ai
-                </div>
-              )}
-              <div className={`px-5 py-3 rounded-2xl max-w-[80%] shadow-sm leading-relaxed ${
-                m.role === "user" 
-                  ? "bg-blue-600 text-white rounded-br-sm" 
-                  : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm" 
-              }`}>
-                <div className="whitespace-pre-wrap text-[14.5px]">{m.content}</div>
+          messages.map((m) => (
+            <div
+              key={m.id}
+              className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  m.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-br-none'
+                    : 'bg-white text-gray-800 border shadow-sm rounded-bl-none'
+                }`}
+              >
+                <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
               </div>
             </div>
           ))
         )}
-        <div ref={messagesEndRef} />
+        {/* 加载状态指示器 */}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-gray-200 text-gray-500 px-4 py-2 rounded-2xl rounded-bl-none animate-pulse">
+              AI 正在思考中...
+            </div>
+          </div>
+        )}
       </main>
 
-      <footer className="w-full max-w-3xl px-4 pt-2 pb-16 z-20">
-        {isLoggedIn === null ? (
-          <div className="text-center text-gray-400 text-sm">正在验证身份...</div>
-        ) : !isLoggedIn ? (
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 text-center shadow-sm flex flex-col items-center">
-             <p className="text-gray-600 text-[14.5px] font-medium">请先登录，开启与 AI 的对话</p>
-             <p className="text-xs text-gray-400 mt-1">点击页面右上角的【登录】按钮即可</p>
-          </div>
-        ) : (
-          <form 
-            onSubmit={handleSubmit}
-            className="relative flex items-end w-full bg-white border border-gray-200 rounded-[28px] shadow-sm transition-all focus-within:ring-4 focus-within:ring-blue-50 focus-within:border-blue-200"
+      {/* 底部输入框区域 */}
+      <footer className="p-4 bg-white border-t shrink-0">
+        <form
+          onSubmit={handleSubmit}
+          className="flex gap-2 max-w-4xl mx-auto"
+        >
+          <input
+            className="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+            value={input}
+            onChange={handleInputChange}
+            placeholder="输入你的问题..."
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <textarea
-              className="w-full bg-transparent rounded-[28px] pl-6 pr-16 py-5 text-[15px] font-medium text-gray-800 focus:outline-none resize-none min-h-[72px] max-h-[200px] placeholder-gray-400 scrollbar-hide leading-relaxed"
-              value={safeInput}
-              placeholder="输入你的问题... (按 Enter 发送)"
-              onChange={handleInputChange}
-              disabled={isLoading}
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault(); 
-                  if (safeInput.trim() && !isLoading) {
-                    e.currentTarget.form?.requestSubmit();
-                  }
-                }
-              }}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !safeInput.trim()}
-              className="absolute right-3 bottom-3.5 bg-blue-600 text-white w-11 h-11 rounded-full font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-100 disabled:text-gray-400 flex items-center justify-center text-xl z-10"
-            >
-              {isLoading ? (
-                <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-              ) : (
-                <span>↑</span>
-              )}
-            </button>
-          </form>
-        )}
+            发送
+          </button>
+        </form>
       </footer>
     </div>
   );
