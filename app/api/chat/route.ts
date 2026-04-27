@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       messages,
     });
 
-    return result.toTextStreamResponse(); // <--- 修改为这个
+    return result.toDataStreamResponse();
     
   } catch (error: any) {
     console.error('Chat API 报错:', error);
