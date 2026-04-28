@@ -8,54 +8,46 @@ export async function POST(req: Request) {
     const { messages, model } = await req.json();
     const selectedModel = model || 'gpt-4o-mini';
 
-    // 1. 初始化我们要动态使用的 Key 和 URL
     let apiKey = '';
     let baseURL = '';
 
-    // 2. 根据前端传来的模型名称，智能路由到对应的环境变量
-    if (selectedModel.startsWith('gpt')) {
-      // GPT 系列走 N1N 的 OpenAI 分组
-      apiKey = process.env.OPENAI_GROUP_KEY || '';
+    // 严丝合缝的模型路由分发
+    if (selectedModel.startsWith('gpt') || selectedModel.startsWith('claude')) {
+      // 1. GPT 和 Claude 走 N1N 中转
+      apiKey = selectedModel.startsWith('gpt') ? (process.env.OPENAI_GROUP_KEY || '') : (process.env.CLAUDE_GROUP_KEY || '');
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
-    } else if (selectedModel.startsWith('claude')) {
-      // Claude 系列走 N1N 的 Claude 分组
-      apiKey = process.env.CLAUDE_GROUP_KEY || '';
-      baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
-    } else if (selectedModel === 'gemini-1.5-flash') {
-      // 官方免费版 Gemini
-      apiKey = process.env.GEMINI_API_KEY || '';
-      baseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/';
+      
     } else if (selectedModel === 'gemini-1.5-pro') {
-      // N1N 付费版优质 Gemini
+      // 2. Gemini Pro 走 N1N 中转
       apiKey = process.env.GEMINI_GROUP_KEY || '';
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
+      
+    } else if (selectedModel === 'gemini-1.5-flash') {
+      // 3. Gemini Flash 走官方免费直连
+      apiKey = process.env.GEMINI_API_KEY || '';
+      baseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/';
+      
     } else if (selectedModel.startsWith('deepseek')) {
-      // 官方 DeepSeek
+      // 4. DeepSeek 走官方直连
       apiKey = process.env.DEEPSEEK_API_KEY || '';
       baseURL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
-    } else if (selectedModel.startsWith('longcat')) {
-      // 官方 LongCat (预留)
+      
+    } else if (selectedModel === 'LongCat-Flash-Thinking') {
+      // 5. Longcat 走官方直连
       apiKey = process.env.LONGCAT_API_KEY || '';
-      baseURL = process.env.LONGCAT_BASE_URL || '';
-    } else {
-      // 兜底默认选项
-      apiKey = process.env.OPENAI_GROUP_KEY || '';
-      baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
+      // 注意：确保你的 .env 里 LONGCAT_BASE_URL 填的是准确的兼容接口地址
+      baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1/chat/completions'; 
     }
 
-    // 检查是否配置了密钥
     if (!apiKey) {
-      throw new Error(`未找到模型 ${selectedModel} 对应的 API Key，请检查 .env 文件`);
+      throw new Error(`未找到模型 ${selectedModel} 对应的 API Key，请检查服务器 .env 配置`);
     }
 
-    // 3. 动态创建 OpenAI 兼容客户端
-    // 因为 N1N、DeepSeek、Google 等都支持 OpenAI 接口格式，所以我们可以统一用 createOpenAI！
     const customProvider = createOpenAI({
       apiKey: apiKey,
       baseURL: baseURL,
     });
 
-    // 4. 发起请求并返回流
     const result = await streamText({
       model: customProvider(selectedModel),
       messages,
@@ -64,9 +56,10 @@ export async function POST(req: Request) {
     return result.toTextStreamResponse();
     
   } catch (error: any) {
-    console.error('Chat API 报错:', error);
+    console.error('Chat API 报错拦截:', error);
+    // 把详细错误返回给前端气泡
     return new Response(
-      JSON.stringify({ error: error.message || 'AI 服务暂时不可用，请稍后再试。' }), 
+      JSON.stringify({ error: `模型调用失败: ${error.message || '未知错误'}` }), 
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
