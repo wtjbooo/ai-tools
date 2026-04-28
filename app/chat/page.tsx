@@ -35,14 +35,14 @@ export default function ChatPage() {
 
   // ✅ 优化 1：每次消息更新时，平滑滚动到底部
   useEffect(() => {
-  if (scrollContainerRef.current) {
-    // 只滚动聊天容器本身，绝不影响外层网页
-    scrollContainerRef.current.scrollTo({
-      top: scrollContainerRef.current.scrollHeight,
-      behavior: 'smooth'
-    });
-  }
-}, [messages]);
+    if (scrollContainerRef.current) {
+      // 只滚动聊天容器本身，绝不影响外层网页
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [messages]);
 
   // 鉴权拦截
   useEffect(() => {
@@ -101,10 +101,9 @@ export default function ChatPage() {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
         if (value) {
-          let chunk = decoder.decode(value, { stream: true });
-          if (chunk.startsWith('0:"')) {
-            chunk = chunk.replace(/^0:"/, '').replace(/"\n?$/, '').replace(/\\n/g, '\n');
-          }
+          // 🚨 修复：直接解码为普通字符串，不需要任何 replace 替换，抛弃旧的 0:" 协议！
+          const chunk = decoder.decode(value, { stream: true });
+          
           setMessages((prev) => {
             const lastIdx = prev.length - 1;
             const updatedLast = { ...prev[lastIdx], content: prev[lastIdx].content + chunk };
@@ -234,8 +233,6 @@ export default function ChatPage() {
               </div>
             </div>
           )}
-          {/* ✅ 优化 1：底部锚点 */}
-          
         </main>
 
         <footer className="p-6 bg-white/40 backdrop-blur-md border-t border-gray-100/50">
