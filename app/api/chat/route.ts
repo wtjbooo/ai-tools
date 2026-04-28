@@ -36,9 +36,10 @@ if (selectedModel.startsWith('gpt') || selectedModel.startsWith('claude')) {
       throw new Error(`未找到模型 ${selectedModel} 对应的 API Key，请检查服务器 .env 配置`);
     }
 
-    const customProvider = createOpenAI({
+      const customProvider = createOpenAI({
       apiKey: apiKey,
       baseURL: baseURL,
+      compatibility: 'compatible', // 🌟 极其关键：开启第三方兼容模式！防止 DeepSeek/LongCat 报错
     });
 
     const result = await streamText({
