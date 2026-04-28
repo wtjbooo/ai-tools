@@ -4,7 +4,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-// ✅ 引入 Markdown 与代码高亮组件
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -30,13 +29,10 @@ export default function ChatPage() {
   const [myInput, setMyInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // ✅ 优化 1：添加滚动锚点引用
   const scrollContainerRef = useRef<HTMLElement>(null);
 
-  // ✅ 优化 1：每次消息更新时，平滑滚动到底部
   useEffect(() => {
     if (scrollContainerRef.current) {
-      // 只滚动聊天容器本身，绝不影响外层网页
       scrollContainerRef.current.scrollTo({
         top: scrollContainerRef.current.scrollHeight,
         behavior: 'smooth'
@@ -44,7 +40,6 @@ export default function ChatPage() {
     }
   }, [messages]);
 
-  // 鉴权拦截
   useEffect(() => {
     const verifyUser = async () => {
       try {
@@ -101,9 +96,8 @@ export default function ChatPage() {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
         if (value) {
-          // 🚨 修复：直接解码为普通字符串，不需要任何 replace 替换，抛弃旧的 0:" 协议！
+          // 🚨 修正：使用最纯净的解析，不再需要旧版的 replace 替换
           const chunk = decoder.decode(value, { stream: true });
-          
           setMessages((prev) => {
             const lastIdx = prev.length - 1;
             const updatedLast = { ...prev[lastIdx], content: prev[lastIdx].content + chunk };
@@ -177,7 +171,6 @@ export default function ChatPage() {
                       : 'bg-white text-gray-800 rounded-[2rem] rounded-tl-sm ring-1 ring-gray-900/5' 
                   }`}
                 >
-                  {/* ✅ 优化 2：彻底替换为 Markdown + 高亮支持 */}
                   {m.role === 'user' ? (
                     <pre className="whitespace-pre-wrap font-sans m-0 text-inherit">{m.content}</pre>
                   ) : (
@@ -189,7 +182,6 @@ export default function ChatPage() {
                           const match = /language-(\w+)/.exec(className || '');
                           return !inline && match ? (
                             <div className="rounded-xl overflow-hidden my-5 border border-gray-200/60 shadow-sm">
-                              {/* MacOS 终端风格顶部标题栏 */}
                               <div className="flex items-center px-4 py-2 bg-[#21252b] text-gray-400 text-xs font-mono">
                                 <div className="flex gap-1.5 mr-4">
                                   <div className="w-3 h-3 rounded-full bg-red-500/90 shadow-[0_0_4px_rgba(239,68,68,0.4)]"></div>

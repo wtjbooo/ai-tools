@@ -18,22 +18,24 @@ export async function POST(req: Request) {
       apiKey = process.env.GEMINI_GROUP_KEY || '';
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
     } 
-    // 🚨 修复 Gemini 404：适配 Google 最新的模型版本号
-    else if (selectedModel.includes('gemini-1.5-flash') || selectedModel.includes('gemini-free')) {
+    // 🚨 重点修复：完美囊括了前端传来的 gemini-2.5-flash、旧版 1.5 和别名 free
+    else if (
+      selectedModel.includes('gemini-2.5-flash') || 
+      selectedModel.includes('gemini-1.5-flash') || 
+      selectedModel.includes('gemini-free')
+    ) {
       apiKey = process.env.GEMINI_API_KEY || '';
-      // 注意：Google 官方兼容地址末尾建议不带斜杠或带 /openai
       baseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai';
-      apiModel = 'gemini-2.5-flash'; // 🔥 升至最新可用版本！Google 已下架 1.5 版本
+      apiModel = 'gemini-2.5-flash'; // 🔥 强行修正为最新版 API 认可的名称
     }
     else if (selectedModel.startsWith('deepseek')) {
       apiKey = process.env.DEEPSEEK_API_KEY || '';
       baseURL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
     } 
-    // 🚨 修复 LongCat：恢复标准的 /v1 路径，并锁定模型名称
     else if (selectedModel.includes('LongCat') || selectedModel.toLowerCase().includes('longcat')) {
       apiKey = process.env.LONGCAT_API_KEY || '';
-      baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1'; // 恢复标准 v1 路径
-      apiModel = 'LongCat-Flash-Thinking-2601'; // 🔥 确保传递给 LongCat 的模型名完全合法
+      baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1'; 
+      apiModel = 'LongCat-Flash-Thinking-2601'; 
     }
 
     // 🌟 强力清洗环境变量
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
     baseURL = baseURL.replace(/['"]/g, '').trim();
 
     if (!apiKey) {
-      throw new Error(`未找到模型对应的 API Key，请检查服务器 .env 配置`);
+      throw new Error(`未找到模型 ${selectedModel} 对应的 API Key，请检查服务器 .env 配置`);
     }
 
     const apiUrl = baseURL.endsWith('/chat/completions') 
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: apiModel, // 🔥 注意这里：使用的是翻译后的 apiModel，而不是前端传来的 selectedModel
+        model: apiModel, 
         messages: messages,
         stream: true
       })
