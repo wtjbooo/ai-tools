@@ -39,8 +39,36 @@ if (selectedModel.startsWith('gpt') || selectedModel.startsWith('claude')) {
       const customProvider = createOpenAI({
       apiKey: apiKey,
       baseURL: baseURL,
-      // @ts-ignore 屏蔽 TS 类型检查，强行开启兼容模式！
-      compatibility: 'compatible', 
+      // @ts-ignore
+      compatibility: 'compatible',
+      
+      // 🛡️ 终极防御：拦截请求，清洗 Vercel 的私有参数，并揪出“伪装成成功的 200 OK 报错”
+      fetch: async (url, options) => {
+        if (options?.body && typeof options.body === 'string') {
+          try {
+            const bodyObj = JSON.parse(options.body);
+            // 🔪 暴力剥离会导致第三方 API 崩溃的 Vercel 专属参数
+            delete bodyObj.stream_options;
+            delete bodyObj.prompt_cache_key;
+            delete bodyObj.prompt_cache_retention;
+            options.body = JSON.stringify(bodyObj);
+          } catch (e) {
+            console.error('JSON解析失败', e);
+          }
+        }
+        
+        const res = await fetch(url, options);
+        
+        // 🚨 核心排雷：如果我们要求流式输出，但 API 却返回了普通 JSON，说明它 100% 报错了！
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json') && typeof options?.body === 'string' && options.body.includes('"stream":true')) {
+          const errorText = await res.text();
+          // 强行抛出错误，让前端气泡变红，把真实的报错信息打印在屏幕上！
+          throw new Error(`API 隐藏报错拦截: ${errorText}`);
+        }
+        
+        return res;
+      }
     });
 
     const result = await streamText({

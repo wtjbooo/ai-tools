@@ -31,12 +31,18 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // ✅ 优化 1：添加滚动锚点引用
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement>(null);
 
   // ✅ 优化 1：每次消息更新时，平滑滚动到底部
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  if (scrollContainerRef.current) {
+    // 只滚动聊天容器本身，绝不影响外层网页
+    scrollContainerRef.current.scrollTo({
+      top: scrollContainerRef.current.scrollHeight,
+      behavior: 'smooth'
+    });
+  }
+}, [messages]);
 
   // 鉴权拦截
   useEffect(() => {
@@ -152,8 +158,7 @@ export default function ChatPage() {
             ))}
           </select>
         </header>
-
-        <main className="flex-1 overflow-y-auto p-8 space-y-6 bg-[#F5F5F7]/30">
+        <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 space-y-6 bg-[#F5F5F7]/30">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 text-gray-400">
               <div className="h-16 w-16 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-50 flex items-center justify-center">
@@ -230,7 +235,7 @@ export default function ChatPage() {
             </div>
           )}
           {/* ✅ 优化 1：底部锚点 */}
-          <div ref={messagesEndRef} />
+          
         </main>
 
         <footer className="p-6 bg-white/40 backdrop-blur-md border-t border-gray-100/50">
