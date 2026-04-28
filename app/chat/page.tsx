@@ -1,10 +1,10 @@
 // @ts-nocheck
 'use client';
 
-import { useChat } from '@ai-sdk/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
+// 1. 补全了 LongCat 模型
 const MODELS = [
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini (日常/极速)' },
   { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (逻辑/代码)' },
@@ -13,6 +13,7 @@ const MODELS = [
   { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (免费版)' },
   { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (长文本)' },
   { id: 'gpt-4o', name: 'GPT-4o (复杂任务)' },
+  { id: 'longcat', name: 'LongCat (长文本特化)' }, 
 ];
 
 export default function ChatPage() {
@@ -20,19 +21,20 @@ export default function ChatPage() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [currentModel, setCurrentModel] = useState<string>(MODELS[0].id);
   
-  // 核心修复：自己管理输入状态，彻底摆脱 useChat input 的 Bug
+  // ==========================================
+  // 核心：彻底抛弃 useChat！全部采用纯原生状态控制
+  // ==========================================
+  const [messages, setMessages] = useState([]);
   const [myInput, setMyInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // 用于自动滚动到最新消息
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-  // 只从 useChat 取出需要的方法和状态
-  const { messages, append, isLoading } = useChat({
-    body: { model: currentModel },
-    onError: (err) => {
-      console.error('聊天发生错误:', err);
-      alert('网络开小差了，请稍后重试。');
-    }
-  });
-
-  // 鉴权拦截
+  // 鉴权拦截 (保持不变)
   useEffect(() => {
     const verifyUser = async () => {
       try {
@@ -51,19 +53,77 @@ export default function ChatPage() {
     verifyUser();
   }, [router]);
 
-  // 自定义发送逻辑
-  const handleSend = (e: React.FormEvent) => {
+  // ==========================================
+  // 🌟 终极防弹级：原生 Fetch + ReadableStream 发送逻辑
+  // ==========================================
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!myInput.trim() || isLoading) return;
     
-    // 使用 append 手动将消息加入对话流
-    append({
-      role: 'user',
-      content: myInput.trim(),
-    });
+    const userText = myInput.trim();
+    setMyInput(''); // 立即清空输入框
+    setIsLoading(true);
+
+    // 1. 将用户的消息立即上屏
+    const newUserMessage = { id: Date.now().toString(), role: 'user', content: userText };
+    const newMessages = [...messages, newUserMessage];
+    setMessages(newMessages);
     
-    // 清空输入框
-    setMyInput('');
+    // 2. 为 AI 预留一个空的等待气泡
+    const assistantId = (Date.now() + 1).toString();
+    setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', content: '' }]);
+
+    try {
+      // 3. 原生 Fetch 发送给你的后端
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: newMessages,
+          model: currentModel,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('API 请求失败，请检查后端状态');
+      }
+
+      // 4. 原生流式读取（真正的打字机效果核心引擎）
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          // 解码数据流
+          let chunk = decoder.decode(value, { stream: true });
+          
+          // 极简清洗：如果 Vercel 偷偷打包成了 0:"xxx" 的奇怪格式，直接粗暴去壳
+          if (chunk.startsWith('0:"')) {
+            chunk = chunk.replace(/^0:"/, '').replace(/"\n?$/, '').replace(/\\n/g, '\n');
+          }
+
+          // 将新字追加到最后一个 AI 气泡中
+          setMessages((prev) => {
+            const lastIdx = prev.length - 1;
+            const updatedLast = { ...prev[lastIdx], content: prev[lastIdx].content + chunk };
+            return [...prev.slice(0, lastIdx), updatedLast];
+          });
+        }
+      }
+    } catch (error) {
+      console.error('发送错误:', error);
+      // 如果后端报错，直接在聊天窗口里显示出来
+      setMessages((prev) => {
+        const lastIdx = prev.length - 1;
+        const updatedLast = { ...prev[lastIdx], content: prev[lastIdx].content + '\n\n[⚠️ 网络错误或 API 密钥配置异常，请检查后端日志]' };
+        return [...prev.slice(0, lastIdx), updatedLast];
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isAuthChecking) {
@@ -78,22 +138,19 @@ export default function ChatPage() {
   }
 
   return (
-    /* 外层容器：控制高度并适配你的全局布局 */
     <div className="mx-auto max-w-5xl px-4 py-8 h-[calc(100vh-120px)] min-h-[600px]">
-      {/* 聊天主卡片：80% 苹果高级毛玻璃风格 */}
+      {/* 聊天主卡片 */}
       <div className="flex flex-col h-full bg-white/70 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.04)] border border-white/50 overflow-hidden ring-1 ring-gray-900/5">
         
         {/* 顶部控制栏 */}
         <header className="flex items-center justify-between px-8 py-5 bg-white/40 backdrop-blur-md border-b border-gray-100/50 z-10">
           <div className="flex items-center gap-3">
-            {/* 20% AI 元素：微微的渐变色圆点和标题 */}
             <div className="h-3 w-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 animate-pulse"></div>
             <h1 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
               智能对话
             </h1>
           </div>
           
-          {/* 极简苹果风下拉框 */}
           <select
             value={currentModel}
             onChange={(e) => setCurrentModel(e.target.value)}
@@ -123,18 +180,19 @@ export default function ChatPage() {
                 <div
                   className={`max-w-[75%] px-6 py-4 text-[15px] leading-relaxed shadow-sm ${
                     m.role === 'user'
-                      ? 'bg-gray-900 text-white rounded-[2rem] rounded-tr-sm' // 苹果深色质感
-                      : 'bg-white text-gray-800 rounded-[2rem] rounded-tl-sm ring-1 ring-gray-900/5' // 干净的 AI 白底
+                      ? 'bg-gray-900 text-white rounded-[2rem] rounded-tr-sm' 
+                      : 'bg-white text-gray-800 rounded-[2rem] rounded-tl-sm ring-1 ring-gray-900/5' 
                   }`}
                 >
-                  <p className="whitespace-pre-wrap">{m.content}</p>
+                  {/* 使用原生 pre 标签保证文本换行格式不出错 */}
+                  <pre className="whitespace-pre-wrap font-sans m-0">{m.content}</pre>
                 </div>
               </div>
             ))
           )}
           
-          {/* AI 思考中动画 */}
-          {isLoading && (
+          {/* AI 思考中动画：只有当 AI 的内容还为空时才显示 */}
+          {isLoading && messages.length > 0 && messages[messages.length - 1].content === '' && (
             <div className="flex justify-start">
               <div className="bg-white px-6 py-4 rounded-[2rem] rounded-tl-sm shadow-sm ring-1 ring-gray-900/5 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
@@ -143,6 +201,8 @@ export default function ChatPage() {
               </div>
             </div>
           )}
+          {/* 自动滚动的锚点 */}
+          <div ref={messagesEndRef} />
         </main>
 
         {/* 底部悬浮输入框 */}
