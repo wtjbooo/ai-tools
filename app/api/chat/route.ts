@@ -7,22 +7,32 @@ export async function POST(req: Request) {
 
     let apiKey = '';
     let baseURL = '';
+    // 🌟 核心新增：真正发给上游 API 的标准模型名称
+    let apiModel = selectedModel; 
 
     if (selectedModel.startsWith('gpt') || selectedModel.startsWith('claude')) {
       apiKey = selectedModel.startsWith('gpt') ? (process.env.OPENAI_GROUP_KEY || '') : (process.env.CLAUDE_GROUP_KEY || '');
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
-    } else if (selectedModel === 'gemini-1.5-pro') {
+    } 
+    else if (selectedModel === 'gemini-1.5-pro') {
       apiKey = process.env.GEMINI_GROUP_KEY || '';
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
-    } else if (selectedModel.includes('gemini-1.5-flash')) {
+    } 
+    // 🚨 修复 Gemini 404：不管前端叫 gemini-free 还是带 latest 后缀，统统拦截！
+    else if (selectedModel.includes('gemini-1.5-flash') || selectedModel.includes('gemini-free')) {
       apiKey = process.env.GEMINI_API_KEY || '';
-      baseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/';
-    } else if (selectedModel.startsWith('deepseek')) {
+      baseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai';
+      apiModel = 'gemini-1.5-flash'; // 🔥 强行修正为 Google 唯一认可的标准名称！
+    } 
+    else if (selectedModel.startsWith('deepseek')) {
       apiKey = process.env.DEEPSEEK_API_KEY || '';
       baseURL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
-    } else if (selectedModel.startsWith('LongCat') || selectedModel.toLowerCase().includes('longcat')) {
+    } 
+    // 🚨 修复 LongCat：恢复标准的 /v1 路径，并锁定模型名称
+    else if (selectedModel.includes('LongCat') || selectedModel.toLowerCase().includes('longcat')) {
       apiKey = process.env.LONGCAT_API_KEY || '';
-      baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/openai/v1'; 
+      baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1'; // 恢复标准 v1 路径
+      apiModel = 'LongCat-Flash-Thinking-2601'; // 🔥 确保传递给 LongCat 的模型名完全合法
     }
 
     // 🌟 强力清洗环境变量
@@ -30,15 +40,13 @@ export async function POST(req: Request) {
     baseURL = baseURL.replace(/['"]/g, '').trim();
 
     if (!apiKey) {
-      throw new Error(`未找到模型 ${selectedModel} 对应的 API Key，请检查服务器 .env 配置`);
+      throw new Error(`未找到模型对应的 API Key，请检查服务器 .env 配置`);
     }
 
-    // 智能拼接 URL，防止多加或漏加 /chat/completions
     const apiUrl = baseURL.endsWith('/chat/completions') 
       ? baseURL 
       : `${baseURL.replace(/\/$/, '')}/chat/completions`;
 
-    // 🚨 终极方案：完全抛弃 Vercel AI SDK，使用原生 Fetch 代理！
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -46,28 +54,24 @@ export async function POST(req: Request) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: apiModel, // 🔥 注意这里：使用的是翻译后的 apiModel，而不是前端传来的 selectedModel
         messages: messages,
         stream: true
       })
     });
 
-    // 拦截 1：硬性 HTTP 错误 (如 401 未授权, 403 余额不足)
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[上游 API 拒绝请求] 状态码: ${response.status}, 详情: ${errorText}`);
       throw new Error(`API 拒绝调用 (${response.status}): ${errorText}`);
     }
 
-    // 拦截 2：伪装成 200 OK 的 JSON 报错 (这是导致你白板的终极元凶！)
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const errorData = await response.text();
-      console.error(`[上游 API 伪装报错] 详情: ${errorData}`);
       throw new Error(`API 返回了异常信息: ${errorData}`);
     }
 
-    // 🌟 手动解析标准的 OpenAI SSE 流，提取文字发送给前端
     const stream = new ReadableStream({
       async start(controller) {
         const reader = response.body?.getReader();
@@ -86,7 +90,7 @@ export async function POST(req: Request) {
             
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
-            buffer = lines.pop() || ''; // 保留最后一行未完整接收的数据片段
+            buffer = lines.pop() || ''; 
 
             for (const line of lines) {
               const trimmedLine = line.trim();
@@ -97,7 +101,6 @@ export async function POST(req: Request) {
                   const jsonStr = trimmedLine.slice(6);
                   const data = JSON.parse(jsonStr);
                   
-                  // 🔥 完美兼容标准 content 和 DeepSeek R1 的 reasoning_content 深度思考内容！
                   const delta = data.choices?.[0]?.delta;
                   if (delta) {
                     const chunkText = delta.content || delta.reasoning_content || '';
@@ -105,9 +108,7 @@ export async function POST(req: Request) {
                       controller.enqueue(encoder.encode(chunkText));
                     }
                   }
-                } catch (e) {
-                  // 忽略单行 JSON 解析错误，防止流崩溃
-                }
+                } catch (e) {}
               }
             }
           }
