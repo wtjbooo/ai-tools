@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     } else if (selectedModel === 'gemini-1.5-pro') {
       apiKey = process.env.GEMINI_GROUP_KEY || '';
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
-    } else if (selectedModel === 'gemini-1.5-flash') {
+    } else if (selectedModel.includes('gemini-1.5-flash')) {
       apiKey = process.env.GEMINI_API_KEY || '';
       baseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/';
     } else if (selectedModel.startsWith('deepseek')) {
