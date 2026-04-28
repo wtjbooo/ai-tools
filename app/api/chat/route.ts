@@ -39,7 +39,8 @@ if (selectedModel.startsWith('gpt') || selectedModel.startsWith('claude')) {
       const customProvider = createOpenAI({
       apiKey: apiKey,
       baseURL: baseURL,
-      compatibility: 'compatible', // 🌟 极其关键：开启第三方兼容模式！防止 DeepSeek/LongCat 报错
+      // @ts-ignore 屏蔽 TS 类型检查，强行开启兼容模式！
+      compatibility: 'compatible', 
     });
 
     const result = await streamText({
