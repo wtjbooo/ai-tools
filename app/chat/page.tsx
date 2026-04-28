@@ -29,13 +29,11 @@ export default function ChatPage() {
   const [myInput, setMyInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🌟 新增：控制自定义下拉菜单的开关状态
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const scrollContainerRef = useRef<HTMLElement>(null);
 
-  // 🌟 新增：点击下拉菜单外部自动关闭
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -133,7 +131,7 @@ export default function ChatPage() {
 
   if (isAuthChecking) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#050507]">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050507]">
         <div className="flex flex-col items-center gap-4">
           <div className="relative flex h-10 w-10 items-center justify-center">
              <div className="absolute h-full w-full animate-ping rounded-full bg-cyan-500/20"></div>
@@ -146,46 +144,58 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#050507] text-gray-100 font-sans overflow-hidden selection:bg-cyan-500/30 selection:text-cyan-50">
+    /* 🛠️ 核心修改：使用 fixed inset-0 z-[100] 让这个页面变成最高层级的全屏，彻底覆盖底下的白边 */
+    <div className="fixed inset-0 z-[100] bg-[#050507] text-gray-100 font-sans overflow-hidden selection:bg-cyan-500/30 selection:text-cyan-50">
       
       {/* 🔮 赛博朋克氛围光晕 */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[150px] pointer-events-none mix-blend-screen"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen"></div>
 
-      <div className="mx-auto max-w-5xl px-4 py-6 h-screen flex flex-col relative z-10">
+      <div className="mx-auto max-w-5xl px-4 py-4 md:py-6 h-full flex flex-col relative z-10">
         {/* 🍏 主容器 */}
-        <div className="flex flex-col h-full bg-white/[0.02] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.4)] border border-white/[0.05] overflow-hidden">
+        <div className="flex flex-col h-full bg-white/[0.02] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.6)] border border-white/[0.05] overflow-hidden">
           
           {/* --- 顶部 Header --- */}
-          {/* 🛠️ 修改了这里的背景透明度和边界颜色，使其更自然 */}
-          <header className="flex items-center justify-between px-8 py-5 bg-transparent border-b border-white/[0.02] z-30">
-            <div className="flex items-center gap-4">
-              <div className="relative flex items-center justify-center h-8 w-8 rounded-full bg-black/50 border border-white/10 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
+          <header className="flex items-center justify-between px-6 md:px-8 py-5 bg-transparent border-b border-white/[0.02] z-30">
+            <div className="flex items-center gap-4 md:gap-6">
+              {/* 🛠️ 新增：返回首页按钮 */}
+              <button 
+                onClick={() => router.push('/')}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors group"
+                title="返回首页"
+              >
+                <svg className="w-4 h-4 text-gray-400 group-hover:text-cyan-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center justify-center h-8 w-8 rounded-full bg-black/50 border border-white/10 shadow-[0_0_15px_rgba(6,182,212,0.15)] hidden md:flex">
+                  <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
+                </div>
+                <h1 className="text-base md:text-lg font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
+                  XAira <span className="text-cyan-400/80 font-mono text-xs md:text-sm ml-1 opacity-80 border border-cyan-500/30 rounded-md px-1.5 py-0.5">OS</span>
+                </h1>
               </div>
-              <h1 className="text-lg font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
-                XAira <span className="text-cyan-400/80 font-mono text-sm ml-1 opacity-80 border border-cyan-500/30 rounded-md px-1.5 py-0.5">OS</span>
-              </h1>
             </div>
             
-            {/* 🛠️ 重新设计的自定义模型选择器 */}
+            {/* 🛠️ 下拉菜单保持不变 */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-3 pl-5 pr-4 py-2 bg-black/30 hover:bg-black/50 text-gray-300 text-sm font-medium rounded-2xl border border-white/[0.08] hover:border-cyan-500/40 transition-all shadow-sm focus:outline-none"
+                className="flex items-center gap-2 md:gap-3 pl-4 pr-3 py-2 bg-black/30 hover:bg-black/50 text-gray-300 text-xs md:text-sm font-medium rounded-2xl border border-white/[0.08] hover:border-cyan-500/40 transition-all shadow-sm focus:outline-none max-w-[150px] md:max-w-none truncate"
               >
-                {MODELS.find(m => m.id === currentModel)?.name}
+                <span className="truncate">{MODELS.find(m => m.id === currentModel)?.name}</span>
                 <svg 
-                  className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} 
+                  className={`w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} 
                   fill="none" viewBox="0 0 24 24" stroke="currentColor"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
-              {/* 下拉菜单列表 */}
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-[#0d0d12]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute right-0 mt-2 w-56 md:w-64 bg-[#0d0d12]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
                   {MODELS.map((m) => (
                     <button
                       key={m.id}
@@ -193,16 +203,16 @@ export default function ChatPage() {
                         setCurrentModel(m.id);
                         setIsDropdownOpen(false);
                       }}
-                      className={`w-full text-left px-5 py-3 text-sm transition-all duration-200 flex items-center gap-2 ${
+                      className={`w-full text-left px-4 md:px-5 py-3 text-xs md:text-sm transition-all duration-200 flex items-center gap-2 ${
                         currentModel === m.id
                           ? 'bg-cyan-500/10 text-cyan-300 font-semibold border-l-2 border-cyan-400'
                           : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200 border-l-2 border-transparent'
                       }`}
                     >
                       {currentModel === m.id && (
-                         <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
+                         <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0"></div>
                       )}
-                      <span className={currentModel === m.id ? '' : 'ml-3'}>{m.name}</span>
+                      <span className={`truncate ${currentModel === m.id ? '' : 'ml-3'}`}>{m.name}</span>
                     </button>
                   ))}
                 </div>
@@ -211,23 +221,22 @@ export default function ChatPage() {
           </header>
 
           {/* --- 聊天记录展示区 --- */}
-          <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth custom-scrollbar relative z-10">
+          <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth custom-scrollbar relative z-10">
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-6 text-gray-500">
-                <div className="relative h-20 w-20 flex items-center justify-center">
+                <div className="relative h-16 w-16 md:h-20 md:w-20 flex items-center justify-center">
                   <div className="absolute inset-0 rounded-full border-2 border-dashed border-white/10 animate-[spin_10s_linear_infinite]"></div>
-                  <svg className="w-8 h-8 text-cyan-500/70 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-6 h-6 md:w-8 md:h-8 text-cyan-500/70 drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                {/* 🛠️ 中文化：系统就绪 */}
-                <p className="text-sm tracking-widest opacity-70">系统就绪。等待输入。</p>
+                <p className="text-xs md:text-sm tracking-widest opacity-70">系统就绪。等待输入。</p>
               </div>
             ) : (
               messages.map((m) => (
                 <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                   <div
-                    className={`max-w-[85%] md:max-w-[75%] px-6 py-4 text-[15px] leading-relaxed shadow-lg min-w-0 ${
+                    className={`max-w-[90%] md:max-w-[75%] px-5 py-3 md:px-6 md:py-4 text-[14px] md:text-[15px] leading-relaxed shadow-lg min-w-0 ${
                       m.role === 'user'
                         ? 'bg-gradient-to-br from-cyan-600/90 to-blue-700/90 text-white rounded-[2rem] rounded-tr-sm shadow-[0_4px_20px_rgba(6,182,212,0.15)] border border-white/10 backdrop-blur-md' 
                         : 'bg-white/[0.04] text-gray-200 rounded-[2rem] rounded-tl-sm border border-white/[0.08] backdrop-blur-xl' 
@@ -243,7 +252,7 @@ export default function ChatPage() {
                           code({ node, inline, className, children, ...props }: any) {
                             const match = /language-(\w+)/.exec(className || '');
                             return !inline && match ? (
-                              <div className="rounded-xl overflow-hidden my-6 border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.4)] bg-[#1e1e1e]">
+                              <div className="rounded-xl overflow-hidden my-4 md:my-6 border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.4)] bg-[#1e1e1e]">
                                 <div className="flex items-center px-4 py-2.5 bg-black/40 text-gray-400 text-xs font-mono border-b border-white/5">
                                   <div className="flex gap-1.5 mr-4">
                                     <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
@@ -256,7 +265,7 @@ export default function ChatPage() {
                                   style={vscDarkPlus}
                                   language={match[1]}
                                   PreTag="div"
-                                  customStyle={{ margin: 0, padding: '1.25rem', background: 'transparent', fontSize: '0.875rem' }}
+                                  customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '0.875rem' }}
                                   {...props}
                                 >
                                   {String(children).replace(/\n$/, '')}
@@ -281,7 +290,7 @@ export default function ChatPage() {
             {/* AI 思考/输入加载状态 */}
             {isLoading && messages.length > 0 && messages[messages.length - 1].content === '' && (
               <div className="flex justify-start animate-in fade-in duration-300">
-                <div className="bg-white/[0.04] px-6 py-5 rounded-[2rem] rounded-tl-sm border border-white/[0.08] backdrop-blur-xl flex items-center gap-2 shadow-lg">
+                <div className="bg-white/[0.04] px-6 py-4 rounded-[2rem] rounded-tl-sm border border-white/[0.08] backdrop-blur-xl flex items-center gap-2 shadow-lg">
                   <div className="flex space-x-1.5">
                     <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -293,16 +302,16 @@ export default function ChatPage() {
           </main>
 
           {/* --- 底部输入区 --- */}
-          <footer className="px-6 py-6 pb-8 z-20">
+          <footer className="px-4 md:px-6 py-4 md:py-6 pb-6 md:pb-8 z-20">
             <form
               onSubmit={handleSend}
-              className="flex items-center relative max-w-4xl mx-auto bg-black/40 backdrop-blur-2xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.5)] border border-white/10 focus-within:border-cyan-500/40 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.15)] transition-all duration-300 p-2"
+              className="flex items-center relative max-w-4xl mx-auto bg-black/40 backdrop-blur-2xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.5)] border border-white/10 focus-within:border-cyan-500/40 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.15)] transition-all duration-300 p-1.5 md:p-2"
             >
               <input
-                className="flex-1 bg-transparent px-6 py-3 text-[15px] text-gray-100 placeholder-gray-500 outline-none w-full font-medium"
+                className="flex-1 bg-transparent px-4 md:px-6 py-2 md:py-3 text-[14px] md:text-[15px] text-gray-100 placeholder-gray-500 outline-none w-full font-medium"
                 value={myInput}
                 onChange={(e) => setMyInput(e.target.value)}
-                placeholder="发送消息..."  /* 🛠️ 中文化 */
+                placeholder="发送消息..."
                 disabled={isLoading}
               />
               <button
@@ -310,14 +319,13 @@ export default function ChatPage() {
                 disabled={isLoading || !myInput.trim()}
                 className="ml-2 flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] hover:scale-105 disabled:opacity-30 disabled:scale-100 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 shrink-0"
               >
-                <svg className="w-5 h-5 md:w-6 md:h-6 relative right-[1px] transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 relative right-[1px] transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19V5m0 0l-7 7m7-7l7 7" />
                 </svg>
               </button>
             </form>
-            <div className="text-center mt-4">
-               {/* 🛠️ 中文化 */}
-              <span className="text-[11px] tracking-wide text-gray-500/70">
+            <div className="text-center mt-3 md:mt-4">
+              <span className="text-[10px] md:text-[11px] tracking-wide text-gray-500/70">
                 AI 可能会犯错，请核实重要信息。
               </span>
             </div>
