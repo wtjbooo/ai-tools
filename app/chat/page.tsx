@@ -15,7 +15,7 @@ const MODELS = [
   { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (逻辑/代码)' },
   { id: 'deepseek-chat', name: 'DeepSeek V3 (官方)' },
   { id: 'deepseek-reasoner', name: 'DeepSeek R1 (官方思考)' },
-  { id: 'gemini-1.5-flash-latest', name: 'Gemini 1.5 Flash (官方免费)' },,
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (官方免费新版)' },
   { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (中转长文本)' },
   { id: 'gpt-4o', name: 'GPT-4o (复杂任务)' },
   { id: 'LongCat-Flash-Thinking-2601', name: 'LongCat (长文本特化)' }, 

@@ -18,12 +18,13 @@ export async function POST(req: Request) {
       apiKey = process.env.GEMINI_GROUP_KEY || '';
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
     } 
-    // 🚨 修复 Gemini 404：不管前端叫 gemini-free 还是带 latest 后缀，统统拦截！
+    // 🚨 修复 Gemini 404：适配 Google 最新的模型版本号
     else if (selectedModel.includes('gemini-1.5-flash') || selectedModel.includes('gemini-free')) {
       apiKey = process.env.GEMINI_API_KEY || '';
+      // 注意：Google 官方兼容地址末尾建议不带斜杠或带 /openai
       baseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai';
-      apiModel = 'gemini-1.5-flash'; // 🔥 强行修正为 Google 唯一认可的标准名称！
-    } 
+      apiModel = 'gemini-2.5-flash'; // 🔥 升至最新可用版本！Google 已下架 1.5 版本
+    }
     else if (selectedModel.startsWith('deepseek')) {
       apiKey = process.env.DEEPSEEK_API_KEY || '';
       baseURL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
