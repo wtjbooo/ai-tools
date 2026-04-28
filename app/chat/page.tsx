@@ -29,7 +29,22 @@ export default function ChatPage() {
   const [myInput, setMyInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🌟 新增：控制自定义下拉菜单的开关状态
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const scrollContainerRef = useRef<HTMLElement>(null);
+
+  // 🌟 新增：点击下拉菜单外部自动关闭
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -124,7 +139,7 @@ export default function ChatPage() {
              <div className="absolute h-full w-full animate-ping rounded-full bg-cyan-500/20"></div>
              <div className="h-8 w-8 animate-spin rounded-full border-4 border-white/10 border-t-cyan-400"></div>
           </div>
-          <p className="text-sm font-medium tracking-widest text-cyan-400/80 uppercase">Authenticating...</p>
+          <p className="text-sm font-medium tracking-widest text-cyan-400/80">正在验证身份...</p>
         </div>
       </div>
     );
@@ -133,16 +148,17 @@ export default function ChatPage() {
   return (
     <div className="relative min-h-screen bg-[#050507] text-gray-100 font-sans overflow-hidden selection:bg-cyan-500/30 selection:text-cyan-50">
       
-      {/* 🔮 赛博朋克氛围光晕 (Cyberpunk Glow) */}
+      {/* 🔮 赛博朋克氛围光晕 */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[150px] pointer-events-none mix-blend-screen"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen"></div>
 
       <div className="mx-auto max-w-5xl px-4 py-6 h-screen flex flex-col relative z-10">
-        {/* 🍏 主容器：Apple 极致毛玻璃质感 */}
+        {/* 🍏 主容器 */}
         <div className="flex flex-col h-full bg-white/[0.02] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.4)] border border-white/[0.05] overflow-hidden">
           
           {/* --- 顶部 Header --- */}
-          <header className="flex items-center justify-between px-8 py-5 bg-black/20 backdrop-blur-md border-b border-white/[0.05] z-10">
+          {/* 🛠️ 修改了这里的背景透明度和边界颜色，使其更自然 */}
+          <header className="flex items-center justify-between px-8 py-5 bg-transparent border-b border-white/[0.02] z-30">
             <div className="flex items-center gap-4">
               <div className="relative flex items-center justify-center h-8 w-8 rounded-full bg-black/50 border border-white/10 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
                 <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
@@ -152,22 +168,50 @@ export default function ChatPage() {
               </h1>
             </div>
             
-            <div className="relative group">
-              <select
-                value={currentModel}
-                onChange={(e) => setCurrentModel(e.target.value)}
-                className="pl-4 pr-10 py-2 bg-black/40 hover:bg-black/60 text-gray-300 text-sm font-medium rounded-2xl border border-white/10 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all cursor-pointer outline-none appearance-none shadow-sm"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.6rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.2em 1.2em` }}
+            {/* 🛠️ 重新设计的自定义模型选择器 */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-3 pl-5 pr-4 py-2 bg-black/30 hover:bg-black/50 text-gray-300 text-sm font-medium rounded-2xl border border-white/[0.08] hover:border-cyan-500/40 transition-all shadow-sm focus:outline-none"
               >
-                {MODELS.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-gray-900 text-gray-200">{m.name}</option>
-                ))}
-              </select>
+                {MODELS.find(m => m.id === currentModel)?.name}
+                <svg 
+                  className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} 
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* 下拉菜单列表 */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-[#0d0d12]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                  {MODELS.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        setCurrentModel(m.id);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-5 py-3 text-sm transition-all duration-200 flex items-center gap-2 ${
+                        currentModel === m.id
+                          ? 'bg-cyan-500/10 text-cyan-300 font-semibold border-l-2 border-cyan-400'
+                          : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200 border-l-2 border-transparent'
+                      }`}
+                    >
+                      {currentModel === m.id && (
+                         <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]"></div>
+                      )}
+                      <span className={currentModel === m.id ? '' : 'ml-3'}>{m.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </header>
 
           {/* --- 聊天记录展示区 --- */}
-          <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth custom-scrollbar">
+          <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth custom-scrollbar relative z-10">
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-6 text-gray-500">
                 <div className="relative h-20 w-20 flex items-center justify-center">
@@ -176,7 +220,8 @@ export default function ChatPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <p className="font-mono text-sm tracking-widest uppercase opacity-60">System Ready. Awaiting Input.</p>
+                {/* 🛠️ 中文化：系统就绪 */}
+                <p className="text-sm tracking-widest opacity-70">系统就绪。等待输入。</p>
               </div>
             ) : (
               messages.map((m) => (
@@ -233,7 +278,7 @@ export default function ChatPage() {
               ))
             )}
             
-            {/* AI 思考/输入加载状态 (赛博风打字机) */}
+            {/* AI 思考/输入加载状态 */}
             {isLoading && messages.length > 0 && messages[messages.length - 1].content === '' && (
               <div className="flex justify-start animate-in fade-in duration-300">
                 <div className="bg-white/[0.04] px-6 py-5 rounded-[2rem] rounded-tl-sm border border-white/[0.08] backdrop-blur-xl flex items-center gap-2 shadow-lg">
@@ -247,8 +292,8 @@ export default function ChatPage() {
             )}
           </main>
 
-          {/* --- 底部输入区 (Apple Floating Dock) --- */}
-          <footer className="px-6 py-6 pb-8">
+          {/* --- 底部输入区 --- */}
+          <footer className="px-6 py-6 pb-8 z-20">
             <form
               onSubmit={handleSend}
               className="flex items-center relative max-w-4xl mx-auto bg-black/40 backdrop-blur-2xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.5)] border border-white/10 focus-within:border-cyan-500/40 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.15)] transition-all duration-300 p-2"
@@ -257,7 +302,7 @@ export default function ChatPage() {
                 className="flex-1 bg-transparent px-6 py-3 text-[15px] text-gray-100 placeholder-gray-500 outline-none w-full font-medium"
                 value={myInput}
                 onChange={(e) => setMyInput(e.target.value)}
-                placeholder="Initialize protocol..."
+                placeholder="发送消息..."  /* 🛠️ 中文化 */
                 disabled={isLoading}
               />
               <button
@@ -271,15 +316,15 @@ export default function ChatPage() {
               </button>
             </form>
             <div className="text-center mt-4">
-              <span className="text-[10px] uppercase tracking-widest text-gray-500/70 font-mono">
-                AI may generate inaccurate information. Verify critical data.
+               {/* 🛠️ 中文化 */}
+              <span className="text-[11px] tracking-wide text-gray-500/70">
+                AI 可能会犯错，请核实重要信息。
               </span>
             </div>
           </footer>
         </div>
       </div>
 
-      {/* 自定义滚动条样式，可放入 global.css 中，这里以注入方式实现兼容 */}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
