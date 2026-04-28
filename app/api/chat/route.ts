@@ -11,32 +11,26 @@ export async function POST(req: Request) {
     let apiKey = '';
     let baseURL = '';
 
-    // 严丝合缝的模型路由分发
-    if (selectedModel.startsWith('gpt') || selectedModel.startsWith('claude')) {
-      // 1. GPT 和 Claude 走 N1N 中转
+if (selectedModel.startsWith('gpt') || selectedModel.startsWith('claude')) {
       apiKey = selectedModel.startsWith('gpt') ? (process.env.OPENAI_GROUP_KEY || '') : (process.env.CLAUDE_GROUP_KEY || '');
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
-      
     } else if (selectedModel === 'gemini-1.5-pro') {
-      // 2. Gemini Pro 走 N1N 中转
       apiKey = process.env.GEMINI_GROUP_KEY || '';
       baseURL = process.env.N1N_BASE_URL || 'https://api.n1n.ai/v1';
-      
     } else if (selectedModel === 'gemini-1.5-flash') {
-      // 3. Gemini Flash 走官方免费直连
       apiKey = process.env.GEMINI_API_KEY || '';
       baseURL = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/';
-      
     } else if (selectedModel.startsWith('deepseek')) {
-      // 4. DeepSeek 走官方直连
       apiKey = process.env.DEEPSEEK_API_KEY || '';
       baseURL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
-      
     } else if (selectedModel.startsWith('LongCat') || selectedModel.toLowerCase().includes('longcat')) {
-      // 5. Longcat 走官方直连 (已修复：使用 startsWith 兼容动态后缀，去除多余路由)
       apiKey = process.env.LONGCAT_API_KEY || '';
       baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/openai/v1'; 
     }
+
+    // 🌟 终极防坑：强力清洗环境变量，去除可能带来的双引号、单引号和隐藏空格！
+    apiKey = apiKey.replace(/['"]/g, '').trim();
+    baseURL = baseURL.replace(/['"]/g, '').trim();
 
     if (!apiKey) {
       throw new Error(`未找到模型 ${selectedModel} 对应的 API Key，请检查服务器 .env 配置`);
