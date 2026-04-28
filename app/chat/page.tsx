@@ -144,21 +144,34 @@ export default function ChatPage() {
   }
 
   return (
-    /* 🛠️ 核心修改：使用 fixed inset-0 z-[100] 让这个页面变成最高层级的全屏，彻底覆盖底下的白边 */
     <div className="fixed inset-0 z-[100] bg-[#050507] text-gray-100 font-sans overflow-hidden selection:bg-cyan-500/30 selection:text-cyan-50">
       
-      {/* 🔮 赛博朋克氛围光晕 */}
+      {/* 🔮 背景特效组：网格底纹 + 赛博光晕 */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[150px] pointer-events-none mix-blend-screen"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen"></div>
 
-      <div className="mx-auto max-w-5xl px-4 py-4 md:py-6 h-full flex flex-col relative z-10">
-        {/* 🍏 主容器 */}
-        <div className="flex flex-col h-full bg-white/[0.02] backdrop-blur-3xl rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.6)] border border-white/[0.05] overflow-hidden">
+      {/* 🚀 左侧装饰文字 (大屏可见) */}
+      <div className="hidden xl:flex fixed left-6 top-0 bottom-0 flex-col justify-center opacity-[0.15] pointer-events-none select-none z-0">
+        <span className="font-mono text-[10px] tracking-[0.4em] text-cyan-400" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+          XAIRA NEURAL NETWORK /// SYS.OP.NORMAL
+        </span>
+      </div>
+
+      {/* 🚀 右侧装饰文字 (大屏可见) */}
+      <div className="hidden xl:flex fixed right-6 top-0 bottom-0 flex-col justify-center opacity-[0.15] pointer-events-none select-none z-0">
+        <span className="font-mono text-[10px] tracking-[0.4em] text-purple-400" style={{ writingMode: 'vertical-rl' }}>
+          DATA STREAM ENCRYPTED /// PORT 3000
+        </span>
+      </div>
+
+      {/* 🍏 主容器：加宽到 max-w-6xl */}
+      <div className="mx-auto max-w-6xl w-full px-2 sm:px-4 py-4 md:py-6 h-full flex flex-col relative z-10">
+        <div className="flex flex-col h-full bg-[#0d0d12]/60 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.6)] border border-white/[0.05] overflow-hidden">
           
           {/* --- 顶部 Header --- */}
           <header className="flex items-center justify-between px-6 md:px-8 py-5 bg-transparent border-b border-white/[0.02] z-30">
             <div className="flex items-center gap-4 md:gap-6">
-              {/* 🛠️ 新增：返回首页按钮 */}
               <button 
                 onClick={() => router.push('/')}
                 className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors group"
@@ -179,7 +192,6 @@ export default function ChatPage() {
               </div>
             </div>
             
-            {/* 🛠️ 下拉菜单保持不变 */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -230,7 +242,7 @@ export default function ChatPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <p className="text-xs md:text-sm tracking-widest opacity-70">系统就绪。等待输入。</p>
+                <p className="text-xs md:text-sm tracking-widest opacity-70 font-mono">SYSTEM READY // AWAITING INPUT</p>
               </div>
             ) : (
               messages.map((m) => (
@@ -311,7 +323,7 @@ export default function ChatPage() {
                 className="flex-1 bg-transparent px-4 md:px-6 py-2 md:py-3 text-[14px] md:text-[15px] text-gray-100 placeholder-gray-500 outline-none w-full font-medium"
                 value={myInput}
                 onChange={(e) => setMyInput(e.target.value)}
-                placeholder="发送消息..."
+                placeholder="发送指令或询问..."
                 disabled={isLoading}
               />
               <button
