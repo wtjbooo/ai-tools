@@ -32,11 +32,10 @@ export async function POST(req: Request) {
       apiKey = process.env.DEEPSEEK_API_KEY || '';
       baseURL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
       
-    } else if (selectedModel === 'LongCat-Flash-Thinking') {
-      // 5. Longcat 走官方直连
+    } else if (selectedModel.startsWith('LongCat') || selectedModel.toLowerCase().includes('longcat')) {
+      // 5. Longcat 走官方直连 (已修复：使用 startsWith 兼容动态后缀，去除多余路由)
       apiKey = process.env.LONGCAT_API_KEY || '';
-      // 注意：确保你的 .env 里 LONGCAT_BASE_URL 填的是准确的兼容接口地址
-      baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/v1/chat/completions'; 
+      baseURL = process.env.LONGCAT_BASE_URL || 'https://api.longcat.chat/openai/v1'; 
     }
 
     if (!apiKey) {

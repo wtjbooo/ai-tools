@@ -1,11 +1,15 @@
 // @ts-nocheck
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-// ⚠️ 注意：这里的 id 必须和大模型官方 API 文档里规定的模型名称一模一样！
-// 如果 LongCat 还是报 404，请查阅官方文档，把 'longcat' 改成它的真实 API 名字
+// ✅ 引入 Markdown 与代码高亮组件
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
 const MODELS = [
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini (日常/极速)' },
   { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (逻辑/代码)' },
@@ -25,6 +29,14 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [myInput, setMyInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // ✅ 优化 1：添加滚动锚点引用
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // ✅ 优化 1：每次消息更新时，平滑滚动到底部
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // 鉴权拦截
   useEffect(() => {
@@ -72,7 +84,7 @@ export default function ChatPage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `后端请求失败 (状态码: ${res.status})，请检查服务器日志`);
+        throw new Error(errData.error || `后端请求失败 (状态码: ${res.status})`);
       }
 
       const reader = res.body.getReader();
@@ -124,7 +136,6 @@ export default function ChatPage() {
         <header className="flex items-center justify-between px-8 py-5 bg-white/40 backdrop-blur-md border-b border-gray-100/50 z-10">
           <div className="flex items-center gap-3">
             <div className="h-3 w-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 animate-pulse"></div>
-            {/* 修改了这里的标题 */}
             <h1 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
               XAira智能助手
             </h1>
@@ -142,7 +153,6 @@ export default function ChatPage() {
           </select>
         </header>
 
-        {/* 彻底删除了 scroll-smooth 和自动锚点，不会再自动下滑了 */}
         <main className="flex-1 overflow-y-auto p-8 space-y-6 bg-[#F5F5F7]/30">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 text-gray-400">
@@ -157,13 +167,54 @@ export default function ChatPage() {
             messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[75%] px-6 py-4 text-[15px] leading-relaxed shadow-sm ${
+                  className={`max-w-[85%] md:max-w-[75%] px-6 py-4 text-[15px] leading-relaxed shadow-sm min-w-0 ${
                     m.role === 'user'
                       ? 'bg-gray-900 text-white rounded-[2rem] rounded-tr-sm' 
                       : 'bg-white text-gray-800 rounded-[2rem] rounded-tl-sm ring-1 ring-gray-900/5' 
                   }`}
                 >
-                  <pre className="whitespace-pre-wrap font-sans m-0 text-inherit">{m.content}</pre>
+                  {/* ✅ 优化 2：彻底替换为 Markdown + 高亮支持 */}
+                  {m.role === 'user' ? (
+                    <pre className="whitespace-pre-wrap font-sans m-0 text-inherit">{m.content}</pre>
+                  ) : (
+                    <ReactMarkdown
+                      className="prose prose-sm md:prose-base max-w-none text-gray-800 break-words"
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        code({ node, inline, className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <div className="rounded-xl overflow-hidden my-5 border border-gray-200/60 shadow-sm">
+                              {/* MacOS 终端风格顶部标题栏 */}
+                              <div className="flex items-center px-4 py-2 bg-[#21252b] text-gray-400 text-xs font-mono">
+                                <div className="flex gap-1.5 mr-4">
+                                  <div className="w-3 h-3 rounded-full bg-red-500/90 shadow-[0_0_4px_rgba(239,68,68,0.4)]"></div>
+                                  <div className="w-3 h-3 rounded-full bg-yellow-500/90 shadow-[0_0_4px_rgba(234,179,8,0.4)]"></div>
+                                  <div className="w-3 h-3 rounded-full bg-green-500/90 shadow-[0_0_4px_rgba(34,197,94,0.4)]"></div>
+                                </div>
+                                <span className="uppercase tracking-wider">{match[1]}</span>
+                              </div>
+                              <SyntaxHighlighter
+                                style={oneDark}
+                                language={match[1]}
+                                PreTag="div"
+                                customStyle={{ margin: 0, padding: '1.25rem', background: '#282c34', fontSize: '0.875rem' }}
+                                {...props}
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            </div>
+                          ) : (
+                            <code className="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md font-mono text-sm before:content-[''] after:content-['']" {...props}>
+                              {children}
+                            </code>
+                          );
+                        }
+                      }}
+                    >
+                      {m.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
               </div>
             ))
@@ -178,6 +229,8 @@ export default function ChatPage() {
               </div>
             </div>
           )}
+          {/* ✅ 优化 1：底部锚点 */}
+          <div ref={messagesEndRef} />
         </main>
 
         <footer className="p-6 bg-white/40 backdrop-blur-md border-t border-gray-100/50">
