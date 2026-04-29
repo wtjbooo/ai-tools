@@ -222,33 +222,35 @@ export async function POST(req: Request) {
           // 💸 结算环节：对话结束后，异步扣除数据库积分
           // ==========================================
           try {
-            if (isFreeModel) {
-              if (!user.isPro) {
-                // 免费模型：扣除一次今日额度，并更新最后使用时间
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                let lastUsed = user.lastUsedDate ? new Date(user.lastUsedDate) : new Date(0);
-                lastUsed.setHours(0, 0, 0, 0);
+            // 🔥 终极防弹装甲：只有当确实产生了 Token 消耗（真正收到了数据），才扣费或扣次数
+            if (promptTokens > 0 || completionTokens > 0) {
+              
+              if (isFreeModel) {
+                if (!user.isPro) {
+                  // 免费模型：扣除一次今日额度，并更新最后使用时间
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  let lastUsed = user.lastUsedDate ? new Date(user.lastUsedDate) : new Date(0);
+                  lastUsed.setHours(0, 0, 0, 0);
 
-                let newFreeUses = user.freeUsesToday;
-                if (lastUsed.getTime() < today.getTime()) {
-                  newFreeUses = DAILY_FREE_LIMIT - 1; // 跨天重置并扣除本次
-                } else {
-                  newFreeUses = Math.max(0, newFreeUses - 1); // 扣除本次
-                }
-
-                await prisma.user.update({
-                  where: { id: user.id },
-                  data: { 
-                    freeUsesToday: newFreeUses, 
-                    lastUsedDate: new Date() 
+                  let newFreeUses = user.freeUsesToday;
+                  if (lastUsed.getTime() < today.getTime()) {
+                    newFreeUses = DAILY_FREE_LIMIT - 1; // 跨天重置并扣除本次
+                  } else {
+                    newFreeUses = Math.max(0, newFreeUses - 1); // 扣除本次
                   }
-                });
-              }
-            } else {
-              // 收费模型：根据定价表和 Token 数量计算费用
-              // 注意：有些模型在流突然中断时可能没返回 usage，我们可以给个默认保底扣费 1 分防止白嫖
-              if (promptTokens > 0 || completionTokens > 0) {
+
+                  await prisma.user.update({
+                    where: { id: user.id },
+                    data: { 
+                      freeUsesToday: newFreeUses, 
+                      lastUsedDate: new Date() 
+                    }
+                  });
+                  console.log(`[额度扣除成功] 用户: ${user.id}, 模型: ${selectedModel}, 剩余免费次数: ${newFreeUses}`);
+                }
+              } else {
+                // 收费模型：根据定价表和 Token 数量计算费用
                 const pricing = PRICING_MAP[selectedModel] || PRICING_MAP['default'];
                 // 公式：(输入Token * 输入单价 / 1000) + (输出Token * 输出单价 / 1000)
                 const cost = Math.ceil((promptTokens * pricing.input / 1000) + (completionTokens * pricing.output / 1000));
@@ -261,6 +263,9 @@ export async function POST(req: Request) {
                   console.log(`[扣费成功] 用户: ${user.id}, 模型: ${selectedModel}, 扣除: ${cost} 积分`);
                 }
               }
+            } else {
+              // 如果 Token 为 0，说明遇到了断流或刚连上就报错断开的情况，不扣除任何费用/次数
+              console.log(`[免单拦截] 用户: ${user.id}, 模型: ${selectedModel}, 未产生有效 Token 消耗，跳过扣除逻辑。`);
             }
           } catch (dbError) {
             console.error('扣费数据库操作失败:', dbError);
