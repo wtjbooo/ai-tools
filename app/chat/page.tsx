@@ -9,18 +9,18 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
+// 💰 1. 模型列表增加价格标签配置
 const MODELS = [
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (日常/极速)' },
-  { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (逻辑/代码)' },
-  { id: 'deepseek-chat', name: 'DeepSeek V3 (官方)' },
-  { id: 'deepseek-reasoner', name: 'DeepSeek R1 (官方思考)' },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (官方免费新版)' },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (中转长文本)' },
-  { id: 'gpt-4o', name: 'GPT-4o (复杂任务)' },
-  { id: 'LongCat-Flash-Thinking-2601', name: 'LongCat (长文本特化)' }, 
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini (日常/极速)', isFree: false, priceTag: '2x 🪙' },
+  { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet (逻辑/代码)', isFree: false, priceTag: '45x 🪙' },
+  { id: 'deepseek-chat', name: 'DeepSeek V3 (官方)', isFree: false, priceTag: '2x 🪙' },
+  { id: 'deepseek-reasoner', name: 'DeepSeek R1 (官方思考)', isFree: false, priceTag: '5x 🪙' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (官方免费新版)', isFree: true, priceTag: '免费' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (中转长文本)', isFree: false, priceTag: '25x 🪙' },
+  { id: 'gpt-4o', name: 'GPT-4o (复杂任务)', isFree: false, priceTag: '25x 🪙' },
+  { id: 'LongCat-Flash-Thinking-2601', name: 'LongCat (长文本特化)', isFree: true, priceTag: '免费' }, 
 ];
 
-// 🛠️ 新增：智能错误信息翻译器
 const translateErrorMsg = (errMsg: string) => {
   const msg = String(errMsg || '').toLowerCase();
   
@@ -39,8 +39,10 @@ const translateErrorMsg = (errMsg: string) => {
   if (msg.includes('fetch failed') || msg.includes('network')) {
     return '网络连接断开。请检查服务器网络状况。';
   }
+  if (msg.includes('积分不足') || msg.includes('额度已用完') || msg.includes('402')) {
+    return '算力能源不足，请补充积分或等待免费额度刷新。';
+  }
   
-  // 如果遇到未知的 JSON 格式错误，尝试提取内部核心信息，避免展示一坨代码
   try {
     const match = errMsg.match(/\{.*\}/);
     if (match) {
@@ -57,13 +59,15 @@ export default function ChatPage() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [currentModel, setCurrentModel] = useState<string>(MODELS[0].id);
   
+  // 💰 2. 新增用户资产状态
+  const [userInfo, setUserInfo] = useState({ bonusCredits: 0, freeUsesToday: 0, isPro: false });
+  
   const [messages, setMessages] = useState([]);
   const [myInput, setMyInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const scrollContainerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -85,22 +89,32 @@ export default function ChatPage() {
     }
   }, [messages]);
 
-  useEffect(() => {
-    const verifyUser = async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (!res.ok) {
-          router.push('/login');
-          return;
-        }
-      } catch (error) {
-        console.error('鉴权失败:', error);
+  // 💰 3. 获取用户鉴权及资产信息
+  const fetchUserInfo = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (!res.ok) {
         router.push('/login');
-      } finally {
-        setIsAuthChecking(false);
+        return;
       }
-    };
-    verifyUser();
+      const data = await res.json();
+      if (data.user) {
+        setUserInfo({
+          bonusCredits: data.user.bonusCredits || 0,
+          freeUsesToday: data.user.freeUsesToday || 0,
+          isPro: data.user.isPro || false
+        });
+      }
+    } catch (error) {
+      console.error('鉴权失败:', error);
+      router.push('/login');
+    } finally {
+      setIsAuthChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserInfo();
   }, [router]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -149,19 +163,28 @@ export default function ChatPage() {
           });
         }
       }
+      
+      // 💰 对话完成后，刷新一下用户资产显示
+      fetchUserInfo();
+      
     } catch (error) {
       console.error('发送错误:', error);
       setMessages((prev) => {
         const lastIdx = prev.length - 1;
-        // 🛠️ 应用智能错误翻译
         const friendlyError = translateErrorMsg(error.message);
-        const updatedLast = { ...prev[lastIdx], content: prev[lastIdx].content + `\n\n> ⚠️ **连接异常**: ${friendlyError}` };
+        const updatedLast = { ...prev[lastIdx], content: prev[lastIdx].content + `\n\n> ⚠️ **系统警报**: ${friendlyError}` };
         return [...prev.slice(0, lastIdx), updatedLast];
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // 💰 判断当前选中的模型是否免费，以及资产是否不足
+  const selectedModelObj = MODELS.find(m => m.id === currentModel) || MODELS[0];
+  const isOutOfEnergy = !selectedModelObj.isFree && userInfo.bonusCredits < 5;
+  const isOutOfFreeUses = selectedModelObj.isFree && !userInfo.isPro && userInfo.freeUsesToday <= 0;
+  const shouldBlockInput = isOutOfEnergy || isOutOfFreeUses;
 
   if (isAuthChecking) {
     return (
@@ -171,7 +194,7 @@ export default function ChatPage() {
              <div className="absolute h-full w-full animate-ping rounded-full bg-cyan-500/20"></div>
              <div className="h-8 w-8 animate-spin rounded-full border-4 border-white/10 border-t-cyan-400"></div>
           </div>
-          <p className="text-sm font-medium tracking-widest text-cyan-400/80">正在验证身份...</p>
+          <p className="text-sm font-medium tracking-widest text-cyan-400/80">系统初始化验证...</p>
         </div>
       </div>
     );
@@ -179,37 +202,30 @@ export default function ChatPage() {
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#050507] text-gray-100 font-sans overflow-hidden selection:bg-cyan-500/30 selection:text-cyan-50">
-      
-      {/* 🔮 背景特效组：网格底纹 + 赛博光晕 */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[150px] pointer-events-none mix-blend-screen"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen"></div>
 
-      {/* 🚀 左侧装饰文字 (大屏可见) */}
       <div className="hidden xl:flex fixed left-6 top-0 bottom-0 flex-col justify-center opacity-[0.15] pointer-events-none select-none z-0">
         <span className="font-mono text-[10px] tracking-[0.4em] text-cyan-400" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
           XAIRA NEURAL NETWORK /// SYS.OP.NORMAL
         </span>
       </div>
 
-      {/* 🚀 右侧装饰文字 (大屏可见) */}
       <div className="hidden xl:flex fixed right-6 top-0 bottom-0 flex-col justify-center opacity-[0.15] pointer-events-none select-none z-0">
         <span className="font-mono text-[10px] tracking-[0.4em] text-purple-400" style={{ writingMode: 'vertical-rl' }}>
           DATA STREAM ENCRYPTED /// PORT 3000
         </span>
       </div>
 
-      {/* 🍏 主容器：加宽到 max-w-6xl */}
       <div className="mx-auto max-w-6xl w-full px-2 sm:px-4 py-4 md:py-6 h-full flex flex-col relative z-10">
         <div className="flex flex-col h-full bg-[#0d0d12]/60 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_8px_40px_rgb(0,0,0,0.6)] border border-white/[0.05] overflow-hidden">
           
-          {/* --- 顶部 Header --- */}
           <header className="flex items-center justify-between px-6 md:px-8 py-5 bg-transparent border-b border-white/[0.02] z-30">
             <div className="flex items-center gap-4 md:gap-6">
               <button 
                 onClick={() => router.push('/')}
                 className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors group"
-                title="返回首页"
               >
                 <svg className="w-4 h-4 text-gray-400 group-hover:text-cyan-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -226,47 +242,76 @@ export default function ChatPage() {
               </div>
             </div>
             
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 md:gap-3 pl-4 pr-3 py-2 bg-black/30 hover:bg-black/50 text-gray-300 text-xs md:text-sm font-medium rounded-2xl border border-white/[0.08] hover:border-cyan-500/40 transition-all shadow-sm focus:outline-none max-w-[150px] md:max-w-none truncate"
-              >
-                <span className="truncate">{MODELS.find(m => m.id === currentModel)?.name}</span>
-                <svg 
-                  className={`w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} 
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 md:w-64 bg-[#0d0d12]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
-                  {MODELS.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        setCurrentModel(m.id);
-                        setIsDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-4 md:px-5 py-3 text-xs md:text-sm transition-all duration-200 flex items-center gap-2 ${
-                        currentModel === m.id
-                          ? 'bg-cyan-500/10 text-cyan-300 font-semibold border-l-2 border-cyan-400'
-                          : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200 border-l-2 border-transparent'
-                      }`}
-                    >
-                      {currentModel === m.id && (
-                         <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0"></div>
-                      )}
-                      <span className={`truncate ${currentModel === m.id ? '' : 'ml-3'}`}>{m.name}</span>
-                    </button>
-                  ))}
+            {/* 💰 顶部右侧资产与模型选择区 */}
+            <div className="flex items-center gap-3 md:gap-4">
+              {/* 资产胶囊指示器 */}
+              <div className="hidden sm:flex items-center px-3 py-1.5 bg-white/[0.03] border border-white/10 rounded-full text-xs font-mono text-gray-300 group cursor-help transition-colors hover:border-cyan-500/30">
+                {selectedModelObj.isFree ? (
+                  <>
+                    <span className="text-cyan-400 mr-1.5">⚡️</span>
+                    {userInfo.isPro ? '无限' : `${userInfo.freeUsesToday} / 15`}
+                  </>
+                ) : (
+                  <>
+                    <span className="text-amber-400 mr-1.5">🪙</span>
+                    {userInfo.bonusCredits}
+                  </>
+                )}
+                {/* Hover 提示 */}
+                <div className="absolute top-14 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all bg-black/80 backdrop-blur-md border border-white/10 px-3 py-2 rounded-lg text-xs whitespace-nowrap z-50">
+                  {selectedModelObj.isFree ? '今日剩余免费算力次数' : '当前可用算力点数'}
                 </div>
-              )}
+              </div>
+
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2 md:gap-3 pl-4 pr-3 py-2 bg-black/30 hover:bg-black/50 text-gray-300 text-xs md:text-sm font-medium rounded-2xl border border-white/[0.08] hover:border-cyan-500/40 transition-all shadow-sm focus:outline-none max-w-[150px] md:max-w-none truncate"
+                >
+                  <span className="truncate">{selectedModelObj.name}</span>
+                  <svg 
+                    className={`w-3 h-3 md:w-4 md:h-4 shrink-0 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} 
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 md:w-72 bg-[#0d0d12]/95 backdrop-blur-xl border border-white/[0.1] rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                    {MODELS.map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => {
+                          setCurrentModel(m.id);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-4 md:px-5 py-3 text-xs md:text-sm transition-all duration-200 flex items-center justify-between group ${
+                          currentModel === m.id
+                            ? 'bg-cyan-500/10 text-cyan-300 font-semibold border-l-2 border-cyan-400'
+                            : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200 border-l-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {currentModel === m.id && (
+                             <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)] shrink-0"></div>
+                          )}
+                          <span className={`truncate ${currentModel === m.id ? '' : 'ml-3'}`}>{m.name}</span>
+                        </div>
+                        {/* 💰 模型价格小标签 */}
+                        <span className={`shrink-0 text-[10px] font-mono px-2 py-0.5 rounded-md border ${
+                          m.isFree ? 'border-cyan-500/30 text-cyan-400/80 bg-cyan-500/5' : 'border-white/10 text-gray-500 group-hover:text-amber-400/80 group-hover:border-amber-500/30'
+                        }`}>
+                          {m.priceTag}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 
-          {/* --- 聊天记录展示区 --- */}
           <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth custom-scrollbar relative z-10">
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-6 text-gray-500">
@@ -276,7 +321,6 @@ export default function ChatPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                {/* 🛠️ 已汉化：中间的空状态提示 */}
                 <p className="text-sm md:text-base tracking-[0.2em] opacity-80 font-mono text-cyan-50/60">系统已连接 // 等待指令输入</p>
               </div>
             ) : (
@@ -334,7 +378,6 @@ export default function ChatPage() {
               ))
             )}
             
-            {/* AI 思考/输入加载状态 */}
             {isLoading && messages.length > 0 && messages[messages.length - 1].content === '' && (
               <div className="flex justify-start animate-in fade-in duration-300">
                 <div className="bg-white/[0.04] px-6 py-4 rounded-[2rem] rounded-tl-sm border border-white/[0.08] backdrop-blur-xl flex items-center gap-2 shadow-lg">
@@ -348,22 +391,23 @@ export default function ChatPage() {
             )}
           </main>
 
-          {/* --- 底部输入区 --- */}
           <footer className="px-4 md:px-6 py-4 md:py-6 pb-6 md:pb-8 z-20">
             <form
               onSubmit={handleSend}
-              className="flex items-center relative max-w-4xl mx-auto bg-black/40 backdrop-blur-2xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.5)] border border-white/10 focus-within:border-cyan-500/40 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.15)] transition-all duration-300 p-1.5 md:p-2"
+              className={`flex items-center relative max-w-4xl mx-auto bg-black/40 backdrop-blur-2xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.5)] border transition-all duration-300 p-1.5 md:p-2 ${
+                shouldBlockInput ? 'border-red-500/40 bg-red-500/5' : 'border-white/10 focus-within:border-cyan-500/40 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.15)]'
+              }`}
             >
               <input
-                className="flex-1 bg-transparent px-4 md:px-6 py-2 md:py-3 text-[14px] md:text-[15px] text-gray-100 placeholder-gray-500 outline-none w-full font-medium"
+                className="flex-1 bg-transparent px-4 md:px-6 py-2 md:py-3 text-[14px] md:text-[15px] text-gray-100 placeholder-gray-500 outline-none w-full font-medium disabled:opacity-50"
                 value={myInput}
                 onChange={(e) => setMyInput(e.target.value)}
-                placeholder="发送指令或询问..."
-                disabled={isLoading}
+                placeholder={shouldBlockInput ? "能量不足，请补充算力积分或切换免费模型..." : "发送指令或询问..."}
+                disabled={isLoading || shouldBlockInput}
               />
               <button
                 type="submit"
-                disabled={isLoading || !myInput.trim()}
+                disabled={isLoading || !myInput.trim() || shouldBlockInput}
                 className="ml-2 flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] hover:scale-105 disabled:opacity-30 disabled:scale-100 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 shrink-0"
               >
                 <svg className="w-5 h-5 relative right-[1px] transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -371,10 +415,17 @@ export default function ChatPage() {
                 </svg>
               </button>
             </form>
-            <div className="text-center mt-3 md:mt-4">
-              <span className="text-[10px] md:text-[11px] tracking-wide text-gray-500/70">
-                AI 可能会犯错，请核实重要信息。
-              </span>
+            <div className="text-center mt-3 md:mt-4 transition-all duration-300 h-4">
+              {/* 💰 底部动态状态提示 */}
+              {shouldBlockInput ? (
+                 <span className="text-[10px] md:text-[11px] tracking-wide text-red-400/90 font-mono animate-pulse">
+                   ⚠️ 系统能源耗尽。请补充积分或等待免费配额刷新。
+                 </span>
+              ) : (
+                <span className="text-[10px] md:text-[11px] tracking-wide text-gray-500/70">
+                  AI 可能会犯错，请核实重要信息。
+                </span>
+              )}
             </div>
           </footer>
         </div>
