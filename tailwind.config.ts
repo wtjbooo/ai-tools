@@ -7,7 +7,14 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      // 💡 这里是赛博扫光动画的配置
+      keyframes: {
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        }
+      }
+    },
   },
   plugins: [
     require('@tailwindcss/typography'), // 👈 排版神器在这里！

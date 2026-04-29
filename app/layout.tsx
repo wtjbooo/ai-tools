@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
+import AssetCapsule from "@/components/AssetCapsule";
 // 👈 致命修复 1：使用新文件名 + 绝对路径
 import NavLinks from "@/app/NavbarLinks"; 
 // 👈 致命修复 2：把上级目录点点点改成绝对路径，彻底杜绝找不到文件
@@ -121,10 +122,15 @@ function Header() {
           </div>
 
           {/* 🚀 把我们的购买大门和用户头像并排放在最右边！ */}
-          <div className="shrink-0 flex items-center gap-2 sm:gap-3">
-            <UpgradeProButton />
-            <AuthButton />
-          </div>
+<div className="shrink-0 flex items-center gap-2 sm:gap-3">
+  {/* 💡 插入我们刚刚做好的动态入口 */}
+  <AssetCapsule />
+  
+  <div className="hidden sm:block w-px h-5 bg-black/10 mx-1"></div> {/* 分割线 */}
+  
+  <UpgradeProButton />
+  <AuthButton />
+</div>
         </div>
       </div>
     </header>
