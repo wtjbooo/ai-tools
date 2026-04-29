@@ -20,6 +20,38 @@ const MODELS = [
   { id: 'LongCat-Flash-Thinking-2601', name: 'LongCat (长文本特化)' }, 
 ];
 
+// 🛠️ 新增：智能错误信息翻译器
+const translateErrorMsg = (errMsg: string) => {
+  const msg = String(errMsg || '').toLowerCase();
+  
+  if (msg.includes('high demand') || msg.includes('503') || msg.includes('overloaded')) {
+    return '当前模型访问人数过多，服务器繁忙 (503)。请稍后再试或切换其他模型。';
+  }
+  if (msg.includes('rate limit') || msg.includes('429') || msg.includes('too many requests')) {
+    return '请求过于频繁或额度已耗尽 (429)。请稍作休息再试。';
+  }
+  if (msg.includes('api key') || msg.includes('401') || msg.includes('unauthorized')) {
+    return 'API 身份验证失败 (401)。请联系管理员检查后台密钥配置。';
+  }
+  if (msg.includes('not found') || msg.includes('404')) {
+    return '找不到该模型接口 (404)。请确认模型名称是否正确。';
+  }
+  if (msg.includes('fetch failed') || msg.includes('network')) {
+    return '网络连接断开。请检查服务器网络状况。';
+  }
+  
+  // 如果遇到未知的 JSON 格式错误，尝试提取内部核心信息，避免展示一坨代码
+  try {
+    const match = errMsg.match(/\{.*\}/);
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      return parsed.error?.message || parsed.message || '发生未知服务错误，请稍后重试。';
+    }
+  } catch (e) {}
+
+  return errMsg || '请求失败，请稍后重试。';
+};
+
 export default function ChatPage() {
   const router = useRouter();
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -121,7 +153,9 @@ export default function ChatPage() {
       console.error('发送错误:', error);
       setMessages((prev) => {
         const lastIdx = prev.length - 1;
-        const updatedLast = { ...prev[lastIdx], content: prev[lastIdx].content + `\n\n[⚠️ ${error.message}]` };
+        // 🛠️ 应用智能错误翻译
+        const friendlyError = translateErrorMsg(error.message);
+        const updatedLast = { ...prev[lastIdx], content: prev[lastIdx].content + `\n\n> ⚠️ **连接异常**: ${friendlyError}` };
         return [...prev.slice(0, lastIdx), updatedLast];
       });
     } finally {
@@ -242,7 +276,8 @@ export default function ChatPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <p className="text-xs md:text-sm tracking-widest opacity-70 font-mono">SYSTEM READY // AWAITING INPUT</p>
+                {/* 🛠️ 已汉化：中间的空状态提示 */}
+                <p className="text-sm md:text-base tracking-[0.2em] opacity-80 font-mono text-cyan-50/60">系统已连接 // 等待指令输入</p>
               </div>
             ) : (
               messages.map((m) => (
@@ -258,7 +293,7 @@ export default function ChatPage() {
                       <pre className="whitespace-pre-wrap font-sans m-0 text-inherit">{m.content}</pre>
                     ) : (
                       <ReactMarkdown
-                        className="prose prose-invert prose-sm md:prose-base max-w-none text-gray-300 break-words prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent prose-code:text-cyan-300 prose-code:bg-cyan-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none"
+                        className="prose prose-invert prose-sm md:prose-base max-w-none text-gray-300 break-words prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent prose-code:text-cyan-300 prose-code:bg-cyan-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-blockquote:border-l-cyan-500 prose-blockquote:bg-cyan-500/5 prose-blockquote:px-4 prose-blockquote:py-1 prose-blockquote:rounded-r-lg prose-blockquote:not-italic"
                         remarkPlugins={[remarkGfm]}
                         components={{
                           code({ node, inline, className, children, ...props }: any) {
