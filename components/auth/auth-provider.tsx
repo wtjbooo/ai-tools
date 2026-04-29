@@ -9,6 +9,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef, // 💡 核心修复 1：引入 useRef
   type PropsWithChildren,
 } from "react";
 import { createPortal } from "react-dom";
@@ -24,7 +25,7 @@ export type AuthUser = {
   nickname?: string | null;
   name?: string | null;
   avatar?: string | null;
-  image?: string | null; // 💡 核心修复 1：增加 image 字段，对齐 Prisma
+  image?: string | null;
   isPro?: boolean;
 };
 
@@ -104,7 +105,7 @@ function normalizeUser(value: unknown): AuthUser | null {
     nickname: (record.nickname || record.name) as string | null,
     name: typeof record.name === "string" ? record.name : null,
     avatar: rawImage, 
-    image: rawImage, // 💡 核心修复 2：将数据同时映射给 image，保持全局兼容
+    image: rawImage, 
     isPro: Boolean(record.isPro || record.isVip), 
   };
 }
@@ -268,6 +269,27 @@ export function AuthButton() {
   const { user, isAuthenticated, isReady, openLogin, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const router = useRouter(); 
+  
+  // 💡 核心修复 2：创建组件引用，用于判断点击区域
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // 💡 核心修复 3：添加全局点击监听，点击外部时自动关闭菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    // 只有在菜单打开时才监听，优化性能
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   if (!isReady) {
     return (
@@ -280,7 +302,8 @@ export function AuthButton() {
 
   if (isAuthenticated && user) {
     return (
-      <div className="relative">
+      // 💡 核心修复 4：将 ref 绑定到最外层容器上
+      <div className="relative" ref={menuRef}>
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           className={`group inline-flex h-10 shrink-0 items-center gap-2.5 rounded-full border px-3 sm:px-3.5 text-sm font-medium shadow-sm transition-all focus:outline-none ${
@@ -316,44 +339,42 @@ export function AuthButton() {
         </button>
 
         {isDropdownOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-            <div className="absolute right-0 top-full mt-2 w-52 z-50 overflow-hidden rounded-2xl border border-zinc-100 bg-white p-1.5 shadow-lg ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="px-3 py-2 border-b border-zinc-50 mb-1">
-                <div className="text-[13px] font-medium text-zinc-800 truncate">{getDisplayName(user)}</div>
-                <div className="text-[11px] text-zinc-400 truncate mt-0.5">{user.email || '已验证账户'}</div>
-              </div>
-              
-              {user.isPro && (
-                <div className="mx-1 mb-1.5 px-3 py-2 bg-gradient-to-r from-amber-50 to-amber-100/50 rounded-xl border border-amber-100/50 flex items-center justify-between">
-                  <span className="text-[12px] font-bold text-amber-700">Pro 会员</span>
-                  <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7.4-6.3-4.8-6.3 4.8 2.3-7.4-6-4.6h7.6z"/></svg>
-                </div>
-              )}
-
-              <button
-                onClick={() => {
-                  setIsDropdownOpen(false);
-                  router.push('/dashboard');
-                }}
-                className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-indigo-700 transition-colors hover:bg-indigo-50"
-              >
-                <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                进入专属工作台
-              </button>
-
-              <button
-                onClick={() => {
-                  setIsDropdownOpen(false);
-                  logout();
-                }}
-                className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 mt-1"
-              >
-                <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                退出登录
-              </button>
+          // 💡 核心修复 5：移除了原来导致问题的透明 fixed 遮罩层
+          <div className="absolute right-0 top-full mt-2 w-52 z-50 overflow-hidden rounded-2xl border border-zinc-100 bg-white p-1.5 shadow-lg ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="px-3 py-2 border-b border-zinc-50 mb-1">
+              <div className="text-[13px] font-medium text-zinc-800 truncate">{getDisplayName(user)}</div>
+              <div className="text-[11px] text-zinc-400 truncate mt-0.5">{user.email || '已验证账户'}</div>
             </div>
-          </>
+            
+            {user.isPro && (
+              <div className="mx-1 mb-1.5 px-3 py-2 bg-gradient-to-r from-amber-50 to-amber-100/50 rounded-xl border border-amber-100/50 flex items-center justify-between">
+                <span className="text-[12px] font-bold text-amber-700">Pro 会员</span>
+                <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7.4-6.3-4.8-6.3 4.8 2.3-7.4-6-4.6h7.6z"/></svg>
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setIsDropdownOpen(false);
+                router.push('/dashboard');
+              }}
+              className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-indigo-700 transition-colors hover:bg-indigo-50"
+            >
+              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+              进入专属工作台
+            </button>
+
+            <button
+              onClick={() => {
+                setIsDropdownOpen(false);
+                logout();
+              }}
+              className="w-full text-left flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-red-600 transition-colors hover:bg-red-50 mt-1"
+            >
+              <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              退出登录
+            </button>
+          </div>
         )}
       </div>
     );
