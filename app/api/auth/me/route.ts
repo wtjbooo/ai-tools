@@ -31,6 +31,10 @@ export async function GET() {
         nickname: session.user.name,
         image: session.user.image,
         avatar: session.user.image, // 确保前端必定能拿到头像字段
+        // 👇 核心修复：把资产和额度字段也发送给前端！
+        bonusCredits: session.user.bonusCredits,
+        freeUsesToday: session.user.freeUsesToday,
+        isPro: session.user.isPro,
       },
     });
   } catch (error) {
