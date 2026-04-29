@@ -50,29 +50,43 @@ export default function AssetCapsule() {
       {isAuthenticated && (
         <div className="group relative flex items-center px-3 py-1.5 rounded-full border border-black/5 bg-white/60 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-300 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer hidden sm:flex">
           
-          {/* 优先显示免费次数，用完显示积分 */}
-          {assets.freeUsesToday > 0 && !assets.isPro ? (
-            <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
-              <span className="text-cyan-500 animate-pulse">⚡️</span>
-              <span>{assets.freeUsesToday} 次</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
+          {/* 将免费次数和积分并排展示，一目了然 */}
+          <div className="flex items-center gap-2.5">
+            {/* 1. 如果不是 Pro 且有免费次数，显示免费次数 */}
+            {!assets.isPro && (
+              <div className="flex items-center gap-1 text-xs font-medium text-zinc-700">
+                <span className="text-cyan-500 animate-pulse">⚡️</span>
+                <span className="opacity-90">免费 {assets.freeUsesToday} 次</span>
+              </div>
+            )}
+            
+            {/* 2. 中间的细分割线 */}
+            {!assets.isPro && (
+              <div className="w-[1px] h-3 bg-black/10"></div>
+            )}
+
+            {/* 3. 永远显示核心算力积分 */}
+            <div className="flex items-center gap-1 text-xs font-medium text-zinc-700">
               <span className="text-amber-500">🪙</span>
               <span>{assets.bonusCredits} 积分</span>
             </div>
-          )}
+          </div>
 
-          {/* Hover 时的毛玻璃提示 */}
-          <div className="absolute top-full right-0 mt-2 w-32 p-2 rounded-xl border border-zinc-100 bg-white/90 backdrop-blur-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 text-center">
-            <p className="text-[11px] text-zinc-500">
-              {assets.isPro ? "🚀 Pro 无限算力" : (assets.freeUsesToday > 0 ? "今日免费额度" : "当前算力积分")}
-            </p>
+          {/* Hover 时的毛玻璃提示 - 💡 核心优化：向用户解释双轨计费规则 */}
+          <div className="absolute top-full right-0 mt-2 w-max p-2.5 rounded-xl border border-zinc-100 bg-white/90 backdrop-blur-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 text-left">
+            {assets.isPro ? (
+              <p className="text-[12px] font-medium text-amber-600">🚀 Pro 会员：尊享无限制极速对话</p>
+            ) : (
+              <div className="flex flex-col gap-1.5 text-[11px] text-zinc-500">
+                <p><span className="text-cyan-500 font-medium">⚡️ 免费额度：</span>仅用于基础免费模型，每日重置</p>
+                <p><span className="text-amber-500 font-medium">🪙 算力积分：</span>用于解锁高级模型 (如 GPT-4o 等)</p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* 2. 🚀 AI 助手核心入口按钮 (Apple的轮廓 + 赛博朋克的内核) */}
+      {/* 2. 🚀 AI 助手核心入口按钮 */}
       <Link href="/chat">
         <button className="relative overflow-hidden px-4 sm:px-5 py-1.5 sm:py-2 rounded-full bg-zinc-900 text-white text-xs sm:text-sm font-medium tracking-wide transition-all duration-300 hover:bg-zinc-800 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:border-cyan-500/50 border border-transparent group flex items-center gap-1.5">
           <span className="relative z-10 flex items-center gap-1.5">

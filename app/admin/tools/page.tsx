@@ -175,6 +175,9 @@ export default function AdminToolsPage() {
   const [range, setRange] = useState<RangeMode>("7d");
   const [rangeLabel, setRangeLabel] = useState("最近 7 天");
 
+  // 💡 新增：专门控制 Logo 上传的 Loading 状态
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
   function handleUnauthorized(data?: { error?: string }) {
     setMsg(data?.error ?? "登录已失效，请重新登录");
     router.replace("/admin");
@@ -300,7 +303,7 @@ export default function AdminToolsPage() {
     setEditForm(null);
   }
 
-  // 👇 新增的上传图片函数 👇
+  // 👇 Markdown 文本内的图片上传 (保持不变) 👇
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>, field: "content" | "tutorial") {
     const file = e.target.files?.[0];
     if (!file || !editForm) return;
@@ -334,6 +337,62 @@ export default function AdminToolsPage() {
     } finally {
       setSaving(false);
       e.target.value = "";
+    }
+  }
+
+  // 🚀 新增：专门处理 Logo 直传 R2 的函数 🚀
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editForm) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("只能上传图片文件");
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    setMsg(null);
+
+    try {
+      // 1. 调用你写好的 `/api/upload` 接口获取通行证
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+          folder: "logos", // 强制存入 logos 文件夹
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "获取上传链接失败");
+      }
+
+      const { uploadUrl, publicUrl } = await res.json();
+
+      // 2. 拿着通行证，把图片本体直接塞入 Cloudflare R2
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("文件本体直传 R2 失败，请检查 CORS 设置");
+      }
+
+      // 3. 上传成功，将 R2 返回的公共链接写入输入框
+      setEditForm({ ...editForm, logoUrl: publicUrl });
+      setMsg("🎉 Logo 成功上传至 R2 存储桶！");
+      
+    } catch (error: any) {
+      console.error("Logo上传错误:", error);
+      alert("Logo 上传失败: " + error.message);
+    } finally {
+      setIsUploadingLogo(false);
+      e.target.value = ""; // 清空 input 以便可重复选择同一文件
     }
   }
 
@@ -717,17 +776,40 @@ export default function AdminToolsPage() {
                       <textarea rows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full rounded-lg border px-3 py-2 text-sm" />
                     </div>
 
+                    {/* 🚀 关键升级：Logo 链接输入框变身为一键上传组件 🚀 */}
                     <div className="mb-4">
                       <label className="mb-1.5 block text-[13px] font-medium text-zinc-700">
-                        Logo 链接 (自动抓取失败时手动填写)
+                        Logo 链接 (直接上传到 R2，或手动填入直链)
                       </label>
-                      <input
-                        type="text"
-                        value={editForm.logoUrl || ""}
-                        onChange={(e) => setEditForm({ ...editForm, logoUrl: e.target.value })}
-                        className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[14px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-800 focus:ring-1 focus:ring-zinc-800"
-                        placeholder="填入图片直链，例如：https://你的图床.com/logo.png"
-                      />
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          value={editForm.logoUrl || ""}
+                          onChange={(e) => setEditForm({ ...editForm, logoUrl: e.target.value })}
+                          className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-[14px] text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-zinc-800 focus:ring-1 focus:ring-zinc-800"
+                          placeholder="点击右侧上传按钮 ->"
+                        />
+                        <label className={`shrink-0 flex items-center justify-center rounded-lg px-4 py-2.5 text-[14px] font-medium text-white transition-all cursor-pointer shadow-sm ${isUploadingLogo ? 'bg-zinc-400 cursor-not-allowed' : 'bg-zinc-900 hover:bg-zinc-800 hover:shadow-md'}`}>
+                          {isUploadingLogo ? (
+                            <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              上传中...
+                            </>
+                          ) : (
+                            "上传至 R2"
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleLogoUpload}
+                            disabled={isUploadingLogo}
+                          />
+                        </label>
+                      </div>
                     </div>
 
                     {/* 👇 产品简介上传按钮区 👇 */}
