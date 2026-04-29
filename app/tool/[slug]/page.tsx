@@ -12,7 +12,7 @@ import TabsLayout from "@/components/TabsLayout";
 export const revalidate = 0;
 
 const SITE_NAME = "AI 工具目录";
-const SITE_URL = process.env.SITE_URL?.replace(/\/+$/, "") || "https://www.xaira.top";
+const SITE_URL = process.env.SITE_URL?.replace(/\/+$/, "") || "https://xaira.top";
 
 async function getPublishedToolBySlug(slug: string) {
   return prisma.tool.findFirst({

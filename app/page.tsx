@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 // 💡 这里的默认值已更新为你的正式域名
 const SITE_URL =
-  process.env.SITE_URL?.replace(/\/+$/, "") || "https://www.xaira.top";
+  process.env.SITE_URL?.replace(/\/+$/, "") || "https://xaira.top";
 
 const CATEGORY_SECTIONS_LIMIT = 4;
 const CATEGORY_TOOLS_LIMIT = 6;
